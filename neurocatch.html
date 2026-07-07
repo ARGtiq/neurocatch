@@ -420,6 +420,17 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
 .ql-btn:hover{background:rgba(var(--seed-rgb),.18)}
 .ql-btn svg{width:13px;height:13px}
 .ql-btn.off{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.35);color:var(--red);text-decoration:line-through}
+
+/* study menu + link row restructure */
+.link-row{padding:8px 10px}
+.link-row .lmain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-decoration:none;color:inherit}
+.link-row .study,.link-row>a.mini{flex:0 0 auto}
+.link-row>.mini{width:34px;height:34px}
+.fail-row .study{color:var(--accent-2)}
+.study-menu{position:absolute;z-index:70;min-width:190px;background:var(--panel);border:1px solid var(--stroke-strong);border-radius:14px;padding:6px;box-shadow:0 20px 55px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:2px}
+.study-menu .sm-h{font-size:11px;color:var(--faint);padding:7px 10px 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.study-menu button{text-align:left;background:none;border:none;color:var(--text);font:inherit;font-size:14px;font-weight:600;padding:10px 12px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:9px}
+.study-menu button:hover{background:var(--glass-2)}
 .bug-fab{position:fixed;right:16px;bottom:18px;z-index:45;width:40px;height:40px;border-radius:50%;
   background:rgba(20,20,40,.35);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
   display:grid;place-items:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -530,6 +541,11 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
     <div class="field"><label for="model">Модель</label><select id="model"><option value="gemini-2.5-flash">gemini-2.5-flash</option><option value="gemini-2.5-pro">gemini-2.5-pro</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select></div>
     <div class="field"><label for="microKey"><i data-lucide="link"></i>Microlink API key (заголовки ссылок)</label><input type="password" id="microKey" placeholder="Необязательно" autocomplete="off"><div class="status-row"><span class="status" id="microStatus"><span class="sd"></span>без ключа: 50 запросов/день</span><button type="button" class="link-btn" id="checkMicro">Проверить</button></div><div class="hint">Тянет заголовок, лого и издателя любой ссылки прямо в браузере (CORS открыт). Работает и без ключа на бесплатном лимите; ключ снимает ограничение.</div></div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="microPerLink"><span class="track"></span></span>Microlink для отдельных ссылок</label><div class="hint">Добавляет на странице «Улов» кнопку, чтобы отключить microlink для конкретной ссылки (например приватной) — её URL не уйдёт на сервис.</div></div>
+    <div class="field"><label><i data-lucide="sparkle"></i>«Изучить»: свой ИИ (необязательно)</label>
+      <input type="text" id="studyName" placeholder="Название (напр. NotebookLM)" autocomplete="off">
+      <input type="text" id="studyUrl" placeholder="URL-шаблон: https://.../?q={q}" autocomplete="off" spellcheck="false" style="margin-top:8px">
+      <div class="hint">{q} — готовый запрос со ссылкой, {url} — только ссылка. Появится в меню «Изучить» рядом с Perplexity / ChatGPT / Claude / Gemini / Grok.</div>
+    </div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
     <div class="field">
@@ -600,7 +616,7 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null;
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[]};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:''};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
@@ -623,7 +639,7 @@ function ensureEntry(e){
 function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[]};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||''};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -647,6 +663,7 @@ function fillSettings(){
   const mp=$('#microPerLink');if(mp)mp.checked=settings.microPerLink;
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
+  setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -793,10 +810,10 @@ function renderDigest(entry){
   const ins=(d.insights.length?d.insights:['Ничего заметного.']).map(x=>`<li>${safe(x)}</li>`).join('');
   const sum=d.summaries.length?d.summaries.map(s=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
   const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label></li>`).join(''):'<p>Задач нет.</p>';
-  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<a class="link-row" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span><i data-lucide="external-link"></i></a>`).join('')}</div></div>`:'';
+  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a></div>`).join('')}</div></div>`:'';
   const covered=new Set(d.summaries.map(x=>x.source).filter(Boolean));
   const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
-  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
+  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
   const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map(t=>`<button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`:'';
   $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
     <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
@@ -806,6 +823,7 @@ function renderDigest(entry){
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
   $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.cpurl);toast('Ссылка скопирована');}catch(e){toast('Не удалось',true);}}));
+  $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
   const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(failed.map(l=>l.url).join('\n'));toast('Скопированы все ссылки');}catch(e){toast('Не удалось',true);}});
   $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
   const tmb=$('#tasksMdBtn');if(tmb)tmb.addEventListener('click',()=>{download('tasks_'+dateKey(entry.ts)+'.md',tasksToMd(entry.tasks),'text/markdown');toast('Задачи сохранены .md');});
@@ -836,6 +854,38 @@ async function enrichTitles(entry){
   if(changed){saveHistory();if(currentEntry===entry&&!$('#view-digest').hidden)renderDigest(entry);}
 }
 async function checkMicro(){setStatus('microStatus','проверяю...','wait');const m=await fetchMeta('https://example.com');if(m&&(m.title||m.publisher||m.logo!==undefined))setStatus('microStatus','работает'+(settings.microlinkKey?' (с ключом)':' (free)'),'ok');else setStatus('microStatus','нет ответа / лимит','err');}
+function aiTargets(){
+  const list=[
+    {n:'Perplexity',u:q=>'https://www.perplexity.ai/?q='+q},
+    {n:'ChatGPT',u:q=>'https://chatgpt.com/?q='+q},
+    {n:'Claude',u:q=>'https://claude.ai/new?q='+q},
+    {n:'Gemini',u:()=>'https://gemini.google.com/app'},
+    {n:'Grok',u:q=>'https://grok.com/?q='+q}
+  ];
+  if(settings.studyCustomUrl){list.push({n:settings.studyCustomName||'Свой ИИ',u:(q,url)=>settings.studyCustomUrl.replace('{q}',q).replace('{url}',encodeURIComponent(url))});}
+  return list;
+}
+function studyOutside(e){if(!e.target.closest('#studyMenu')&&!e.target.closest('.study'))closeStudyMenu();}
+function closeStudyMenu(){const m=$('#studyMenu');if(m)m.remove();document.removeEventListener('click',studyOutside);}
+function openStudyMenu(url,anchor){
+  closeStudyMenu();
+  const prompt='Изучи и сделай подробный конспект этой ссылки — ключевые тезисы и выводы:\n'+url;
+  const q=encodeURIComponent(prompt);
+  const targets=aiTargets();
+  const m=document.createElement('div');m.className='study-menu';m.id='studyMenu';
+  m.innerHTML='<div class="sm-h">Изучить в ИИ</div>'+targets.map((t,i)=>`<button data-i="${i}">${esc(t.n)}</button>`).join('');
+  document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect();
+  m.style.top=(r.bottom+6+window.scrollY)+'px';
+  let left=r.right-200+window.scrollX;if(left<8)left=8+window.scrollX;m.style.left=left+'px';
+  m.querySelectorAll('button[data-i]').forEach(b=>b.addEventListener('click',async()=>{
+    const t=targets[+b.dataset.i];
+    try{await navigator.clipboard.writeText(url);}catch(e){}
+    window.open(t.u(q,url),'_blank','noopener');
+    closeStudyMenu();toast('Ссылка скопирована → '+t.n);
+  }));
+  setTimeout(()=>document.addEventListener('click',studyOutside),0);
+}
 function renderActionBar(mode){
   const bar=$('#actionBar');
   const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
@@ -888,12 +938,13 @@ async function runRitual(items,opts){
   $('#loader').hidden=false;$('#streamWrap').hidden=true;$('#result').hidden=true;
   const box=$('#streamBox');box.innerHTML='';
   const startStream=()=>{$('#loader').hidden=true;$('#streamWrap').hidden=false;};
-  const finish=md=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
+  const isDaily=(items===catches);
+  const finish=(md,real)=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);if(isDaily&&real&&catches.length){catches=[];saveCatches();refreshCount();toast('Улов разобран и очищен');}renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
   if(settings.key&&items.length){
     const lk=classifyLinks(items);$('#loaderText').textContent=(lk.yt.length||lk.web.length)?'Читаю ссылки и конспектирую...':'Подключаюсь к '+settings.model+'...';let opened=false;streamAbort=new AbortController();
-    try{const full=await streamGemini(items,txt=>{if(!opened){opened=true;startStream();}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);finish(full||DEMO_MD);}
-    catch(err){if(err.name==='AbortError'){const cur=box.textContent.replace(/\s*$/,'');finish(cur||DEMO_MD);toast('Остановлено');}else{toast('Gemini: '+err.message+' — демо',true);typewriter(DEMO_MD,box,startStream,finish);}}
-  }else{if(!settings.key)toast('Нет API-ключа — демо-разбор');else if(!items.length)toast('Пусто — показываю пример');$('#loaderText').textContent='Разбираю...';setTimeout(()=>typewriter(DEMO_MD,box,startStream,finish),700);}
+    try{const full=await streamGemini(items,txt=>{if(!opened){opened=true;startStream();}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);finish(full||DEMO_MD,!!full);}
+    catch(err){if(err.name==='AbortError'){const cur=box.textContent.replace(/\s*$/,'');finish(cur||DEMO_MD,false);toast('Остановлено');}else{toast('Gemini: '+err.message+' — демо',true);typewriter(DEMO_MD,box,startStream,md=>finish(md,false));}}
+  }else{if(!settings.key)toast('Нет API-ключа — демо-разбор');else if(!items.length)toast('Пусто — показываю пример');$('#loaderText').textContent='Разбираю...';setTimeout(()=>typewriter(DEMO_MD,box,startStream,md=>finish(md,false)),700);}
 }
 $('#ritual').addEventListener('click',()=>runRitual());
 /* single-link analyzer */
@@ -987,7 +1038,7 @@ $('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)r
     history.sort((a,b)=>b.ts-a.ts);
     const cKeys=new Set(catches.map(c=>c.id||(c.at+'|'+c.text)));
     (o.catches||[]).forEach(c=>{const key=c.id||(c.at+'|'+c.text);if(!cKeys.has(key)){if(!c.id)c.id=uid('c');catches.push(c);cKeys.add(key);addedC++;}});
-    if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.microlinkKey)settings.microlinkKey=o.settings.microlinkKey;if(typeof o.settings.microPerLink==='boolean')settings.microPerLink=o.settings.microPerLink;if(Array.isArray(o.settings.microExclude))settings.microExclude=o.settings.microExclude;if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;$('#apikey').value=settings.key;$('#model').value=settings.model;buildSwatches();}
+    if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.microlinkKey)settings.microlinkKey=o.settings.microlinkKey;if(typeof o.settings.microPerLink==='boolean')settings.microPerLink=o.settings.microPerLink;if(Array.isArray(o.settings.microExclude))settings.microExclude=o.settings.microExclude;if(o.settings.studyCustomUrl){settings.studyCustomName=o.settings.studyCustomName||'';settings.studyCustomUrl=o.settings.studyCustomUrl;}if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;$('#apikey').value=settings.key;$('#model').value=settings.model;buildSwatches();}
     saveSettings();saveCatches();saveHistory();refreshCount();renderHistory();
     toast(`Слито: +${addedH} отчётов, +${addedC} записей`);
   }catch(err){toast('Битый файл импорта',true);}e.target.value='';};
@@ -998,7 +1049,7 @@ const ov=$('#overlay');
 $('#openSettings').addEventListener('click',()=>{fillSettings();ov.classList.add('open');});
 $('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
