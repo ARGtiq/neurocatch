@@ -437,6 +437,17 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
 .study-menu .sm-h{font-size:11px;color:var(--faint);padding:7px 10px 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .study-menu button{text-align:left;background:none;border:none;color:var(--text);font:inherit;font-size:14px;font-weight:600;padding:10px 12px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:9px}
 .study-menu button:hover{background:var(--glass-2)}
+
+.err-msg{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--red);background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:10px;padding:10px 12px;word-break:break-word;max-height:120px;overflow:auto}
+.guide-body{font-size:14px;color:var(--text)}
+.guide-body ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:13px}
+.guide-body li{line-height:1.55}
+.guide-body a{color:var(--accent-2);text-decoration:underline}
+.guide-body code{background:var(--glass-2);padding:2px 6px;border-radius:6px;font-size:12px;word-break:break-all}
+.guide-code{position:relative;background:#0c0f1c;border:1px solid var(--stroke);border-radius:10px;padding:12px;margin-top:8px;overflow:auto}
+.guide-code pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#cdd3f0;white-space:pre;line-height:1.45}
+.guide-note{background:rgba(var(--seed-rgb),.09);border:1px solid rgba(var(--seed-rgb),.22);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted);margin-top:14px}
+.guide-btn{font-size:12px;font-weight:600}
 .bug-fab{position:fixed;right:16px;bottom:18px;z-index:45;width:40px;height:40px;border-radius:50%;
   background:rgba(20,20,40,.35);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
   display:grid;place-items:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -545,9 +556,9 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
     <div class="modal-head"><h2><i data-lucide="settings-2"></i>Настройки</h2><button class="icon-btn" id="closeSettings" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
     <div class="sec-title">Провайдер ИИ</div>
     <div class="field"><label for="provider"><i data-lucide="sparkle"></i>Провайдер ИИ</label><select id="provider"><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter (много моделей)</option><option value="ollama">Ollama (локально)</option></select><div class="hint">OpenRouter — быстрые бесплатные модели по одному ключу. Ollama — локально на ПК (нужен запущенный сервер).</div></div>
-    <div class="field"><label for="apikey">Gemini API Key</label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div><div class="status-row"><span class="status" id="gemStatus"><span class="sd"></span>не проверено</span><button type="button" class="link-btn" id="checkGem">Проверить подключение</button></div></div>
+    <div class="field"><label for="apikey" style="display:flex;align-items:center;justify-content:space-between">Gemini API Key<button type="button" class="link-btn guide-btn" data-guide="gemini">как настроить</button></label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div><div class="status-row"><span class="status" id="gemStatus"><span class="sd"></span>не проверено</span><button type="button" class="link-btn" id="checkGem">Проверить подключение</button></div></div>
     <div class="field"><label for="model">Модель Gemini</label><select id="model"><option value="gemini-2.5-flash">gemini-2.5-flash</option><option value="gemini-2.5-pro">gemini-2.5-pro</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select></div>
-    <div class="field prov prov-openrouter" hidden><label for="orKey">OpenRouter API key</label><input type="password" id="orKey" placeholder="sk-or-..." autocomplete="off"><input type="text" id="orModel" placeholder="meta-llama/llama-3.3-70b-instruct:free" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Бесплатные модели помечены :free. Ключ — openrouter.ai/keys. Читает страницы по ссылкам через r.jina.ai.</div></div>
+    <div class="field prov prov-openrouter" hidden><label for="orKey" style="display:flex;align-items:center;justify-content:space-between">OpenRouter API key<button type="button" class="link-btn guide-btn" data-guide="openrouter">как настроить</button></label><input type="password" id="orKey" placeholder="sk-or-..." autocomplete="off"><input type="text" id="orModel" placeholder="meta-llama/llama-3.3-70b-instruct:free" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Бесплатные модели помечены :free. Ключ — openrouter.ai/keys. Читает страницы по ссылкам через r.jina.ai.</div></div>
     <div class="field prov prov-ollama" hidden><label for="ollamaUrl">Ollama URL</label><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false"><input type="text" id="ollamaModel" placeholder="llama3.1" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Запусти Ollama с OLLAMA_ORIGINS=* . С https-страницы к http-localhost браузер может блокировать запрос.</div></div>
     <div class="sec-title">Внешний вид</div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
@@ -559,7 +570,7 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
       <div class="hint">Плейсхолдер <code>{{RECORDS}}</code> заменяется на записи улова. Сохраняй заголовки секций (## Инсайты, ## Конспекты, ## Ссылки, ## Задачи, ## Теги) — иначе разбор дайджеста может сломаться.</div>
     </div>
     <div class="sec-title">Ссылки и метаданные</div>
-    <div class="field"><label for="microKey"><i data-lucide="link"></i>Microlink API key (заголовки ссылок)</label><input type="password" id="microKey" placeholder="Необязательно" autocomplete="off"><div class="status-row"><span class="status" id="microStatus"><span class="sd"></span>без ключа: 50 запросов/день</span><button type="button" class="link-btn" id="checkMicro">Проверить</button></div><div class="hint">Тянет заголовок, лого и издателя любой ссылки прямо в браузере (CORS открыт). Работает и без ключа на бесплатном лимите; ключ снимает ограничение.</div></div>
+    <div class="field"><label for="microKey" style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="link"></i>Microlink API key</span><button type="button" class="link-btn guide-btn" data-guide="microlink">как настроить</button></label><input type="password" id="microKey" placeholder="Необязательно" autocomplete="off"><div class="status-row"><span class="status" id="microStatus"><span class="sd"></span>без ключа: 50 запросов/день</span><button type="button" class="link-btn" id="checkMicro">Проверить</button></div><div class="hint">Тянет заголовок, лого и издателя любой ссылки прямо в браузере (CORS открыт). Работает и без ключа на бесплатном лимите; ключ снимает ограничение.</div></div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="microPerLink"><span class="track"></span></span>Microlink для отдельных ссылок</label><div class="hint">Добавляет на странице «Улов» кнопку, чтобы отключить microlink для конкретной ссылки (например приватной) — её URL не уйдёт на сервис.</div></div>
     <div class="field"><label><i data-lucide="sparkle"></i>«Изучить»: свой ИИ (необязательно)</label>
       <input type="text" id="studyName" placeholder="Название (напр. NotebookLM)" autocomplete="off">
@@ -577,7 +588,7 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
         <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
       </div>
       <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
-      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn" id="cloudPushNow">Выгрузить сейчас</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div>
+      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить сейчас</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div>
       <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
     </div>
     <div class="sec-title">Уведомления</div>
@@ -613,6 +624,25 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
   </div>
 </div>
 
+<div class="overlay" id="errOverlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+    <div class="modal-head"><h2><i data-lucide="alert-triangle"></i>Что-то пошло не так</h2><button class="icon-btn" id="errClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <p style="color:var(--muted);margin-bottom:10px">Произошла ошибка. Данные не потеряны. Можешь отправить отчёт — я починю.</p>
+    <div class="err-msg" id="errMsg"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-primary" id="errReport" style="flex:1"><i data-lucide="bug"></i>Сообщить о баге</button>
+      <button class="btn" id="errDismiss" style="flex:1">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="guideOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h2><i data-lucide="book-open"></i><span id="guideTitle">Настройка</span></h2><button class="icon-btn" id="guideClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <div id="guideBody" class="guide-body"></div>
+  </div>
+</div>
+
 <div class="overlay" id="bugOverlay">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-head"><h2><i data-lucide="bug"></i>Отчёт о проблеме</h2><button class="icon-btn" id="closeBug" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
@@ -638,10 +668,11 @@ let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget=
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';
+const APP_VERSION='2025.7-06';const SW_VER='v15';
+let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
-window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();});
-window.addEventListener('unhandledrejection',e=>{lastErrors.push({t:Date.now(),msg:'promise: '+(e.reason&&e.reason.message||e.reason)});if(lastErrors.length>10)lastErrors.shift();});
+window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
+window.addEventListener('unhandledrejection',e=>{const m='promise: '+(e.reason&&e.reason.message||e.reason);lastErrors.push({t:Date.now(),msg:m});if(lastErrors.length>10)lastErrors.shift();showErrorModal(m);});
 let localUpdatedAt=0, applyingRemote=false, booting=true;
 
 /* ---------- persistence ---------- */
@@ -701,7 +732,7 @@ if(mql)mql.addEventListener('change',()=>{if(settings.themeMode==='auto')applyEf
 setInterval(()=>{if(settings.themeMode==='auto')applyEffective();},600000);
 
 /* ---------- helpers ---------- */
-function show(view){document.querySelectorAll('.view').forEach(v=>{if(v!==view)v.hidden=true;});view.hidden=false;view.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>view.classList.remove('enter')));}
+function show(view){crumb('view '+(view&&view.id));document.querySelectorAll('.view').forEach(v=>{if(v!==view)v.hidden=true;});view.hidden=false;view.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>view.classList.remove('enter')));}
 let toastTimer;
 function toast(msg,err){$('#toastText').textContent=msg;$('#toast').classList.toggle('err',!!err);$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2600);}
 function refreshCount(){const c=$('#counter');$('#count').textContent=catches.length;c.classList.remove('pulse');void c.offsetWidth;c.classList.add('pulse');}
@@ -990,7 +1021,7 @@ async function runRitual(items,opts){
   $('#loader').hidden=false;$('#streamWrap').hidden=true;$('#result').hidden=true;
   const box=$('#streamBox');box.innerHTML='';
   const startStream=()=>{$('#loader').hidden=true;$('#streamWrap').hidden=false;};
-  const isDaily=(items===catches);
+  const isDaily=(items===catches);crumb('ritual '+(isDaily?'daily':'link')+' n='+items.length+' via '+(settings.provider||'gemini'));
   const finish=(md,real)=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);if(isDaily&&real&&catches.length){catches=[];saveCatches();refreshCount();toast('Улов разобран и очищен');}renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
   if(hasLLM()&&items.length){
     const lk=classifyLinks(items);$('#loaderText').textContent=(lk.yt.length||lk.web.length)?('Читаю ссылки и конспектирую… ('+providerName()+')'):('Думает '+providerName()+'…');
@@ -1243,14 +1274,88 @@ function startNotifyLoop(){
 }
 
 /* ---------- bug report ---------- */
+let bugStorage=null;
 function buildBugData(){
-  const safeSettings=Object.assign({},settings);delete safeSettings.key;delete safeSettings.sbKey;delete safeSettings.microlinkKey;delete safeSettings.microExclude;delete safeSettings.orKey;
-  return {app:'NeuroCatch',version:APP_VERSION,when:new Date().toISOString(),url:location.href,secureContext:window.isSecureContext,
-    ua:navigator.userAgent,lang:navigator.language,online:navigator.onLine,theme:document.documentElement.getAttribute('data-theme'),
-    effectiveThemeMode:settings.themeMode,counts:{catches:catches.length,history:history.length},
-    cloud:{configured:!!(settings.sbUrl&&settings.sbKey),signedIn:!!sbUser},settings:safeSettings,recentErrors:lastErrors};
+  const safeSettings=Object.assign({},settings);['key','sbKey','microlinkKey','microExclude','orKey'].forEach(k=>delete safeSettings[k]);
+  let dm='browser';try{if((matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone)dm='standalone';}catch(e){}
+  const av=[...document.querySelectorAll('.view')].find(v=>!v.hidden);
+  const conn=(navigator.connection&&navigator.connection.effectiveType)||'?';
+  return {app:'NeuroCatch',version:APP_VERSION,swCache:SW_VER,when:new Date().toISOString(),url:location.href,
+    secureContext:window.isSecureContext,displayMode:dm,ua:navigator.userAgent,lang:navigator.language,
+    online:navigator.onLine,connection:conn,theme:document.documentElement.getAttribute('data-theme'),
+    effectiveThemeMode:settings.themeMode,provider:settings.provider,
+    viewport:innerWidth+'x'+innerHeight+' @'+(window.devicePixelRatio||1)+'x',
+    activeView:av?av.id:'?',currentEntry:currentEntry?currentEntry.id:null,
+    counts:{catches:catches.length,history:history.length},
+    cloud:{configured:!!(settings.sbUrl&&settings.sbKey),signedIn:!!sbUser,localUpdatedAt:localUpdatedAt},
+    storage:bugStorage,breadcrumbs:crumbs,recentErrors:lastErrors,settings:safeSettings};
 }
-$('#bugBtn').addEventListener('click',()=>{$('#bugNote').value='';$('#bugData').value=JSON.stringify(buildBugData(),null,2);$('#bugOverlay').classList.add('open');});
+async function openBug(prefillNote){
+  $('#bugNote').value=prefillNote||'';
+  $('#bugData').value=JSON.stringify(buildBugData(),null,2);
+  $('#bugOverlay').classList.add('open');
+  try{if(navigator.storage&&navigator.storage.estimate){const est=await navigator.storage.estimate();bugStorage={usageKB:Math.round((est.usage||0)/1024),quotaMB:Math.round((est.quota||0)/1048576)};$('#bugData').value=JSON.stringify(buildBugData(),null,2);}}catch(e){}
+}
+/* error modal */
+function showErrorModal(msg){
+  if(!msg||msg==='Script error.'||/ResizeObserver/.test(msg))return;
+  const el=$('#errMsg');if(el)el.textContent=msg;
+  const ov=$('#errOverlay');if(ov&&!ov.classList.contains('open'))ov.classList.add('open');
+}
+$('#errClose')&&$('#errClose').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
+$('#errDismiss')&&$('#errDismiss').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
+$('#errReport')&&$('#errReport').addEventListener('click',()=>{$('#errOverlay').classList.remove('open');const last=lastErrors[lastErrors.length-1];openBug(last?('Ошибка: '+last.msg):'');});
+/* setup guides */
+const SB_SQL_RAW=`create table if not exists public.states (
+  id uuid primary key references auth.users on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.states enable row level security;
+create policy "own-select" on public.states for select using (auth.uid() = id);
+create policy "own-insert" on public.states for insert with check (auth.uid() = id);
+create policy "own-update" on public.states for update using (auth.uid() = id) with check (auth.uid() = id);`;
+function openGuide(which){
+  const cur=location.href.split('#')[0];
+  const G={
+    gemini:{t:'Настройка Gemini',h:`<ol>
+      <li>Открой <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio → API keys</a>, войди Google-аккаунтом.</li>
+      <li>Нажми <b>Create API key</b> и скопируй ключ.</li>
+      <li>В настройках выбери провайдера <b>Google Gemini</b> и вставь ключ в поле <b>Gemini API Key</b>.</li>
+      <li>Нажми <b>Сохранить</b>, затем <b>Проверить подключение</b> — статус станет «подключено».</li>
+    </ol><div class="guide-note">Есть бесплатный лимит. Ключ хранится только в твоём браузере.</div>`},
+    openrouter:{t:'Настройка OpenRouter',h:`<ol>
+      <li>Зарегистрируйся на <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a>.</li>
+      <li>Открой <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> → <b>Create Key</b> → скопируй (<code>sk-or-...</code>).</li>
+      <li>Выбери провайдера <b>OpenRouter</b> и вставь ключ.</li>
+      <li>Укажи модель. Бесплатные помечены <code>:free</code> — <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">список бесплатных</a>. Напр. <code>meta-llama/llama-3.3-70b-instruct:free</code>.</li>
+      <li>Сохрани и проверь подключение.</li>
+    </ol><div class="guide-note">Статьи по ссылкам читаются через r.jina.ai. Видео (в отличие от Gemini) не разбирается.</div>`},
+    microlink:{t:'Настройка Microlink',h:`<ol>
+      <li>Можно не настраивать — работает без ключа: 50 запросов/день.</li>
+      <li>Для большего лимита зарегистрируйся на <a href="https://microlink.io" target="_blank" rel="noopener">microlink.io</a>.</li>
+      <li>В Dashboard возьми <b>API key</b> и вставь в поле <b>Microlink API key</b>, сохрани.</li>
+    </ol><div class="guide-note">Тянет заголовок, лого и издателя ссылок. Приватные ссылки исключаются тумблером «Microlink для отдельных ссылок».</div>`},
+    supabase:{t:'Настройка Supabase',h:`<ol>
+      <li>На <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> создай проект (New project). Запомни пароль БД, регион — поближе.</li>
+      <li><b>Project Settings → API</b>: скопируй <b>Project URL</b> и ключ <b>anon public</b>.</li>
+      <li>Открой <b>SQL Editor</b>, вставь и выполни:
+        <div class="guide-code"><button class="mini" id="guideSqlCopy" title="Скопировать" style="position:absolute;top:8px;right:8px"><i data-lucide="clipboard"></i></button><pre>${esc(SB_SQL_RAW)}</pre></div></li>
+      <li><b>Authentication → Providers → Email</b>: включи, оставь <b>Magic Link</b>.</li>
+      <li><b>Authentication → URL Configuration</b>: в <b>Site URL</b> и <b>Redirect URLs</b> добавь:<br><code>${esc(cur)}</code></li>
+      <li>В настройках вставь <b>URL</b>, <b>anon key</b>, <b>email</b> → <b>Войти по ссылке</b> → открой письмо, вернёшься авторизованным.</li>
+      <li>(Опц.) GitHub Actions пинг раз в 3 дня, чтобы free-проект не засыпал.</li>
+    </ol><div class="guide-note">anon-ключ публичный — держать в приложении безопасно (данные защищены RLS). Никогда не вставляй service_role ключ.</div>`}
+  };
+  const g=G[which]||G.gemini;
+  $('#guideTitle').textContent=g.t;$('#guideBody').innerHTML=g.h;lucide.createIcons();
+  const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(SB_SQL_RAW);toast('SQL скопирован');}catch(e){toast('Не удалось',true);}});
+  $('#guideOverlay').classList.add('open');
+}
+$('#guideClose')&&$('#guideClose').addEventListener('click',()=>$('#guideOverlay').classList.remove('open'));
+$('#guideOverlay')&&$('#guideOverlay').addEventListener('click',e=>{if(e.target===$('#guideOverlay'))$('#guideOverlay').classList.remove('open');});
+$('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('[data-guide]');if(b){e.preventDefault();e.stopPropagation();openGuide(b.dataset.guide);}});
+$('#bugBtn').addEventListener('click',()=>openBug(''));
 $('#closeBug').addEventListener('click',()=>$('#bugOverlay').classList.remove('open'));
 $('#bugOverlay').addEventListener('click',e=>{if(e.target===$('#bugOverlay'))$('#bugOverlay').classList.remove('open');});
 $('#bugCopy').addEventListener('click',async()=>{const rep='ПРОБЛЕМА:\n'+($('#bugNote').value||'(не описано)')+'\n\nДАННЫЕ:\n'+$('#bugData').value;try{await navigator.clipboard.writeText(rep);toast('Отчёт скопирован — вставь его мне');}catch(e){toast('Не удалось скопировать',true);}});
