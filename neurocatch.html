@@ -235,6 +235,7 @@ textarea::placeholder{color:var(--faint)}
 .link-row:hover{border-color:var(--stroke-strong);transform:translateY(-1px)}
 .link-row .lic{width:34px;height:34px;flex:0 0 auto;border-radius:10px;background:rgba(var(--seed-rgb),.12);color:var(--accent-2);display:grid;place-items:center}
 .link-row .lic svg{width:17px;height:17px}
+.link-row .lic img.lg{width:22px;height:22px;border-radius:6px;object-fit:cover}
 .link-row .lt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .link-row .ltt{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .link-row .lth{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -369,6 +370,63 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
 .toast svg{width:17px;height:17px;color:var(--green)}
 .toast.err svg{color:var(--red)}
 
+
+/* sync indicator */
+.sync-dot{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;flex:0 0 auto}
+.sync-dot .d{width:9px;height:9px;border-radius:50%;background:var(--faint);transition:.25s}
+.sync-dot.ok .d{background:var(--green);box-shadow:0 0 8px rgba(61,220,151,.6)}
+.sync-dot.err .d{background:var(--red)}
+.sync-dot.sync{border:2px solid rgba(var(--seed-rgb),.25);border-top-color:var(--accent);animation:spin 0.8s linear infinite}
+.sync-dot.sync .d{display:none}
+/* status rows */
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.status .sd{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.status.ok .sd{background:var(--green);box-shadow:0 0 8px rgba(61,220,151,.5)}
+.status.err .sd{background:var(--red)}
+.status.wait .sd{background:var(--accent);animation:blink 1s ease-in-out infinite}
+/* switch */
+.switch{position:relative;display:inline-block;width:46px;height:26px;flex:0 0 auto;cursor:pointer}
+.switch input{display:none}
+.switch .track{position:absolute;inset:0;border-radius:999px;background:var(--glass);border:1px solid var(--stroke);transition:.25s}
+.switch .track:before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:.25s}
+.switch input:checked + .track{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+.switch input:checked + .track:before{transform:translateX(20px);background:#fff}
+.field input[type=time]{width:100%;padding:13px 14px;border-radius:14px;font:inherit;font-size:15px;background:var(--glass);border:1px solid var(--stroke);color:var(--text);outline:none}
+.field input[type=time]:focus{border-color:rgba(var(--seed-rgb),.55);box-shadow:0 0 0 3px rgba(var(--seed-rgb),.12)}
+/* failed links block */
+.fail-box{background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.25)}
+.fail-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--stroke);margin-bottom:8px}
+.fail-row:last-child{margin-bottom:0}
+.fail-row .u{flex:1;min-width:0;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+.fail-row .cp{width:32px;height:32px;flex:0 0 auto;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.fail-row .cp:hover{color:var(--text);border-color:var(--stroke-strong)}
+.fail-row .cp svg{width:15px;height:15px}
+.fail-all{margin-top:4px}
+/* bug FAB */
+
+/* mini export buttons */
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sec-head h3{margin-bottom:0}
+.sec-actions{display:flex;align-items:center;gap:6px}
+.mini{width:32px;height:32px;flex:0 0 auto;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.18s var(--ease)}
+.mini:hover{color:var(--text);border-color:var(--stroke-strong);transform:translateY(-1px)}
+.mini svg{width:15px;height:15px}
+.summary-item .sum-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.summary-item .sum-head h4{margin-bottom:0}
+/* queue microlink toggle */
+.ql-btn{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:6px 11px;border-radius:9px;font:inherit;font-size:12px;font-weight:600;
+  background:rgba(var(--seed-rgb),.10);border:1px solid rgba(var(--seed-rgb),.3);color:var(--accent-2);cursor:pointer;transition:.18s}
+.ql-btn:hover{background:rgba(var(--seed-rgb),.18)}
+.ql-btn svg{width:13px;height:13px}
+.ql-btn.off{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.35);color:var(--red);text-decoration:line-through}
+.bug-fab{position:fixed;right:16px;bottom:18px;z-index:45;width:40px;height:40px;border-radius:50%;
+  background:rgba(20,20,40,.35);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
+  display:grid;place-items:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:.5;transition:.2s var(--ease)}
+.bug-fab:hover{opacity:1;color:var(--text);border-color:var(--stroke-strong);transform:translateY(-2px)}
+.bug-fab svg{width:19px;height:19px}
+html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -383,8 +441,10 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
         <button class="icon-btn" id="openSettings" aria-label="Настройки"><i data-lucide="settings"></i></button>
         <button class="icon-btn" id="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
         <button class="icon-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
+        <button class="icon-btn" id="openLink" aria-label="Разобрать ссылку"><i data-lucide="link"></i></button>
       </div>
       <div class="grp">
+        <span id="syncDot" class="sync-dot" title="Синхронизация" hidden></span>
         <button class="icon-btn" id="themeBtn" aria-label="Тема"><i data-lucide="moon"></i></button>
         <button class="counter" id="counter"><span class="dot"></span>Улов: <b id="count">0</b></button>
       </div>
@@ -441,11 +501,6 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
     <!-- HISTORY -->
     <section class="view" id="view-history" hidden>
       <div class="head-row"><button class="back" id="histBack"><i data-lucide="arrow-left"></i>Назад</button><h2>История</h2></div>
-      <div class="hist-tools">
-        <button class="btn" id="exportBtn"><i data-lucide="download"></i>Экспорт .json</button>
-        <button class="btn" id="importBtn"><i data-lucide="upload"></i>Импорт</button>
-        <input type="file" id="importFile" accept="application/json,.json" hidden>
-      </div>
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="searchInput" placeholder="Поиск по отчётам..."></div>
       <div class="cal">
         <div class="cal-head"><div class="m" id="calMonth"></div>
@@ -461,7 +516,7 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
     <!-- TASKS -->
     <section class="view" id="view-tasks" hidden>
       <div class="head-row"><button class="back" id="tasksBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Задачи</h2></div>
-      <div class="list-head"><span id="tasksLabel">Открыто: 0</span><span class="chip" id="toggleDone" hidden>Скрыть выполненные</span></div>
+      <div class="list-head"><span id="tasksLabel">Открыто: 0</span><div class="sec-actions"><button class="mini" id="allTasksMd" title="Скачать все задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="allTasksTick" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button><span class="chip" id="toggleDone" hidden>Скрыть выполненные</span></div></div>
       <div class="rep-list" id="taskList"></div>
     </section>
   </div>
@@ -473,6 +528,8 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
     <div class="modal-head"><h2><i data-lucide="settings-2"></i>Настройки</h2><button class="icon-btn" id="closeSettings" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
     <div class="field"><label for="apikey">Gemini API Key</label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div></div>
     <div class="field"><label for="model">Модель</label><select id="model"><option value="gemini-2.5-flash">gemini-2.5-flash</option><option value="gemini-2.5-pro">gemini-2.5-pro</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select></div>
+    <div class="field"><label for="microKey"><i data-lucide="link"></i>Microlink API key (заголовки ссылок)</label><input type="password" id="microKey" placeholder="Необязательно" autocomplete="off"><div class="status-row"><span class="status" id="microStatus"><span class="sd"></span>без ключа: 50 запросов/день</span><button type="button" class="link-btn" id="checkMicro">Проверить</button></div><div class="hint">Тянет заголовок, лого и издателя любой ссылки прямо в браузере (CORS открыт). Работает и без ключа на бесплатном лимите; ключ снимает ограничение.</div></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="microPerLink"><span class="track"></span></span>Microlink для отдельных ссылок</label><div class="hint">Добавляет на странице «Улов» кнопку, чтобы отключить microlink для конкретной ссылки (например приватной) — её URL не уйдёт на сервис.</div></div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
     <div class="field">
@@ -490,9 +547,49 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
         <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
       </div>
       <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
+      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn" id="cloudPushNow">Выгрузить сейчас</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div>
       <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
     </div>
+    <div class="field">
+      <label><i data-lucide="bell"></i>Напоминание о ритуале</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <label class="switch"><input type="checkbox" id="notifyOn"><span class="track"></span></label>
+        <input type="time" id="notifyTime" value="21:00" style="flex:1">
+        <button type="button" class="btn" id="notifyTest" style="padding:12px 14px">Тест</button>
+      </div>
+      <div class="hint">Работает, пока приложение открыто или установлено как PWA. Фоновые уведомления при закрытом приложении браузеры не гарантируют.</div>
+    </div>
+    <div class="field">
+      <label><i data-lucide="download"></i>Данные</label>
+      <div style="display:flex;gap:10px">
+        <button type="button" class="btn" id="exportBtn" style="flex:1"><i data-lucide="download"></i>Экспорт .json</button>
+        <button type="button" class="btn" id="importBtn" style="flex:1"><i data-lucide="upload"></i>Импорт</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+    </div>
     <button class="btn btn-primary" id="saveSettings" style="width:100%"><i data-lucide="check"></i>Сохранить</button>
+  </div>
+</div>
+
+<button class="bug-fab" id="bugBtn" title="Сообщить о баге / отправить данные"><i data-lucide="bug"></i></button>
+
+<div class="overlay" id="linkOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h2><i data-lucide="link"></i>Разобрать ссылку</h2><button class="icon-btn" id="closeLink" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <div class="field"><label for="linkInput">URL статьи или видео</label><input type="text" id="linkInput" placeholder="https://..." autocomplete="off" spellcheck="false"><div class="hint">Подтянет заголовок и сделает конспект содержимого. Отчёт сохранится в историю.</div></div>
+    <button class="btn btn-primary" id="linkGo" style="width:100%"><i data-lucide="sparkle"></i>Разобрать</button>
+  </div>
+</div>
+
+<div class="overlay" id="bugOverlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h2><i data-lucide="bug"></i>Отчёт о проблеме</h2><button class="icon-btn" id="closeBug" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <div class="field"><label for="bugNote">Что не так?</label><textarea id="bugNote" class="prompt-ta" style="min-height:90px" placeholder="Опиши, что произошло..."></textarea></div>
+    <div class="field"><label>Собранные данные (приложатся автоматически)</label><textarea id="bugData" class="prompt-ta" style="min-height:120px" readonly></textarea></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" id="bugCopy" style="flex:1"><i data-lucide="clipboard"></i>Скопировать отчёт</button>
+      <button class="btn" id="bugDownload" style="flex:1"><i data-lucide="download"></i>Скачать .json</button>
+    </div>
   </div>
 </div>
 
@@ -503,12 +600,17 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null;
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:''};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[]};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const APP_VERSION='2025.7-06';
+let lastErrors=[];
+window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();});
+window.addEventListener('unhandledrejection',e=>{lastErrors.push({t:Date.now(),msg:'promise: '+(e.reason&&e.reason.message||e.reason)});if(lastErrors.length>10)lastErrors.shift();});
+let localUpdatedAt=0, applyingRemote=false;
 
 /* ---------- persistence ---------- */
 function ensureEntry(e){
@@ -520,7 +622,8 @@ function ensureEntry(e){
 }
 function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||''};}catch(e){}
+  localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[]};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -528,13 +631,14 @@ function loadAll(){
   history.forEach(ensureEntry);
   saveCatches();saveHistory();
   $('#apikey').value=settings.key;$('#model').value=settings.model;$('#themeSel').value=settings.themeMode;$('#colorPick').value=settings.seed;$('#promptInput').value=settings.prompt||DEFAULT_PROMPT;
-  $('#sbUrl').value=settings.sbUrl;$('#sbKey').value=settings.sbKey;$('#sbEmail').value=settings.sbEmail;
+  $('#sbUrl').value=settings.sbUrl;$('#sbKey').value=settings.sbKey;$('#sbEmail').value=settings.sbEmail;$('#microKey').value=settings.microlinkKey;$('#microPerLink').checked=settings.microPerLink;
   refreshCount();setAccent(settings.seed,false);applyThemeMode(settings.themeMode,false);buildSwatches();
   if(settings.sbUrl&&settings.sbKey)cloudInit();
 }
+function touchLocal(){if(applyingRemote)return;localUpdatedAt=Date.now();localStorage.setItem('neurocatch_updated',String(localUpdatedAt));scheduleCloudPush();}
 function saveSettings(){localStorage.setItem('neurocatch_settings',JSON.stringify(settings));}
-function saveCatches(){localStorage.setItem('neurocatch_catches',JSON.stringify(catches));scheduleCloudPush();}
-function saveHistory(){localStorage.setItem('neurocatch_history',JSON.stringify(history));scheduleCloudPush();}
+function saveCatches(){localStorage.setItem('neurocatch_catches',JSON.stringify(catches));touchLocal();}
+function saveHistory(){localStorage.setItem('neurocatch_history',JSON.stringify(history));touchLocal();}
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
 /* ---------- color / Material You ---------- */
@@ -582,12 +686,18 @@ $('#queueBack').addEventListener('click',()=>show($('#view-input')));
 function renderQueue(){
   const box=$('#qList');$('#queueRitual').disabled=!catches.length;
   if(!catches.length){box.innerHTML='<div class="empty"><i data-lucide="inbox"></i>Улов пуст. Закинь первую мысль.</div>';lucide.createIcons();return;}
-  box.innerHTML=catches.map(c=>`<div class="q-item" data-id="${c.id}">
-    <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}</div></div>
-    <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`).join('');
+  const excl=new Set(settings.microExclude||[]);
+  box.innerHTML=catches.map(c=>{
+    const urls=c.text.match(URL_RE)||[];
+    const off=urls.length&&urls.every(u=>excl.has(u.replace(/[),.]+$/,'')));
+    const mbtn=(settings.microPerLink&&urls.length)?`<button class="ql-btn${off?' off':''}" data-mic="${c.id}"><i data-lucide="link"></i>${off?'microlink выкл':'microlink вкл'}</button>`:'';
+    return `<div class="q-item" data-id="${c.id}">
+      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}</div>${mbtn}</div>
+      <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
   box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',()=>{catches=catches.filter(x=>x.id!==b.dataset.del);saveCatches();refreshCount();renderQueue();}));
+  box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
 }
 $('#queueRitual').addEventListener('click',()=>runRitual());
 
@@ -672,30 +782,51 @@ const attr=u=>String(u).replace(/"/g,'%22');
 function renderDigest(entry){
   currentEntry=entry;const d=parseMd(entry.markdown);
   const ins=(d.insights.length?d.insights:['Ничего заметного.']).map(x=>`<li>${safe(x)}</li>`).join('');
-  const sum=d.summaries.length?d.summaries.map(s=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item">${s.title?`<h4>${safe(s.title)}${badge}</h4>`:''}${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
+  const sum=d.summaries.length?d.summaries.map(s=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
   const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label></li>`).join(''):'<p>Задач нет.</p>';
-  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<a class="link-row" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic"><i data-lucide="link"></i></span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(hostOf(l.url))}</span></span><i data-lucide="external-link"></i></a>`).join('')}</div></div>`:'';
+  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<a class="link-row" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span><i data-lucide="external-link"></i></a>`).join('')}</div></div>`:'';
+  const covered=new Set(d.summaries.map(x=>x.source).filter(Boolean));
+  const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
+  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
   const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map(t=>`<button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`:'';
   $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
     <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
     ${links}
-    <div class="md-section"><h3>✅ Задачи</h3><ul>${tasks}</ul></div>${tags}`;
+    ${failBlock}
+    <div class="md-section"><div class="sec-head"><h3>✅ Задачи</h3><div class="sec-actions"><button class="mini" id="tasksMdBtn" title="Скачать задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="tasksTickBtn" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button></div></div><ul>${tasks}</ul></div>${tags}`;
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
+  $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.cpurl);toast('Ссылка скопирована');}catch(e){toast('Не удалось',true);}}));
+  const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(failed.map(l=>l.url).join('\n'));toast('Скопированы все ссылки');}catch(e){toast('Не удалось',true);}});
+  $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
+  const tmb=$('#tasksMdBtn');if(tmb)tmb.addEventListener('click',()=>{download('tasks_'+dateKey(entry.ts)+'.md',tasksToMd(entry.tasks),'text/markdown');toast('Задачи сохранены .md');});
+  const ttb=$('#tasksTickBtn');if(ttb)ttb.addEventListener('click',()=>copyTick(entry.tasks));
   lucide.createIcons();
   enrichTitles(entry);
 }
 function openHistoryWithTag(tag){filterDate=null;searchQuery='';$('#searchInput').value='';tagFilter=tag;renderHistory();show($('#view-history'));}
+async function fetchMeta(url){ // YouTube -> oEmbed (без лимита); прочее -> microlink.io
+  try{
+    if(isYT(url)){const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(url));if(!r.ok)return null;const j=await r.json();return{title:j.title||'',logo:j.thumbnail_url||'',publisher:j.author_name||''};}
+    const opt=settings.microlinkKey?{headers:{'x-api-key':settings.microlinkKey}}:{};
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url),opt);
+    if(!r.ok)return null;const j=await r.json();
+    if(j&&j.status==='success'&&j.data){const dd=j.data;return{title:dd.title||'',desc:dd.description||'',logo:(dd.logo&&dd.logo.url)||(dd.image&&dd.image.url)||'',publisher:dd.publisher||''};}
+    return null;
+  }catch(e){return null;}
+}
 async function enrichTitles(entry){
   if(!entry.links||!entry.links.length)return;let changed=false;
-  await Promise.all(entry.links.map(async l=>{
-    if(l._tried)return;
-    const needs=!l.title||l.title===hostOf(l.url);
-    if(!(isYT(l.url)&&needs))return;l._tried=true;
-    try{const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(l.url));if(r.ok){const j=await r.json();if(j&&j.title){l.title=j.title;changed=true;}}}catch(e){}
-  }));
+  const excl=new Set(settings.microExclude||[]);
+  const todo=entry.links.filter(l=>!l._tried&&!excl.has(l.url)&&(!l.title||l.title===hostOf(l.url)||!l.logo)).slice(0,10);
+  if(!todo.length)return;
+  await Promise.all(todo.map(async l=>{l._tried=true;const m=await fetchMeta(l.url);if(!m)return;
+    if(m.title&&(!l.title||l.title===hostOf(l.url))){l.title=m.title;changed=true;}
+    if(m.logo&&!l.logo){l.logo=m.logo;changed=true;}
+    if(m.publisher&&!l.publisher){l.publisher=m.publisher;changed=true;}}));
   if(changed){saveHistory();if(currentEntry===entry&&!$('#view-digest').hidden)renderDigest(entry);}
 }
+async function checkMicro(){setStatus('microStatus','проверяю...','wait');const m=await fetchMeta('https://example.com');if(m&&(m.title||m.publisher||m.logo!==undefined))setStatus('microStatus','работает'+(settings.microlinkKey?' (с ключом)':' (free)'),'ok');else setStatus('microStatus','нет ответа / лимит','err');}
 function renderActionBar(mode){
   const bar=$('#actionBar');
   const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
@@ -741,27 +872,40 @@ const DEMO_MD=`## 🧠 Инсайты
 #идея #задача #фокус #видео`;
 
 /* ---------- ritual ---------- */
-function saveToHistory(md){const d=parseMd(md);const entry={id:uid('d'),ts:Date.now(),date:dateKey(Date.now()),markdown:md,tags:d.tags,links:assembleLinks(d,catches.map(c=>c.text).join('\n')),tasks:d.tasks.map((t,i)=>({id:'d'+Date.now()+'_t'+i,text:t,done:false}))};history.unshift(entry);saveHistory();return entry;}
-async function runRitual(){
-  backTarget='#view-input';$('#digestTitle').textContent='Дайджест';show($('#view-digest'));
+function saveToHistory(md,items){const d=parseMd(md);const src=(items||catches).map(c=>c.text).join('\n');const entry={id:uid('d'),ts:Date.now(),date:dateKey(Date.now()),markdown:md,tags:d.tags,links:assembleLinks(d,src),tasks:d.tasks.map((t,i)=>({id:'d'+Date.now()+'_t'+i,text:t,done:false}))};history.unshift(entry);saveHistory();return entry;}
+async function runRitual(items,opts){
+  opts=opts||{};items=items||catches;
+  backTarget=opts.back||'#view-input';$('#digestTitle').textContent=opts.title||'Дайджест';show($('#view-digest'));
   $('#loader').hidden=false;$('#streamWrap').hidden=true;$('#result').hidden=true;
   const box=$('#streamBox');box.innerHTML='';
   const startStream=()=>{$('#loader').hidden=true;$('#streamWrap').hidden=false;};
-  const finish=md=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md);renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
-  if(settings.key&&catches.length){
-    const lk=classifyLinks(catches);$('#loaderText').textContent=(lk.yt.length||lk.web.length)?'Читаю ссылки и конспектирую...':'Подключаюсь к '+settings.model+'...';let opened=false;streamAbort=new AbortController();
-    try{const full=await streamGemini(catches,txt=>{if(!opened){opened=true;startStream();}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);finish(full||DEMO_MD);}
+  const finish=md=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
+  if(settings.key&&items.length){
+    const lk=classifyLinks(items);$('#loaderText').textContent=(lk.yt.length||lk.web.length)?'Читаю ссылки и конспектирую...':'Подключаюсь к '+settings.model+'...';let opened=false;streamAbort=new AbortController();
+    try{const full=await streamGemini(items,txt=>{if(!opened){opened=true;startStream();}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);finish(full||DEMO_MD);}
     catch(err){if(err.name==='AbortError'){const cur=box.textContent.replace(/\s*$/,'');finish(cur||DEMO_MD);toast('Остановлено');}else{toast('Gemini: '+err.message+' — демо',true);typewriter(DEMO_MD,box,startStream,finish);}}
-  }else{if(!settings.key)toast('Нет API-ключа — демо-разбор');else if(!catches.length)toast('Улова нет — показываю пример');$('#loaderText').textContent='Разбираю дневной улов...';setTimeout(()=>typewriter(DEMO_MD,box,startStream,finish),700);}
+  }else{if(!settings.key)toast('Нет API-ключа — демо-разбор');else if(!items.length)toast('Пусто — показываю пример');$('#loaderText').textContent='Разбираю...';setTimeout(()=>typewriter(DEMO_MD,box,startStream,finish),700);}
 }
-$('#ritual').addEventListener('click',runRitual);
+$('#ritual').addEventListener('click',()=>runRitual());
+/* single-link analyzer */
+$('#openLink').addEventListener('click',()=>{$('#linkInput').value='';$('#linkOverlay').classList.add('open');setTimeout(()=>$('#linkInput').focus(),100);});
+$('#closeLink').addEventListener('click',()=>$('#linkOverlay').classList.remove('open'));
+$('#linkOverlay').addEventListener('click',e=>{if(e.target===$('#linkOverlay'))$('#linkOverlay').classList.remove('open');});
+$('#linkGo').addEventListener('click',()=>{const u=$('#linkInput').value.trim();if(!/^https?:\/\//i.test(u)){toast('Вставь ссылку (http/https)',true);return;}$('#linkOverlay').classList.remove('open');runRitual([{id:uid('c'),text:u,at:Date.now()}],{title:'Разбор ссылки'});});
 $('#stopBtn').addEventListener('click',()=>{if(streamAbort)streamAbort.abort();else typewriterStop=true;});
 function typewriter(md,box,onStart,onDone){onStart();typewriterStop=false;let i=0;(function tick(){if(typewriterStop){onDone(md.slice(0,i)||md);return;}i=Math.min(md.length,i+2);box.innerHTML=esc(md.slice(0,i))+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;if(i<md.length)setTimeout(tick,14);else onDone(md);})();}
 
 /* ---------- digest shared actions ---------- */
 $('#backBtn').addEventListener('click',()=>show($(backTarget)));
 async function copyDigest(){if(!currentEntry)return;try{await navigator.clipboard.writeText(currentEntry.markdown);toast('Скопировано в Obsidian');}catch(e){toast('Не удалось скопировать',true);}}
-function exportMd(){if(!currentEntry)return;const blob=new Blob([currentEntry.markdown],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(currentEntry.ts)+'.md';a.click();URL.revokeObjectURL(a.href);toast('Экспорт .md');}
+function download(name,text,mime){const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function slug(t){return (String(t||'').trim().toLowerCase().replace(/[^\wа-яё]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,40))||'konspekt';}
+function exportMd(){if(!currentEntry)return;download('neurocatch_'+dateKey(currentEntry.ts)+'.md',currentEntry.markdown,'text/markdown');toast('Экспорт .md');}
+function downloadSummary(i){if(!currentEntry)return;const s=parseMd(currentEntry.markdown).summaries[i];if(!s)return;const md='### '+(s.title||'Конспект')+(s.source?'\n\n🔗 '+s.source:'')+'\n\n'+s.body+'\n';download('konspekt_'+slug(s.title)+'.md',md,'text/markdown');toast('Конспект сохранён .md');}
+function tasksToMd(list){return list.map(t=>'- ['+(t.done?'x':' ')+'] '+t.text).join('\n')+'\n';}
+function tasksForTick(list){return list.filter(t=>!t.done).map(t=>t.text).join('\n');}
+async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Нет открытых задач');return;}try{await navigator.clipboard.writeText(txt);toast('Скопировано — вставь в TickTick как несколько задач');}catch(e){toast('Не удалось скопировать',true);}}
+function allTasksFlat(){const a=[];history.forEach(h=>{ensureEntry(h);h.tasks.forEach(t=>a.push({text:t.text,done:t.done,ts:h.ts}));});return a.sort((x,y)=>(x.done-y.done)||(y.ts-x.ts));}
 
 /* ---------- history / calendar ---------- */
 $('#openHistory').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();show($('#view-history'));});
@@ -834,7 +978,7 @@ $('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)r
     history.sort((a,b)=>b.ts-a.ts);
     const cKeys=new Set(catches.map(c=>c.id||(c.at+'|'+c.text)));
     (o.catches||[]).forEach(c=>{const key=c.id||(c.at+'|'+c.text);if(!cKeys.has(key)){if(!c.id)c.id=uid('c');catches.push(c);cKeys.add(key);addedC++;}});
-    if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;$('#apikey').value=settings.key;$('#model').value=settings.model;buildSwatches();}
+    if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.microlinkKey)settings.microlinkKey=o.settings.microlinkKey;if(typeof o.settings.microPerLink==='boolean')settings.microPerLink=o.settings.microPerLink;if(Array.isArray(o.settings.microExclude))settings.microExclude=o.settings.microExclude;if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;$('#apikey').value=settings.key;$('#model').value=settings.model;buildSwatches();}
     saveSettings();saveCatches();saveHistory();refreshCount();renderHistory();
     toast(`Слито: +${addedH} отчётов, +${addedC} записей`);
   }catch(err){toast('Битый файл импорта',true);}e.target.value='';};
@@ -845,7 +989,7 @@ const ov=$('#overlay');
 $('#openSettings').addEventListener('click',()=>ov.classList.add('open'));
 $('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
@@ -865,40 +1009,47 @@ async function sbClient(){
 async function cloudInit(){
   const c=await sbClient();if(!c)return;
   try{const {data}=await c.auth.getSession();
-    if(data&&data.session){sbUser=data.session.user;setCloudStatus(sbUser.email,true);await cloudPull(true);}
-    else setCloudStatus('не в сети');
-    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){setCloudStatus(sbUser.email,true);cloudPull(true);}else setCloudStatus('не в сети');updateCloudButtons();});
+    if(data&&data.session){sbUser=data.session.user;setCloudStatus(sbUser.email,true);setSync('ok');await cloudPull(true);}
+    else{setCloudStatus('не в сети');setSync();}
+    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{setCloudStatus('не в сети');setSync();}updateCloudButtons();});
   }catch(e){setCloudStatus('ошибка',false);}
   updateCloudButtons();
 }
 function cloudAppSettings(){return {model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt};}
-function mergeState(remote){
-  if(!remote||typeof remote!=='object')return;
-  if(Array.isArray(remote.history)){const ids=new Set(history.map(h=>h.id));remote.history.forEach(h=>{if(h&&h.id&&!ids.has(h.id)){ensureEntry(h);history.push(h);ids.add(h.id);}});history.sort((a,b)=>b.ts-a.ts);}
-  if(Array.isArray(remote.catches)){const ks=new Set(catches.map(c=>c.id||(c.at+'|'+c.text)));remote.catches.forEach(c=>{const k=c.id||(c.at+'|'+c.text);if(!ks.has(k)){if(!c.id)c.id=uid('c');catches.push(c);ks.add(k);}});}
-  if(remote.settings&&typeof remote.settings==='object'){const rs=remote.settings;if(rs.model)settings.model=rs.model;if(typeof rs.prompt==='string')settings.prompt=rs.prompt;if(rs.seed){settings.seed=rs.seed;setAccent(rs.seed,false);buildSwatches();}if(rs.themeMode){applyThemeMode(rs.themeMode,false);}$('#model').value=settings.model;$('#promptInput').value=settings.prompt||DEFAULT_PROMPT;}
+function setSync(state){const el=$('#syncDot');if(!el)return;el.hidden=!sbUser;el.className='sync-dot'+(state?' '+state:'');el.innerHTML=state==='ok'?'<span class="d"></span>':state==='err'?'<span class="d"></span>':state==='sync'?'':'<span class="d"></span>';}
+function replaceState(remote){ // last-writer-wins: полностью заменяем локальное состояние удалённым
+  applyingRemote=true;
+  if(Array.isArray(remote.catches)){catches=remote.catches;catches.forEach(c=>{if(!c.id)c.id=uid('c');});}
+  if(Array.isArray(remote.history)){history=remote.history;history.forEach(ensureEntry);history.sort((a,b)=>b.ts-a.ts);}
+  if(remote.settings&&typeof remote.settings==='object'){const rs=remote.settings;if(rs.model)settings.model=rs.model;if(typeof rs.prompt==='string')settings.prompt=rs.prompt;if(rs.seed){settings.seed=rs.seed;setAccent(rs.seed,false);buildSwatches();}if(rs.themeMode)applyThemeMode(rs.themeMode,false);$('#model').value=settings.model;$('#promptInput').value=settings.prompt||DEFAULT_PROMPT;}
+  localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
+  localStorage.setItem('neurocatch_history',JSON.stringify(history));
+  saveSettings();refreshCount();
+  applyingRemote=false;
 }
 async function cloudPull(silent){
   const c=await sbClient();if(!c||!sbUser)return;
-  cloudBusy=true;
-  try{const {data,error}=await c.from('states').select('data').eq('id',sbUser.id).maybeSingle();
+  cloudBusy=true;setSync('sync');
+  try{const {data,error}=await c.from('states').select('data,updated_at').eq('id',sbUser.id).maybeSingle();
     if(error)throw error;
-    if(data&&data.data)mergeState(data.data);
-    localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
-    localStorage.setItem('neurocatch_history',JSON.stringify(history));
-    saveSettings();refreshCount();
-    cloudBusy=false;await cloudPush(true);
-    if(!silent)toast('Синхронизировано');
-  }catch(e){cloudBusy=false;toast('Синхр: '+(e.message||e),true);}
+    const remoteTs=data&&data.updated_at?new Date(data.updated_at).getTime():0;
+    if(data&&data.data&&remoteTs>localUpdatedAt){ // облако свежее — принимаем его
+      replaceState(data.data);localUpdatedAt=remoteTs;localStorage.setItem('neurocatch_updated',String(remoteTs));
+      cloudBusy=false;setSync('ok');if(!silent)toast('Загружено из облака (свежее)');
+    }else{ // локальное свежее или равно — выгружаем
+      cloudBusy=false;await cloudPush(true);if(!silent)toast('Синхронизировано');
+    }
+  }catch(e){cloudBusy=false;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
 }
 async function cloudPush(silent){
-  if(cloudBusy)return;const c=await sbClient();if(!c||!sbUser)return;
-  try{const payload={catches,history,settings:cloudAppSettings()};
-    const {error}=await c.from('states').upsert({id:sbUser.id,data:payload,updated_at:new Date().toISOString()});
-    if(error)throw error;if(!silent)toast('Выгружено в облако');
-  }catch(e){if(!silent)toast('Выгрузка: '+(e.message||e),true);}
+  if(cloudBusy||applyingRemote){return;}const c=await sbClient();if(!c||!sbUser)return;
+  setSync('sync');
+  try{const ts=localUpdatedAt||Date.now();const payload={catches,history,settings:cloudAppSettings()};
+    const {error}=await c.from('states').upsert({id:sbUser.id,data:payload,updated_at:new Date(ts).toISOString()});
+    if(error)throw error;setSync('ok');if(!silent)toast('Выгружено в облако');
+  }catch(e){setSync('err');if(!silent)toast('Выгрузка: '+(e.message||e),true);}
 }
-function scheduleCloudPush(){if(!sbUser)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);}
+function scheduleCloudPush(){if(!sbUser)return;setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);}
 $('#sbLogin').addEventListener('click',async()=>{
   settings.sbUrl=$('#sbUrl').value.trim().replace(/\/$/,'');settings.sbKey=$('#sbKey').value.trim();settings.sbEmail=$('#sbEmail').value.trim();saveSettings();sb=null;
   if(!settings.sbUrl||!settings.sbKey){toast('Укажи Supabase URL и anon key',true);return;}
@@ -911,11 +1062,85 @@ $('#sbLogin').addEventListener('click',async()=>{
 $('#sbSync').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPull(false);});
 $('#sbLogout').addEventListener('click',async()=>{const c=await sbClient();if(c){try{await c.auth.signOut();}catch(e){}}sbUser=null;updateCloudButtons();setCloudStatus('не в сети');toast('Вышел из облака');});
 
+$('#cloudPushNow').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPush(false);});
+
+/* ---------- status checks ---------- */
+function setStatus(id,txt,cls){const el=$('#'+id);if(!el)return;el.className='status'+(cls?' '+cls:'');el.innerHTML='<span class="sd"></span>'+txt;}
+async function checkGemini(){
+  if(!settings.key){setStatus('gemStatus','нет ключа');return;}
+  setStatus('gemStatus','проверяю...','wait');
+  try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(settings.key));
+    if(r.ok){setStatus('gemStatus','подключено','ok');}
+    else{const e=await r.json().catch(()=>({}));setStatus('gemStatus','ошибка: '+((e.error&&e.error.message)||r.status),'err');}
+  }catch(e){setStatus('gemStatus','нет сети','err');}
+}
+async function checkDb(){
+  if(!settings.sbUrl||!settings.sbKey){setStatus('dbStatus','не настроено');return;}
+  setStatus('dbStatus','проверяю...','wait');
+  const c=await sbClient();if(!c){setStatus('dbStatus','нет библиотеки','err');return;}
+  try{const {data}=await c.auth.getSession();
+    if(data&&data.session){setStatus('dbStatus','вошёл: '+data.session.user.email,'ok');}
+    else setStatus('dbStatus','ключи ок, не авторизован');
+  }catch(e){setStatus('dbStatus','ошибка ключей','err');}
+}
+$('#checkGem').addEventListener('click',checkGemini);
+$('#checkMicro').addEventListener('click',checkMicro);
+$('#microPerLink').addEventListener('change',e=>{settings.microPerLink=e.target.checked;saveSettings();if(!$('#view-queue').hidden)renderQueue();});
+$('#allTasksMd').addEventListener('click',()=>{const l=allTasksFlat();if(!l.length){toast('Задач нет');return;}download('all_tasks_'+dateKey(Date.now())+'.md',tasksToMd(l),'text/markdown');toast('Все задачи сохранены .md');});
+$('#allTasksTick').addEventListener('click',()=>copyTick(allTasksFlat()));
+$('#checkDb').addEventListener('click',checkDb);
+
+/* ---------- notifications ---------- */
+let notifyTimer=null;
+function initNotify(){$('#notifyOn').checked=!!settings.notifyOn;$('#notifyTime').value=settings.notifyTime||'21:00';startNotifyLoop();}
+$('#notifyOn').addEventListener('change',async e=>{
+  if(e.target.checked){if('Notification'in window){const p=await Notification.requestPermission();if(p!=='granted'){toast('Уведомления запрещены в браузере',true);e.target.checked=false;settings.notifyOn=false;saveSettings();return;}}else{toast('Уведомления не поддерживаются',true);e.target.checked=false;return;}}
+  settings.notifyOn=e.target.checked;saveSettings();startNotifyLoop();
+});
+$('#notifyTime').addEventListener('change',e=>{settings.notifyTime=e.target.value;saveSettings();});
+$('#notifyTest').addEventListener('click',async()=>{if('Notification'in window&&Notification.permission!=='granted')await Notification.requestPermission();fireNotify('Тест уведомления','Так будет выглядеть напоминание о ритуале.');});
+function fireNotify(title,body){
+  try{
+    const opt={body,icon:'icon.svg',badge:'icon.svg',tag:'neurocatch'};
+    if(navigator.serviceWorker&&navigator.serviceWorker.ready&&location.protocol.startsWith('http')){navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,opt)).catch(()=>{new Notification(title,opt);});}
+    else if('Notification'in window&&Notification.permission==='granted'){new Notification(title,opt);}
+    else toast(title+' — '+body);
+  }catch(e){toast(title);}
+}
+function startNotifyLoop(){
+  clearInterval(notifyTimer);
+  if(!settings.notifyOn)return;
+  notifyTimer=setInterval(()=>{
+    if(!settings.notifyOn)return;
+    const now=new Date();const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const today=dateKey(Date.now());
+    if(hhmm===(settings.notifyTime||'21:00')&&localStorage.getItem('neurocatch_lastnotify')!==today){
+      localStorage.setItem('neurocatch_lastnotify',today);
+      fireNotify('NeuroCatch','Пора провести вечерний ритуал — разбери дневной улов.');
+    }
+  },30000);
+}
+
+/* ---------- bug report ---------- */
+function buildBugData(){
+  const safeSettings=Object.assign({},settings);delete safeSettings.key;delete safeSettings.sbKey;delete safeSettings.microlinkKey;delete safeSettings.microExclude;
+  return {app:'NeuroCatch',version:APP_VERSION,when:new Date().toISOString(),url:location.href,secureContext:window.isSecureContext,
+    ua:navigator.userAgent,lang:navigator.language,online:navigator.onLine,theme:document.documentElement.getAttribute('data-theme'),
+    effectiveThemeMode:settings.themeMode,counts:{catches:catches.length,history:history.length},
+    cloud:{configured:!!(settings.sbUrl&&settings.sbKey),signedIn:!!sbUser},settings:safeSettings,recentErrors:lastErrors};
+}
+$('#bugBtn').addEventListener('click',()=>{$('#bugNote').value='';$('#bugData').value=JSON.stringify(buildBugData(),null,2);$('#bugOverlay').classList.add('open');});
+$('#closeBug').addEventListener('click',()=>$('#bugOverlay').classList.remove('open'));
+$('#bugOverlay').addEventListener('click',e=>{if(e.target===$('#bugOverlay'))$('#bugOverlay').classList.remove('open');});
+$('#bugCopy').addEventListener('click',async()=>{const rep='ПРОБЛЕМА:\n'+($('#bugNote').value||'(не описано)')+'\n\nДАННЫЕ:\n'+$('#bugData').value;try{await navigator.clipboard.writeText(rep);toast('Отчёт скопирован — вставь его мне');}catch(e){toast('Не удалось скопировать',true);}});
+$('#bugDownload').addEventListener('click',()=>{const rep={note:$('#bugNote').value,data:buildBugData()};const blob=new Blob([JSON.stringify(rep,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_bug_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Отчёт сохранён');});
+
 /* ---------- PWA ---------- */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
 /* ---------- init ---------- */
 loadAll();
+initNotify();
 lucide.createIcons();
 </script>
 </body>
