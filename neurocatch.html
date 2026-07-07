@@ -610,7 +610,7 @@ const APP_VERSION='2025.7-06';
 let lastErrors=[];
 window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();});
 window.addEventListener('unhandledrejection',e=>{lastErrors.push({t:Date.now(),msg:'promise: '+(e.reason&&e.reason.message||e.reason)});if(lastErrors.length>10)lastErrors.shift();});
-let localUpdatedAt=0, applyingRemote=false;
+let localUpdatedAt=0, applyingRemote=false, booting=true;
 
 /* ---------- persistence ---------- */
 function ensureEntry(e){
@@ -628,17 +628,26 @@ function loadAll(){
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
   catches.forEach(c=>{if(!c.id)c.id=uid('c');});
-  history.forEach(ensureEntry);
-  saveCatches();saveHistory();
-  $('#apikey').value=settings.key;$('#model').value=settings.model;$('#themeSel').value=settings.themeMode;$('#colorPick').value=settings.seed;$('#promptInput').value=settings.prompt||DEFAULT_PROMPT;
-  $('#sbUrl').value=settings.sbUrl;$('#sbKey').value=settings.sbKey;$('#sbEmail').value=settings.sbEmail;$('#microKey').value=settings.microlinkKey;$('#microPerLink').checked=settings.microPerLink;
-  refreshCount();setAccent(settings.seed,false);applyThemeMode(settings.themeMode,false);buildSwatches();
-  if(settings.sbUrl&&settings.sbKey)cloudInit();
+  history.forEach(h=>{try{ensureEntry(h);}catch(e){}});
+  localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
+  localStorage.setItem('neurocatch_history',JSON.stringify(history));
+  try{fillSettings();}catch(e){}
+  try{refreshCount();setAccent(settings.seed,false);applyThemeMode(settings.themeMode,false);buildSwatches();}catch(e){}
+  if(settings.sbUrl&&settings.sbKey){try{cloudInit();}catch(e){}}
 }
-function touchLocal(){if(applyingRemote)return;localUpdatedAt=Date.now();localStorage.setItem('neurocatch_updated',String(localUpdatedAt));scheduleCloudPush();}
+function touchLocal(){if(applyingRemote||booting)return;localUpdatedAt=Date.now();localStorage.setItem('neurocatch_updated',String(localUpdatedAt));scheduleCloudPush();}
 function saveSettings(){localStorage.setItem('neurocatch_settings',JSON.stringify(settings));}
 function saveCatches(){localStorage.setItem('neurocatch_catches',JSON.stringify(catches));touchLocal();}
 function saveHistory(){localStorage.setItem('neurocatch_history',JSON.stringify(history));touchLocal();}
+function fillSettings(){
+  const setv=(id,v)=>{const el=$('#'+id);if(el)el.value=v;};
+  setv('apikey',settings.key);setv('model',settings.model);setv('themeSel',settings.themeMode);
+  setv('colorPick',settings.seed);setv('promptInput',settings.prompt||DEFAULT_PROMPT);
+  setv('sbUrl',settings.sbUrl);setv('sbKey',settings.sbKey);setv('sbEmail',settings.sbEmail);setv('microKey',settings.microlinkKey);
+  const mp=$('#microPerLink');if(mp)mp.checked=settings.microPerLink;
+  const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
+  const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
+}
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
 /* ---------- color / Material You ---------- */
@@ -743,7 +752,7 @@ async function streamGemini(items,onChunk,signal){
 }
 
 /* ---------- parse & render ---------- */
-function parseMd(md){const d={insights:[],summaries:[],tasks:[],tags:[],links:[]};let sec=null,cur=null;
+function parseMd(md){md=md||'';const d={insights:[],summaries:[],tasks:[],tags:[],links:[]};let sec=null,cur=null;
   const addLink=(url,title)=>{if(!url)return;url=url.replace(/[),.]+$/,'');const ex=d.links.find(l=>l.url===url);if(ex){if(title&&!ex.title)ex.title=title;}else d.links.push({url,title:title||''});};
   md.split('\n').forEach(raw=>{const line=raw.replace(/\s+$/,'');const t=line.trim();
     if(/^##\s/.test(t)){ // section heading (## ...)
@@ -986,7 +995,7 @@ $('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)r
 
 /* ---------- settings ---------- */
 const ov=$('#overlay');
-$('#openSettings').addEventListener('click',()=>ov.classList.add('open'));
+$('#openSettings').addEventListener('click',()=>{fillSettings();ov.classList.add('open');});
 $('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
 $('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
@@ -1142,6 +1151,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){navigat
 loadAll();
 initNotify();
 lucide.createIcons();
+booting=false;
 </script>
 </body>
 </html>
