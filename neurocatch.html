@@ -58,6 +58,9 @@
     "chevron-down":'<path d="m6 9 6 6 6-6"/>',
     "chevron-up":'<path d="m18 15-6-6-6 6"/>',
     "lightbulb":'<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    "more-horizontal":'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    "bar-chart-3":'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    "flame":'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
     "notebook-pen":'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.4 3.6a2.1 2.1 0 0 0-3-3L11 8v3h3z"/>' 
   };
   function createIcons(){
@@ -79,18 +82,23 @@
 </head>
 <body>
 <div class="bg-pattern"></div>
+<div class="bgfx" id="bgfx"></div>
 <div class="ambient"><span></span><span></span><span></span><span></span></div>
 
 <div class="app">
   <div class="shell">
     <div class="topbar">
       <div class="grp">
+        <button class="icon-btn ui-toggle" id="uiToggle" aria-label="Скрыть/показать кнопки"><i data-lucide="chevron-left"></i></button>
         <button class="icon-btn" id="openSettings" aria-label="Настройки"><i data-lucide="settings"></i></button>
         <button class="icon-btn" id="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
         <button class="icon-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
-        <button class="icon-btn" id="openLink" aria-label="Разобрать ссылку"><i data-lucide="link"></i></button>
-        <button class="icon-btn" id="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
-        <button class="icon-btn" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
+        <button class="icon-btn" id="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
+        <button class="icon-btn" id="openMore" aria-label="Ещё"><i data-lucide="more-horizontal"></i></button>
+        <button class="icon-btn in-more" id="openLink" aria-label="Разобрать ссылку"><i data-lucide="link"></i></button>
+        <button class="icon-btn in-more" id="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
+        <button class="icon-btn in-more" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
+        <button class="icon-btn in-more" id="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
       </div>
       <div class="grp">
         <span id="syncDot" class="sync-dot" title="Синхронизация" hidden></span>
@@ -103,12 +111,13 @@
     <section class="view" id="view-input">
       <div class="orb"><div class="ring"></div><div class="ring"></div><div class="core"></div></div>
       <p class="hero-sub">Всё, что в голове — сюда. Разберём вечером.</p>
-      <div id="clipChip" class="clip-chip" hidden></div>
       <div class="glass-input"><textarea id="brain" placeholder="Скинь ссылку, мысль или задачу..."></textarea></div>
       <div class="actions">
         <button class="btn btn-primary" id="submit"><i data-lucide="sparkle"></i>Закинуть</button>
         <button class="btn btn-mic" id="mic" aria-label="Голосовой ввод"><i data-lucide="mic"></i></button>
       </div>
+      <div id="clipChip" class="clip-chip" hidden></div>
+      <div class="preset-row" id="presetRow"></div>
       <div class="ritual-wrap">
         <button class="btn btn-today" id="todayTasks"><i data-lucide="list-checks"></i>Задачи на сегодня<span id="todayCount" class="today-badge" hidden>0</span></button>
         <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал</button>
@@ -203,6 +212,18 @@
       <div class="tag-row" id="noteTags"></div>
       <div class="notes-list" id="notesList"></div>
     </section>
+
+    <section class="view" id="view-dashboard" hidden>
+      <div class="head-row"><button class="back" id="dashBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Дашборд</h2></div>
+      <div id="dashBody"></div>
+    </section>
+
+    <section class="view" id="view-search" hidden>
+      <div class="head-row"><button class="back" id="searchBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Поиск</h2></div>
+      <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="globalSearch" placeholder="Искать во всём: записи, отчёты, задачи, заметки, закладки…" autocomplete="off"></div>
+      <button class="btn" id="semBtn" style="width:100%;margin-bottom:14px"><i data-lucide="sparkle"></i>Поиск по смыслу (ИИ)</button>
+      <div id="searchResults"></div>
+    </section>
   </div>
 </div>
 
@@ -219,7 +240,8 @@
     <div class="field prov prov-ollama" hidden><label for="ollamaUrl">Ollama URL</label><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false"><input type="text" id="ollamaModel" placeholder="llama3.1" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Запусти Ollama с OLLAMA_ORIGINS=* . С https-страницы к http-localhost браузер может блокировать запрос.</div></div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Внешний вид</div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
-    <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div></div>
+    <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
+    <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
       <label for="promptInput" style="display:flex;align-items:center;justify-content:space-between">Промпт разбора<button type="button" id="resetPrompt" class="link-btn">Сбросить</button></label>
@@ -237,6 +259,7 @@
     <div class="sgroup" data-grp="api"><div class="sec-title">Синхронизация</div>
     <div class="field">
       <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
+      <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
       <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
       <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
       <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
@@ -326,6 +349,7 @@
 
 <div class="toast" id="toast"><i data-lucide="check-circle"></i><span id="toastText">Готово</span></div>
 
+<script src="nc-parsers.js"></script>
 <script src="neurocatch.js"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null, bookmarks=[];
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard'};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
@@ -11,7 +11,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v25';
+const APP_VERSION='2025.7-06';const SW_VER='v32';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
 window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
@@ -35,7 +35,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard'};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -61,7 +61,7 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;updateProviderUI();
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;updateProviderUI();try{applyBg();}catch(e){}
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -121,11 +121,18 @@ function renderQueue(){
   lucide.createIcons();
   box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
   box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',()=>{catches=catches.filter(x=>x.id!==b.dataset.del);saveCatches();refreshCount();renderQueue();}));
+  box.querySelectorAll('.q-item').forEach(it=>attachSwipe(it,{onLeft:()=>{catches=catches.filter(x=>x.id!==it.dataset.id);saveCatches();refreshCount();renderQueue();toast('Удалено');}}));
   box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
 }
 $('#queueRitual').addEventListener('click',()=>runRitual());
 
 /* ---------- Gemini ---------- */
+const PRESET_INTRO={
+  standard:'',
+  clinical:'РЕЖИМ РАЗБОРА: Клинический (урология-андрология). Пиши как коллега-врач: выделяй клинически значимое, дифференциальные диагнозы, красные флаги, что уточнить у пациента и что назначить/проверить. Термины — корректно. Это рабочие заметки врача, не ставь диагноз пациенту напрямую.',
+  content:'РЕЖИМ РАЗБОРА: Для медицинского контента (Instagram @dr.garipov). Ищи идеи для постов и каруселей: цепляющие тезисы, «мифы vs факты», вопросы аудитории, готовую структуру карусели. В инсайтах предлагай форматы подачи и заголовки.',
+  personal:'РЕЖИМ РАЗБОРА: Личное. Спокойный, поддерживающий тон. Фокус на смысле, эмоциях, целях и конкретных следующих шагах. Без клинического жаргона.'
+};
 const DEFAULT_PROMPT=`Ты — ассистент дневного brain-dump. Ниже записи пользователя за день.
 Проанализируй их и верни ТОЛЬКО markdown строго в таком виде, без вступлений:
 ## 🧠 Инсайты
@@ -151,31 +158,19 @@ const DEFAULT_PROMPT=`Ты — ассистент дневного brain-dump. �
 #тег1 #тег2 #тег3
 Теги — короткие категории на русском (например #идея #задача #ссылка #видео #здоровье). Отвечай на русском. Записи:
 {{RECORDS}}`;
-function fmtDue(d,hasTime){const dd=d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});return hasTime?(dd+', '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})):dd;}
-function parseDateTime(text,base){
-  if(!text)return null;base=base||new Date();const t=text.toLowerCase();
-  let hasTime=false,hh=9,mm=0,hasDate=false,d=new Date(base);
-  const WD={'понедельник':1,'вторник':2,'сред':3,'четверг':4,'пятниц':5,'суббот':6,'воскрес':0};
-  const MON=[['март',2],['мая',4],['май',4],['янв',0],['фев',1],['апр',3],['июн',5],['июл',6],['авг',7],['сен',8],['окт',9],['ноя',10],['дек',11],['ма',4]];
-  let mt=t.match(/(\d{1,2}):(\d{2})(?!\d)/)||t.match(/в\s*(\d{1,2})[.:](\d{2})(?!\d)/);
-  if(mt){hh=+mt[1];mm=+mt[2];hasTime=true;}
-  else{let m2=t.match(/в\s*(\d{1,2})(?:\s*(утра|дня|вечера|ночи|час\w*))?/);if(m2){hh=+m2[1];mm=0;hasTime=true;const q=m2[2]||'';if(/вечера|дня/.test(q)&&hh<12)hh+=12;if(/ночи/.test(q)&&hh===12)hh=0;}}
-  if(/послезавтра/.test(t)){d=new Date(base);d.setDate(d.getDate()+2);hasDate=true;}
-  else if(/завтра/.test(t)){d=new Date(base);d.setDate(d.getDate()+1);hasDate=true;}
-  else if(/сегодня/.test(t)){d=new Date(base);hasDate=true;}
-  let mr=t.match(/через\s+(\d+)\s*(минут\w*|час\w*|недел\w*|дн\w*|день)/);
-  if(mr){const n=+mr[1],u=mr[2];d=new Date(base);if(/минут/.test(u)){d.setMinutes(d.getMinutes()+n);hasTime=true;hh=d.getHours();mm=d.getMinutes();}else if(/час/.test(u)){d.setHours(d.getHours()+n);hasTime=true;hh=d.getHours();mm=d.getMinutes();}else if(/недел/.test(u)){d.setDate(d.getDate()+n*7);}else{d.setDate(d.getDate()+n);}hasDate=true;}
-  if(!hasDate){for(const k in WD){if(t.includes(k)){const target=WD[k];d=new Date(base);let diff=(target-d.getDay()+7)%7;if(diff===0)diff=7;d.setDate(d.getDate()+diff);hasDate=true;break;}}}
-  let md=t.match(/(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?/);
-  if(md){const dd=+md[1],mo=+md[2]-1;let yy=md[3]?+md[3]:base.getFullYear();if(yy<100)yy+=2000;if(mo>=0&&mo<12&&dd>=1&&dd<=31){d=new Date(yy,mo,dd);hasDate=true;}}
-  if(!md){let mn=t.match(/(\d{1,2})\s+([а-я]+)/);if(mn){const dd=+mn[1],name=mn[2];let moi=-1;for(const it of MON){if(name.startsWith(it[0])){moi=it[1];break;}}if(moi>=0){d=new Date(base.getFullYear(),moi,dd);hasDate=true;}}}
-  if(!hasDate&&!hasTime)return null;
-  if(hasTime)d.setHours(hh,mm,0,0);else d.setHours(9,0,0,0);
-  if(hasTime&&!hasDate&&d.getTime()<base.getTime()-60000){d.setDate(d.getDate()+1);}
-  return {ts:d.getTime(),hasTime,label:fmtDue(d,hasTime)};
+function carryContext(){
+  let ot=[];history.forEach(h=>{try{ensureEntry(h);}catch(e){}(h.tasks||[]).forEach(t=>{if(!t.done)ot.push({text:t.text,due:t.due||0});});});
+  const now=Date.now();ot.sort((a,b)=>{const ao=a.due&&a.due<now?0:1,bo=b.due&&b.due<now?0:1;if(ao!==bo)return ao-bo;return (a.due||9e15)-(b.due||9e15);});
+  const openTasks=ot.map(t=>t.text+(t.due?((t.due<now?' (ПРОСРОЧЕНО, срок ':' (срок ')+fmtDueShort(t.due)+')'):''));
+  const todayK=dateKey(Date.now());const undone=habits.filter(hb=>!(hb.checks&&hb.checks[todayK])).map(hb=>hb.name);
+  let out='';
+  if(openTasks.length)out+='Открытые задачи (они УЖЕ существуют — НЕ дублируй их в разделе «Задачи», туда добавляй только новые действия из записей выше; в «Инсайтах» кратко напомни о самых важных или просроченных):\n'+openTasks.slice(0,40).map(t=>'- '+t).join('\n')+'\n\n';
+  if(undone.length)out+='Сегодня ещё не отмечены привычки (мягко напомни о них в «Инсайтах»):\n'+undone.map(n=>'- '+n).join('\n')+'\n';
+  return out.trim();
 }
-function buildPrompt(items){const recs=items.map((c,i)=>`${i+1}. ${c.text}${c.dueLabel?(' [срок: '+c.dueLabel+']'):''}`).join('\n');const tpl=(settings.prompt&&settings.prompt.trim())?settings.prompt:DEFAULT_PROMPT;return tpl.includes('{{RECORDS}}')?tpl.replace('{{RECORDS}}',recs):tpl+'\n\nЗаписи:\n'+recs;}
-const URL_RE=/https?:\/\/[^\s<>"')]+/gi;
+function buildPrompt(items){const recs=items.map((c,i)=>`${i+1}. ${c.text}${c.dueLabel?(' [срок: '+c.dueLabel+']'):''}`).join('\n');const _p=settings.preset||'standard';let tpl;if(_p==='custom'){tpl=(settings.prompt&&settings.prompt.trim())?settings.prompt:DEFAULT_PROMPT;}else{tpl=(PRESET_INTRO[_p]?PRESET_INTRO[_p]+'\n\n':'')+DEFAULT_PROMPT;}let out=tpl.includes('{{RECORDS}}')?tpl.replace('{{RECORDS}}',recs):tpl+'\n\nЗаписи:\n'+recs;
+  if(items===catches){const ctx=carryContext();if(ctx)out+='\n\n— — —\n'+ctx;}
+  return out;}
 const isYT=u=>/(?:youtube\.com\/(?:watch|shorts|live)|youtu\.be\/)/i.test(u);
 function classifyLinks(items){const urls=[];items.forEach(c=>{(c.text.match(URL_RE)||[]).forEach(u=>urls.push(u));});return{yt:[...new Set(urls.filter(isYT))],web:[...new Set(urls.filter(u=>!isYT(u)))]};}
 function providerName(){return {gemini:'Gemini',openrouter:'OpenRouter',ollama:'Ollama'}[settings.provider||'gemini'];}
@@ -228,26 +223,6 @@ async function streamGemini(items,onChunk,signal){
 }
 
 /* ---------- parse & render ---------- */
-function parseMd(md){md=md||'';const d={insights:[],summaries:[],tasks:[],tags:[],links:[],bookmarks:[]};let sec=null,cur=null;
-  const addLink=(url,title)=>{if(!url)return;url=url.replace(/[),.]+$/,'');const ex=d.links.find(l=>l.url===url);if(ex){if(title&&!ex.title)ex.title=title;}else d.links.push({url,title:title||''});};
-  md.split('\n').forEach(raw=>{const line=raw.replace(/\s+$/,'');const t=line.trim();
-    if(/^##\s/.test(t)){ // section heading (## ...)
-      if(/инсайт/i.test(t))sec='ins';else if(/конспект/i.test(t))sec='sum';else if(/закладк/i.test(t))sec='bm';else if(/задач/i.test(t))sec='task';else if(/ссылк/i.test(t))sec='link';else if(/тег/i.test(t))sec='tag';else sec=null;cur=null;return;}
-    if(sec==='sum'){ // конспекты — многострочные блоки, разбитые по ### Заголовок
-      if(/^###\s+/.test(t)){cur={title:t.replace(/^###\s+/,''),body:'',source:''};d.summaries.push(cur);return;}
-      if(cur&&!cur.body&&(t.startsWith('🔗')||/^https?:\/\/\S+$/.test(t))){const um=t.match(URL_RE);if(um){cur.source=um[0].replace(/[),.]+$/,'');addLink(cur.source,cur.title);return;}}
-      if(!cur){cur={title:'',body:'',source:''};d.summaries.push(cur);}
-      cur.body+=(cur.body?'\n':'')+line;return;}
-    if(sec==='bm'){if(!t||/^_/.test(t))return;const bm=t.replace(/^[-*]\s*/,'');const lm=bm.match(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/);let url='',title='';if(lm){title=lm[1];url=lm[2];}else{const um=bm.match(URL_RE);if(um)url=um[0];}if(!url)return;url=url.replace(/[),.]+$/,'');const parts=bm.split('|').map(x=>x.trim());let cat=parts[1]||'Прочее',desc=parts.length>=3?parts.slice(2).join(' | '):'';d.bookmarks.push({url,title:title||'',category:cat,desc:desc});return;}
-    if(sec==='link'){const lm=t.match(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/);if(lm)addLink(lm[2],lm[1]);else (t.match(URL_RE)||[]).forEach(u=>addLink(u,''));return;}
-    if(!t)return;
-    if(sec==='tag'||/^#[^\s#]/.test(t)){(t.match(/#[\wа-яёА-ЯЁ-]+/g)||[]).forEach(x=>{if(!d.tags.includes(x))d.tags.push(x);});return;}
-    const m=t.replace(/^[-*]\s*/,'');
-    if(sec==='ins')d.insights.push(m);
-    else if(sec==='task')d.tasks.push(m.replace(/^\[[ xX]?\]\s*/,''));});
-  d.summaries.forEach(s=>s.body=s.body.trim());
-  d.summaries=d.summaries.filter(s=>s.title||s.body);
-  return d;}
 function hostOf(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u.replace(/^https?:\/\//,'').split('/')[0];}}
 function assembleLinks(d,text){const map=new Map();
   const add=(u,t)=>{if(!u)return;u=u.replace(/[),.]+$/,'');if(!map.has(u))map.set(u,t||'');else if(t&&!map.get(u))map.set(u,t);};
@@ -404,6 +379,95 @@ function renderNotes(){
 $('#openNotes')&&$('#openNotes').addEventListener('click',()=>{renderNotes();show($('#view-notes'));});
 $('#notesBack')&&$('#notesBack').addEventListener('click',()=>show($('#view-input')));
 $('#noteSearch')&&$('#noteSearch').addEventListener('input',e=>{noteSearch=e.target.value.toLowerCase();renderNotes();});
+async function llmComplete(prompt){
+  const p=settings.provider||'gemini';
+  if(p==='openrouter'){const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.orKey,'HTTP-Referer':location.origin,'X-Title':'NeuroCatch'},body:JSON.stringify({model:settings.orModel||'meta-llama/llama-3.3-70b-instruct:free',messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';}
+  if(p==='ollama'){const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');const res=await fetch(base+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:settings.ollamaModel||'llama3.1',stream:false,messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.message&&j.message.content)||'';}
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+(settings.model||'gemini-2.5-flash')+':generateContent?key='+encodeURIComponent(settings.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2048}})});
+  const j=await res.json();try{return j.candidates[0].content.parts.map(x=>x.text||'').join('');}catch(e){return '';}
+}
+async function semanticSearch(){
+  const box=$('#searchResults');if(!box)return;const q=(($('#globalSearch')&&$('#globalSearch').value)||'').trim();
+  if(q.length<2){toast('Введите запрос',true);return;}
+  if(!hasLLM()){toast('Сначала настрой провайдера ИИ',true);return;}
+  box.innerHTML='<div class="empty">Ищу по смыслу через '+providerName()+'…</div>';
+  const notes=buildNotes().slice(0,60);
+  if(!notes.length){box.innerHTML='<div class="empty">Пока нет заметок для поиска.</div>';return;}
+  const corpus=notes.map((n,i)=>`[${i}] ${(n.title||'').slice(0,80)} · ${(n.tags||[]).join(' ')} · ${(n.body||'').replace(/\s+/g,' ').slice(0,200)}`).join('\n');
+  const prompt='Ты ищешь по личной базе заметок ПО СМЫСЛУ (не по точным словам).\nЗапрос пользователя: "'+q+'"\nЗаметки (формат [номер] заголовок · теги · фрагмент):\n'+corpus+'\n\nВерни ТОЛЬКО JSON-массив до 8 самых релевантных по смыслу, без пояснений вокруг: [{"i":номер,"why":"кратко почему подходит"}]. Если ничего не подходит — [].';
+  try{
+    let txt=await llmComplete(prompt);txt=(txt||'').replace(/```json|```/g,'').trim();const mm=txt.match(/\[[\s\S]*\]/);const arr=JSON.parse(mm?mm[0]:txt);
+    if(!arr.length){box.innerHTML='<div class="empty">По смыслу ничего не нашлось.</div>';return;}
+    box.innerHTML='<div class="sr-group"><div class="sr-h">По смыслу · ИИ<span>'+arr.length+'</span></div>'+arr.map(r=>{const n=notes[r.i];if(!n)return '';return `<button class="sr-item" data-nid="${attr(n.id)}"><span class="sr-t">${esc(n.title||'Заметка')}</span><span class="sr-sub">${esc(r.why||'')}</span></button>`;}).join('')+'</div>';
+    box.querySelectorAll('.sr-item[data-nid]').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=null;noteSearch='';const ns=$('#noteSearch');if(ns)ns.value='';renderNotes();show($('#view-notes'));}));
+  }catch(e){box.innerHTML='<div class="empty">Не удалось выполнить смысловой поиск. Попробуй ещё раз.</div>';}
+}
+/* ---------- swipe gestures ---------- */
+function attachSwipe(el,opts){
+  let x0=0,y0=0,dx=0,active=false;
+  el.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;active=true;el.style.transition='none';},{passive:true});
+  el.addEventListener('touchmove',e=>{if(!active)return;dx=e.touches[0].clientX-x0;const dy=e.touches[0].clientY-y0;if(Math.abs(dy)>Math.abs(dx)+6){active=false;el.style.transform='';el.style.opacity='';return;}el.style.transform='translateX('+dx+'px)';el.style.opacity=String(Math.max(0.3,1-Math.abs(dx)/300));},{passive:true});
+  el.addEventListener('touchend',e=>{if(!active)return;active=false;el.style.transition='transform .2s,opacity .2s';const th=90;
+    if(dx<-th&&opts.onLeft){e.preventDefault();el.style.transform='translateX(-120%)';el.style.opacity='0';setTimeout(opts.onLeft,170);}
+    else if(dx>th&&opts.onRight){e.preventDefault();el.style.transform='translateX(120%)';el.style.opacity='0';setTimeout(opts.onRight,170);}
+    else{el.style.transform='';el.style.opacity='';}},{passive:false});
+}
+$('#semBtn')&&$('#semBtn').addEventListener('click',semanticSearch);
+function globalSearch(q){
+  const box=$('#searchResults');if(!box)return;q=(q||'').trim().toLowerCase();
+  if(q.length<2){box.innerHTML='<div class="empty">Введите минимум 2 символа для поиска.</div>';return;}
+  const flat=[];const groups=[];
+  const push=(name,items)=>{if(items.length){groups.push([name,items.map(it=>{const fi=flat.length;flat.push(it.act);return {t:it.t,sub:it.sub,fi};})]);}};
+  push('Улов',catches.filter(c=>c.text.toLowerCase().includes(q)).slice(0,15).map(c=>({t:c.text,act:()=>{show($('#view-queue'));try{renderQueue();}catch(e){}}})));
+  const tm=[];history.forEach(h=>{try{ensureEntry(h);}catch(e){}(h.tasks||[]).forEach(t=>{if(t.text.toLowerCase().includes(q))tm.push({t:t.text+(t.done?' ✓':''),act:()=>{show($('#view-tasks'));setSubTab('tasks');}});});});
+  push('Задачи',tm.slice(0,15));
+  const nm=[];try{buildNotes().forEach(n=>{if(((n.title||'')+' '+(n.body||'')).toLowerCase().includes(q))nm.push({t:n.title,sub:n.kind==='ins'?'инсайт':'конспект',act:()=>{noteSearch=q;const ns=$('#noteSearch');if(ns)ns.value=q;renderNotes();show($('#view-notes'));}});});}catch(e){}
+  push('Заметки',nm.slice(0,15));
+  push('Закладки',bookmarks.filter(b=>((b.title||'')+' '+(b.desc||'')+' '+b.url).toLowerCase().includes(q)).slice(0,15).map(b=>({t:b.title||b.url,sub:b.category,act:()=>{renderBookmarks();show($('#view-bookmarks'));}})));
+  push('Отчёты',history.filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор'),act:()=>openReport(h.id)})));
+  push('Привычки',habits.filter(hb=>hb.name.toLowerCase().includes(q)).slice(0,10).map(hb=>({t:hb.name,act:()=>{show($('#view-tasks'));setSubTab('habits');}})));
+  const total=groups.reduce((n,g)=>n+g[1].length,0);
+  if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';return;}
+  box.innerHTML=groups.map(([name,items])=>`<div class="sr-group"><div class="sr-h">${esc(name)}<span>${items.length}</span></div>${items.map(it=>`<button class="sr-item" data-fi="${it.fi}"><span class="sr-t">${esc(it.t)}</span>${it.sub?`<span class="sr-sub">${esc(it.sub)}</span>`:''}</button>`).join('')}</div>`).join('');
+  box.querySelectorAll('.sr-item').forEach(b=>b.addEventListener('click',()=>{const f=flat[+b.dataset.fi];if(f)f();}));
+}
+$('#openSearch')&&$('#openSearch').addEventListener('click',()=>{show($('#view-search'));setTimeout(()=>{const gi=$('#globalSearch');if(gi)gi.focus();},60);});
+$('#searchBack')&&$('#searchBack').addEventListener('click',()=>show($('#view-input')));
+$('#globalSearch')&&$('#globalSearch').addEventListener('input',e=>globalSearch(e.target.value));
+function renderDashboard(){
+  const box=$('#dashBody');if(!box)return;
+  history.forEach(h=>{try{ensureEntry(h);}catch(e){}});
+  const reportsTotal=history.length;
+  const dayset=new Set(history.map(h=>h.date||dateKey(h.ts)));
+  let streak=0;{const d=new Date();d.setHours(0,0,0,0);if(!dayset.has(dateKey(d.getTime())))d.setDate(d.getDate()-1);while(dayset.has(dateKey(d.getTime()))){streak++;d.setDate(d.getDate()-1);}}
+  let tTotal=0,tDone=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{tTotal++;if(t.done)tDone++;}));
+  const tPct=tTotal?Math.round(tDone/tTotal*100):0;
+  const weekKeys=[];{const d=new Date();for(let i=0;i<7;i++){weekKeys.push(dateKey(d.getTime()));d.setDate(d.getDate()-1);}}
+  let habBest=0,habWeek=0;habits.forEach(hb=>{habBest=Math.max(habBest,habitStreak(hb));weekKeys.forEach(k=>{if(hb.checks&&hb.checks[k])habWeek++;});});
+  let noteCount=0;try{noteCount=buildNotes().length;}catch(e){}
+  const days=[];{const d=new Date();d.setHours(0,0,0,0);for(let i=13;i>=0;i--){const dd=new Date(d);dd.setDate(d.getDate()-i);const k=dateKey(dd.getTime());days.push({k,d:dd,n:history.filter(h=>(h.date||dateKey(h.ts))===k).length});}}
+  const maxN=Math.max(1,...days.map(x=>x.n));
+  const tagFreq={};history.forEach(h=>(h.tags||[]).forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1;}));
+  const tags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,24);const maxT=Math.max(1,...tags.map(t=>t[1]));
+  const card=(n,l,extra)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</div>`;
+  box.innerHTML=`
+    <div class="dash-grid">
+      ${card(reportsTotal,'разборов')}
+      ${card('🔥 '+streak,'дней подряд')}
+      ${card(tDone+'/'+tTotal,'задач закрыто','<div class="stat-bar"><span style="width:'+tPct+'%"></span></div>')}
+      ${card(habits.length,'привычек · 🔥'+habBest)}
+      ${card(noteCount,'заметок')}
+      ${card(bookmarks.length,'закладок')}
+      ${card(catches.length,'в улове')}
+      ${card((()=>{let o=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{if(!t.done&&t.due&&t.due<Date.now())o++;}));return o;})(),'просрочено')}
+      ${card(habWeek,'отметок за неделю')}
+    </div>
+    <div class="dash-sec"><h3>Активность · 14 дней</h3><div class="act-chart">${days.map(x=>`<div class="act-col"><div class="act-bar${x.n?'':' zero'}" style="height:${x.n?Math.max(8,Math.round(x.n/maxN*100)):3}%" title="${x.n} разбор(ов)"></div><span class="act-d">${x.d.getDate()}</span></div>`).join('')}</div></div>
+    <div class="dash-sec"><h3>Облако тегов</h3><div class="tag-cloud">${tags.length?tags.map(([t,n])=>`<button class="tag-cloud-item" data-t="${attr(t)}" style="font-size:${(0.85+n/maxT*0.85).toFixed(2)}rem;opacity:${(0.6+n/maxT*0.4).toFixed(2)}">${esc(t)}<span class="tcn">${n}</span></button>`).join(''):'<span class="empty">Тегов пока нет</span>'}</div></div>`;
+  box.querySelectorAll('.tag-cloud-item').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=b.dataset.t;renderNotes();show($('#view-notes'));}));
+}
+$('#openDash')&&$('#openDash').addEventListener('click',()=>{renderDashboard();show($('#view-dashboard'));});
+$('#dashBack')&&$('#dashBack').addEventListener('click',()=>show($('#view-input')));
 function renderActionBar(mode){
   const bar=$('#actionBar');
   const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
@@ -544,14 +608,27 @@ $('#tasksBack').addEventListener('click',()=>show($('#view-input')));
 function loadHabits(){try{habits=JSON.parse(localStorage.getItem('neurocatch_habits')||'[]');}catch(e){habits=[];}}
 function saveHabits(){localStorage.setItem('neurocatch_habits',JSON.stringify(habits));touchLocal();}
 function habitStreak(hb){let n=0;const d=new Date();for(;;){const k=dateKey(d.getTime());if(hb.checks&&hb.checks[k]){n++;d.setDate(d.getDate()-1);}else break;}return n;}
+function weekKeysOf(base){const ks=[];const d=new Date(base);let dw=d.getDay();dw=dw===0?6:dw-1;d.setDate(d.getDate()-dw);for(let i=0;i<7;i++){ks.push(dateKey(d.getTime()));d.setDate(d.getDate()+1);}return ks;}
+function habitWeekCount(hb){return weekKeysOf(new Date()).reduce((n,k)=>n+((hb.checks&&hb.checks[k])?1:0),0);}
+function habitMonthStats(hb){const now=new Date();const y=now.getFullYear(),m=now.getMonth();const daysIn=new Date(y,m+1,0).getDate();const elapsed=now.getDate();let done=0;for(let dd=1;dd<=daysIn;dd++){if(hb.checks&&hb.checks[dateKey(new Date(y,m,dd).getTime())])done++;}const pct=elapsed?Math.round(done/elapsed*100):0;return {daysIn,elapsed,done,pct,y,m};}
 function renderHabits(){
   const box=$('#habitList');if(!box)return;
-  if(!habits.length){box.innerHTML='<div class="empty">Пока нет привычек. Добавь первую выше — и отмечай каждый день.</div>';return;}
+  if(!habits.length){box.innerHTML='<div class="empty">Пока нет привычек. Добавь первую выше — и отмечай каждый день. Задай цель «N раз в неделю» и смотри месячный обзор.</div>';return;}
   const days=[];const base=new Date();for(let i=6;i>=0;i--){const d=new Date(base);d.setDate(base.getDate()-i);days.push(d);}
-  box.innerHTML=habits.map(hb=>`<div class="habit-card" data-id="${hb.id}"><div class="habit-top"><span class="habit-name">${esc(hb.name)}</span><span class="habit-streak">🔥 ${habitStreak(hb)}</span><button class="mini habit-del" data-id="${hb.id}" title="Удалить"><i data-lucide="trash-2"></i></button></div><div class="habit-week">${days.map(d=>{const k=dateKey(d.getTime());const on=hb.checks&&hb.checks[k];const today=k===dateKey(Date.now());return `<button class="habit-day${on?' on':''}${today?' today':''}" data-hid="${hb.id}" data-k="${k}"><span class="hd-dow">${['вс','пн','вт','ср','чт','пт','сб'][d.getDay()]}</span><span class="hd-num">${d.getDate()}</span></button>`;}).join('')}</div></div>`).join('');
+  const monthName=new Date().toLocaleDateString('ru-RU',{month:'long'});
+  box.innerHTML=habits.map(hb=>{
+    const goal=hb.goal||7;const wc=habitWeekCount(hb);const ms=habitMonthStats(hb);
+    const goalMet=wc>=goal;
+    const monthGrid=(()=>{let cells='';for(let dd=1;dd<=ms.daysIn;dd++){const k=dateKey(new Date(ms.y,ms.m,dd).getTime());const on=hb.checks&&hb.checks[k];const fut=dd>ms.elapsed;cells+=`<span class="hm-cell${on?' on':''}${fut?' fut':''}" title="${dd}">${dd}</span>`;}return cells;})();
+    return `<div class="habit-card" data-id="${hb.id}">
+      <div class="habit-top"><span class="habit-name">${esc(hb.name)}</span><span class="habit-streak">🔥 ${habitStreak(hb)}</span><button class="mini habit-goal" data-id="${hb.id}" title="Цель в неделю">${wc}/${goal}${goalMet?' ✓':''}</button><button class="mini habit-del" data-id="${hb.id}" title="Удалить"><i data-lucide="trash-2"></i></button></div>
+      <div class="habit-week">${days.map(d=>{const k=dateKey(d.getTime());const on=hb.checks&&hb.checks[k];const today=k===dateKey(Date.now());return `<button class="habit-day${on?' on':''}${today?' today':''}" data-hid="${hb.id}" data-k="${k}"><span class="hd-dow">${['вс','пн','вт','ср','чт','пт','сб'][d.getDay()]}</span><span class="hd-num">${d.getDate()}</span></button>`;}).join('')}</div>
+      <details class="habit-month"><summary><i data-lucide="chevron-down"></i>Месяц · ${esc(monthName)} — ${ms.done}/${ms.elapsed} дн (${ms.pct}%)</summary><div class="hm-bar"><span style="width:${ms.pct}%"></span></div><div class="hm-grid">${monthGrid}</div></details>
+    </div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.habit-day').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.hid);if(!hb)return;hb.checks=hb.checks||{};if(hb.checks[b.dataset.k])delete hb.checks[b.dataset.k];else hb.checks[b.dataset.k]=1;saveHabits();renderHabits();}));
   box.querySelectorAll('.habit-del').forEach(b=>b.addEventListener('click',()=>{habits=habits.filter(x=>x.id!==b.dataset.id);saveHabits();renderHabits();}));
+  box.querySelectorAll('.habit-goal').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.id);if(!hb)return;openCatMenu(b,String(hb.goal||7),cat=>{hb.goal=+cat||7;saveHabits();renderHabits();},['1','2','3','4','5','6','7']);}));
 }
 function allOpenTasks(){const a=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>{if(!t.done)a.push({ref:h.id,idx:i,text:t.text,eis:t.eis||0,ts:h.ts});});});return a;}
 function renderMatrix(){
@@ -610,9 +687,9 @@ function renderTaskList(){
   lucide.createIcons();
   document.querySelectorAll('#taskList .t-row, #doneWrap .t-row').forEach(r=>r.addEventListener('click',()=>{const h=history.find(x=>x.id===r.dataset.ref);if(!h)return;const t=h.tasks[+r.dataset.idx];t.done=!t.done;saveHistory();renderTasks();}));
   document.querySelectorAll('#view-tasks .t-date').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openDateMenu(b);}));
+  document.querySelectorAll('#view-tasks .t-row').forEach(r=>attachSwipe(r,{onRight:()=>{const h=history.find(x=>x.id===r.dataset.ref);if(h){const t=h.tasks[+r.dataset.idx];t.done=!t.done;saveHistory();renderTasks();}}}));
   const det=$('#doneWrap').querySelector('details');if(det)det.addEventListener('toggle',()=>{doneOpen=det.open;});
 }
-function fmtDueShort(ts){return new Date(ts).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});}
 function openDateMenu(anchor){
   const ex=$('#catMenu');if(ex)ex.remove();
   const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
@@ -630,7 +707,8 @@ function openDateMenu(anchor){
     close();}));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
-function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}}
+function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}
+try{applyBg();applyMinimal();renderPresetRow();}catch(e){}}
 
 /* ---------- export / import (merge) ---------- */
 $('#exportBtn').addEventListener('click',()=>{const payload={app:'NeuroCatch',version:3,exportedAt:new Date().toISOString(),settings,catches,history};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Данные выгружены');});
@@ -653,7 +731,7 @@ const ov=$('#overlay');
 $('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov.classList.add('open');});
 $('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
@@ -776,6 +854,19 @@ function fireNotify(title,body){
     else toast(title+' — '+body);
   }catch(e){toast(title);}
 }
+function checkTaskReminders(){
+  if(!settings.notifyOn)return;
+  const nowMs=Date.now();let fired;try{fired=JSON.parse(localStorage.getItem('neurocatch_task_notified')||'{}');}catch(e){fired={};}
+  let changed=false;
+  history.forEach(h=>{try{ensureEntry(h);}catch(e){return;}(h.tasks||[]).forEach((t,i)=>{if(t.done||!t.due)return;const key=h.id+'_'+i+'_'+t.due;if(t.due<=nowMs&&!fired[key]&&(nowMs-t.due)<86400000){fired[key]=1;changed=true;fireNotify('⏰ Задача — срок наступил',t.text);}});});
+  // prune keys older than 30 days
+  for(const k in fired){const due=+(k.split('_').pop());if(due&&nowMs-due>2592000000){delete fired[k];changed=true;}}
+  if(changed)localStorage.setItem('neurocatch_task_notified',JSON.stringify(fired));
+}
+let autoSyncTimer=null;
+function startAutoSync(){clearInterval(autoSyncTimer);if(settings.autoSync===false)return;autoSyncTimer=setInterval(()=>{if(settings.autoSync!==false&&sbUser)cloudPull(true);},180000);}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&settings.autoSync!==false&&sbUser)cloudPull(true);});
+window.addEventListener('focus',()=>{if(settings.autoSync!==false&&sbUser)cloudPull(true);});
 function startNotifyLoop(){
   clearInterval(notifyTimer);
   if(!settings.notifyOn)return;
@@ -787,6 +878,7 @@ function startNotifyLoop(){
       localStorage.setItem('neurocatch_lastnotify',today);
       fireNotify('NeuroCatch','Пора провести вечерний ритуал — разбери дневной улов.');
     }
+    checkTaskReminders();
   },30000);
 }
 
@@ -971,6 +1063,7 @@ renderBookmarks=guard('renderBookmarks',renderBookmarks);
 renderNotes=guard('renderNotes',renderNotes);
 renderHabits=guard('renderHabits',renderHabits);
 renderMatrix=guard('renderMatrix',renderMatrix);
+renderDashboard=guard('renderDashboard',renderDashboard);
 renderTasks=guard('renderTasks',renderTasks);
 
 /* ---------- clipboard auto-read ---------- */
@@ -996,6 +1089,27 @@ window.addEventListener('pointerdown',()=>setTimeout(checkClipboard,120),{once:t
 function setTab(t){document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;}
 $('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)setTab(b.dataset.tab);});
 
+/* ---------- ritual presets ---------- */
+const PRESET_LABELS={standard:'Стандарт',clinical:'Клинический',content:'Контент',personal:'Личное',custom:'Свой'};
+function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=settings.preset||'standard';row.innerHTML=Object.keys(PRESET_LABELS).map(k=>`<button class="preset-chip${k===cur?' on':''}" data-p="${k}">${PRESET_LABELS[k]}</button>`).join('');row.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{settings.preset=b.dataset.p;saveSettings();renderPresetRow();toast('Режим разбора: '+PRESET_LABELS[b.dataset.p]);}));}
+/* ---------- background pattern ---------- */
+function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
+$('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
+/* ---------- minimal UI toggle ---------- */
+function applyMinimal(){const on=localStorage.getItem('neurocatch_minimal')==='1';document.body.classList.toggle('minimal',on);const ic=$('#uiToggle')&&$('#uiToggle').querySelector('i');if($('#uiToggle')){$('#uiToggle').innerHTML='<i data-lucide="'+(on?'chevron-right':'chevron-left')+'"></i>';lucide.createIcons();}}
+$('#uiToggle')&&$('#uiToggle').addEventListener('click',()=>{const on=localStorage.getItem('neurocatch_minimal')==='1';localStorage.setItem('neurocatch_minimal',on?'0':'1');applyMinimal();});
+function openMoreMenu(anchor){
+  const ex=$('#catMenu');if(ex)ex.remove();
+  const items=[['openLink','link','Разобрать ссылку'],['openBookmarks','bookmark','Закладки'],['openNotes','notebook-pen','Заметки'],['openDash','bar-chart-3','Дашборд']];
+  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
+  m.innerHTML='<div class="sm-h">Ещё</div>'+items.map(it=>`<button data-id="${it[0]}"><i data-lucide="${it[1]}"></i>${it[2]}</button>`).join('');
+  document.body.appendChild(m);lucide.createIcons();
+  const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.left+window.scrollX;if(left+220>window.innerWidth)left=window.innerWidth-228;m.style.left=Math.max(8,left)+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor&&!anchor.contains(e.target))close();}
+  m.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>{close();const el=$('#'+b.dataset.id);if(el)el.click();}));
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
+$('#openMore')&&$('#openMore').addEventListener('click',()=>openMoreMenu($('#openMore')));
 /* ---------- today's tasks button ---------- */
 function todayOpenCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done)n++;});});return n;}
 function refreshTodayBtn(){const b=$('#todayCount');if(!b)return;const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
@@ -1022,6 +1136,46 @@ async function createShareLink(note){
   return location.origin+location.pathname+'#s='+b64e(JSON.stringify({t:token,u:settings.sbUrl,k:settings.sbKey}));
 }
 async function revokeShareToken(token){const c=await sbClient();if(!c)return;await c.from('shares').delete().eq('token',token);}
+function noteToMarkdown(note){
+  const tags=(note.tags||[]).map(t=>t.replace(/^#/,'')).filter(Boolean);
+  const dt=new Date(note.ts||Date.now()).toISOString().slice(0,10);
+  let fm='---\n';fm+='title: '+(note.title||'Заметка').replace(/\n/g,' ')+'\n';fm+='date: '+dt+'\n';if(note.source)fm+='source: '+note.source+'\n';if(tags.length)fm+='tags: ['+tags.join(', ')+']\n';fm+='---\n\n';
+  let body='# '+(note.title||'Заметка')+'\n\n';
+  if(note.source)body+='> Источник: '+note.source+'\n\n';
+  body+=(note.body||'')+'\n';
+  if(tags.length)body+='\n'+tags.map(t=>'#'+t).join(' ')+'\n';
+  download(slug(note.title||'note')+'.md',fm+body,'text/markdown');
+  toast('Экспортировано в Markdown');
+}
+function wrapText(ctx,text,maxW){const words=(text||'').split(/\s+/);const lines=[];let line='';for(const w of words){const test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;}else line=test;}if(line)lines.push(line);return lines;}
+async function noteToImage(note){
+  const W=1080,H=1350,P=90;const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+  const seed=getComputedStyle(document.documentElement).getPropertyValue('--seed-rgb').trim()||'124,92,255';
+  const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0a0b18');g.addColorStop(1,'rgba('+seed+',0.28)');ctx.fillStyle='#0b0d18';ctx.fillRect(0,0,W,H);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // accent bar
+  ctx.fillStyle='rgb('+seed+')';ctx.fillRect(P,150,90,10);
+  // kind label
+  ctx.fillStyle='rgba('+seed+',0.95)';ctx.font='600 30px -apple-system,Segoe UI,Roboto,sans-serif';ctx.fillText(note.kind==='ins'?'ИНСАЙТ':'КОНСПЕКТ',P,130);
+  // title
+  ctx.fillStyle='#fff';ctx.font='800 60px -apple-system,Segoe UI,Roboto,sans-serif';
+  let y=250;wrapText(ctx,note.title||'Заметка',W-P*2).slice(0,4).forEach(l=>{ctx.fillText(l,P,y);y+=72;});
+  y+=20;
+  // body
+  ctx.fillStyle='rgba(232,234,245,0.85)';ctx.font='400 34px -apple-system,Segoe UI,Roboto,sans-serif';
+  const plain=(note.body||'').replace(/[#>*_`]/g,'').replace(/\n+/g,'\n');const blines=[];plain.split('\n').forEach(par=>{wrapText(ctx,par.trim(),W-P*2).forEach(l=>blines.push(l));});
+  const maxLines=Math.floor((H-y-260)/46);blines.slice(0,maxLines).forEach(l=>{ctx.fillText(l,P,y);y+=46;});
+  if(blines.length>maxLines){ctx.fillStyle='rgba('+seed+',0.9)';ctx.fillText('…',P,y+6);}
+  // tags
+  ctx.fillStyle='rgba('+seed+',0.95)';ctx.font='600 30px -apple-system,Segoe UI,Roboto,sans-serif';
+  const tg=(note.tags||[]).slice(0,6).join('  ');if(tg)ctx.fillText(tg,P,H-150);
+  // footer
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='500 28px -apple-system,Segoe UI,Roboto,sans-serif';ctx.fillText('NeuroCatch · @dr.garipov',P,H-90);
+  const blob=await new Promise(res=>cv.toBlob(res,'image/png',0.95));
+  const fname=slug(note.title||'card')+'.png';
+  try{const file=new File([blob],fname,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:note.title||'Заметка'});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('Карточка сохранена');
+}
 function openShareMenu(anchor,note){
   const ex=$('#catMenu');if(ex)ex.remove();
   const map=loadShareMap();const shared=map[note.id];
@@ -1029,12 +1183,14 @@ function openShareMenu(anchor,note){
   let html='<div class="sm-h">Поделиться</div>';
   if(sbUser)html+='<button data-a="short">🔗 Короткая ссылка (Supabase)</button>';
   if(sbUser&&shared)html+='<button data-a="revoke" style="color:var(--red)">Отозвать доступ</button>';
-  html+='<button data-a="self">Автономная ссылка</button><button data-a="file">Скачать .html</button>';
+  html+='<button data-a="md">⬇ Экспорт .md (Obsidian)</button><button data-a="card">🖼 Карточка PNG</button><button data-a="self">Автономная ссылка</button><button data-a="file">Скачать .html</button>';
   m.innerHTML=html;document.body.appendChild(m);
   const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-230+window.scrollX;if(left<8)left=8;m.style.left=left+'px';
   const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
   m.querySelectorAll('button[data-a]').forEach(b=>b.addEventListener('click',async()=>{const a=b.dataset.a;close();
-    if(a==='self'){shareNote(note);}
+    if(a==='md'){noteToMarkdown(note);}
+    else if(a==='card'){noteToImage(note);}
+    else if(a==='self'){shareNote(note);}
     else if(a==='file'){shareNoteFile(note);}
     else if(a==='short'){try{toast('Создаю ссылку…');const url=await createShareLink(note);if(navigator.share){try{await navigator.share({title:note.title||'Заметка',url});return;}catch(_){}}await navigator.clipboard.writeText(url);toast('Короткая ссылка скопирована');}catch(e){toast('Ошибка: '+(e.message||e),true);}}
     else if(a==='revoke'){try{await revokeShareToken(shared);const mp=loadShareMap();delete mp[note.id];saveShareMap(mp);toast('Доступ по ссылке отозван');}catch(e){toast('Не удалось отозвать',true);}}
@@ -1076,8 +1232,10 @@ function checkSharedHash(){const hs=location.hash||'';
 
 loadAll();
 initNotify();
+try{startAutoSync();}catch(e){}
 lucide.createIcons();
 booting=false;
 try{refreshTodayBtn();}catch(e){}
+try{applyBg();applyMinimal();renderPresetRow();}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
 setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
