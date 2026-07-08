@@ -1,0 +1,1083 @@
+const $=s=>document.querySelector(s);
+
+/* ---------- state ---------- */
+let catches=[], history=[], currentEntry=null, bookmarks=[];
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true};
+let calCursor=new Date(); calCursor.setDate(1);
+let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
+let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
+let habits=[], curSubTab='tasks';
+const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1'},{n:'Важно, не срочно',s:'Запланировать',c:'q2'},{n:'Срочно, не важно',s:'Делегировать',c:'q3'},{n:'Не срочно, не важно',s:'Не делать',c:'q4'}];
+const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
+const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const APP_VERSION='2025.7-06';const SW_VER='v25';
+let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
+let lastErrors=[];
+window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
+window.addEventListener('unhandledrejection',e=>{const m='promise: '+(e.reason&&e.reason.message||e.reason);lastErrors.push({t:Date.now(),msg:m});if(lastErrors.length>10)lastErrors.shift();showErrorModal(m);});
+let localUpdatedAt=0, applyingRemote=false, booting=true;
+
+/* ---------- persistence ---------- */
+function loadBookmarks(){try{bookmarks=JSON.parse(localStorage.getItem('neurocatch_bookmarks')||'[]');}catch(e){bookmarks=[];}}
+function saveBookmarks(){localStorage.setItem('neurocatch_bookmarks',JSON.stringify(bookmarks));touchLocal();}
+function ingestBookmarks(list){let added=0;(list||[]).forEach(b=>{if(!b||!b.url)return;const ex=bookmarks.find(x=>x.url===b.url);if(ex){if(!ex.title&&b.title)ex.title=b.title;if(!ex.desc&&b.desc)ex.desc=b.desc;if((!ex.category||ex.category==='Прочее')&&b.category)ex.category=b.category;}else{bookmarks.unshift({id:uid('b'),url:b.url,title:b.title||hostOf(b.url),desc:b.desc||'',category:b.category||'Прочее',ts:Date.now()});added++;}});if(added)saveBookmarks();return added;}
+function catList(){const set=new Set(['Инструменты','Библиотеки','ИИ','Дизайн','Обучение','Статьи','DevTools','Прочее']);bookmarks.forEach(b=>{if(b.category)set.add(b.category);});return [...set];}
+function ensureEntry(e){
+  if(!e.tags||!e.tasks||!e.links){const d=parseMd(e.markdown);
+    if(!e.tags)e.tags=d.tags;
+    if(!e.tasks)e.tasks=d.tasks.map((t,i)=>({id:e.id+'_t'+i,text:t,done:false}));
+    if(!e.links)e.links=assembleLinks(d,e.markdown);}
+  if(!e.bookmarks){try{e.bookmarks=parseMd(e.markdown).bookmarks||[];}catch(_){e.bookmarks=[];}}
+  return e;
+}
+function loadAll(){
+  const hadSettings=!!localStorage.getItem('neurocatch_settings');
+  localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
+  loadBookmarks();loadHabits();
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false};}catch(e){}
+  if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
+  try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
+  try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
+  catches.forEach(c=>{if(!c.id)c.id=uid('c');});
+  history.forEach(h=>{try{ensureEntry(h);}catch(e){}});
+  if(!localStorage.getItem('neurocatch_bm_migrated')){try{history.forEach(h=>ingestBookmarks(h.bookmarks));}catch(e){}localStorage.setItem('neurocatch_bm_migrated','1');}
+  localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
+  localStorage.setItem('neurocatch_history',JSON.stringify(history));
+  try{fillSettings();}catch(e){}
+  try{refreshCount();setAccent(settings.seed,false);applyThemeMode(settings.themeMode,false);buildSwatches();}catch(e){}
+  if(settings.sbUrl&&settings.sbKey){try{cloudInit();}catch(e){}}
+}
+function touchLocal(){if(applyingRemote||booting)return;localUpdatedAt=Date.now();localStorage.setItem('neurocatch_updated',String(localUpdatedAt));scheduleCloudPush();}
+function saveSettings(){localStorage.setItem('neurocatch_settings',JSON.stringify(settings));}
+function saveCatches(){localStorage.setItem('neurocatch_catches',JSON.stringify(catches));touchLocal();}
+function saveHistory(){localStorage.setItem('neurocatch_history',JSON.stringify(history));touchLocal();}
+function fillSettings(){
+  const setv=(id,v)=>{const el=$('#'+id);if(el)el.value=v;};
+  setv('apikey',settings.key);setv('model',settings.model);setv('themeSel',settings.themeMode);
+  setv('colorPick',settings.seed);setv('promptInput',settings.prompt||DEFAULT_PROMPT);
+  setv('sbUrl',settings.sbUrl);setv('sbKey',settings.sbKey);setv('sbEmail',settings.sbEmail);setv('microKey',settings.microlinkKey);
+  const mp=$('#microPerLink');if(mp)mp.checked=settings.microPerLink;
+  const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
+  const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
+  setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;updateProviderUI();
+}
+
+function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
+/* ---------- color / Material You ---------- */
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function rgbToHsl(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h,s,l=(mx+mn)/2;if(mx===mn){h=s=0;}else{const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);switch(mx){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}h/=6;}return[h*360,s*100,l*100];}
+function hslToHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12;const a=s*Math.min(l,1-l);const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));const to=x=>Math.round(x*255).toString(16).padStart(2,'0');return'#'+to(f(0))+to(f(8))+to(f(4));}
+function setAccent(hex,persist=true){const rgb=hexToRgb(hex);const[h,s,l]=rgbToHsl(...rgb);const a2=hslToHex(h,Math.min(s,90),Math.min(l+12,90));const root=document.documentElement.style;root.setProperty('--seed',hex);root.setProperty('--seed-rgb',rgb.join(','));root.setProperty('--accent',hex);root.setProperty('--accent-2',a2);settings.seed=hex;if(persist)saveSettings();}
+function buildSwatches(){const wrap=$('#swatches');wrap.querySelectorAll('.swatch').forEach(e=>e.remove());PRESETS.forEach(c=>{const b=document.createElement('button');b.className='swatch'+(c.toLowerCase()===settings.seed.toLowerCase()?' sel':'');b.style.background=c;b.type='button';b.title=c;b.addEventListener('click',()=>{setAccent(c);$('#colorPick').value=c;buildSwatches();});wrap.insertBefore(b,$('#colorPick'));});}
+$('#colorPick').addEventListener('input',e=>{setAccent(e.target.value);buildSwatches();});
+
+/* ---------- theme ---------- */
+function effectiveTheme(){if(settings.themeMode!=='auto')return settings.themeMode;if(mql&&mql.media!=='not all')return mql.matches?'dark':'light';const hr=new Date().getHours();return(hr>=7&&hr<20)?'light':'dark';}
+function applyEffective(){document.documentElement.setAttribute('data-theme',effectiveTheme());}
+function applyThemeMode(mode,persist=true){settings.themeMode=mode;if(persist)saveSettings();$('#themeSel').value=mode;const ic={dark:'moon',light:'sun',auto:'sun-moon'}[mode];$('#themeBtn').innerHTML='';const i=document.createElement('i');i.setAttribute('data-lucide',ic);$('#themeBtn').appendChild(i);lucide.createIcons();applyEffective();}
+$('#themeBtn').addEventListener('click',()=>{const next={dark:'light',light:'auto',auto:'dark'}[settings.themeMode];applyThemeMode(next);toast('Тема: '+({dark:'тёмная',light:'светлая',auto:'авто'}[next]));});
+if(mql)mql.addEventListener('change',()=>{if(settings.themeMode==='auto')applyEffective();});
+setInterval(()=>{if(settings.themeMode==='auto')applyEffective();},600000);
+
+/* ---------- helpers ---------- */
+function show(view){crumb('view '+(view&&view.id));document.querySelectorAll('.view').forEach(v=>{if(v!==view)v.hidden=true;});view.hidden=false;view.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>view.classList.remove('enter')));}
+let toastTimer;
+function toast(msg,err){$('#toastText').textContent=msg;$('#toast').classList.toggle('err',!!err);$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2600);}
+function refreshCount(){const c=$('#counter');$('#count').textContent=catches.length;c.classList.remove('pulse');void c.offsetWidth;c.classList.add('pulse');}
+const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const safe=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+const dateKey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const fmtDate=ts=>new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+const fmtTime=ts=>new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+
+/* ---------- textarea ---------- */
+const ta=$('#brain');
+function grow(){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,340)+'px';}
+ta.addEventListener('input',grow);
+ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();$('#submit').click();}});
+$('#submit').addEventListener('click',()=>{const v=ta.value.trim();if(!v){ta.focus();return;}const c={id:uid('c'),text:v,at:Date.now()};try{const due=parseDateTime(v);if(due){c.due=due.ts;c.dueLabel=due.label;c.dueHasTime=due.hasTime;}}catch(e){}catches.push(c);saveCatches();refreshCount();ta.value='';grow();ta.focus();toast(c.dueLabel?('Закинуто • срок '+c.dueLabel):'Закинуто в чёрную дыру');});
+
+/* ---------- voice ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null,recording=false;
+$('#mic').addEventListener('click',e=>{const b=e.currentTarget;if(!SR){toast('Голосовой ввод не поддерживается браузером',true);return;}if(!window.isSecureContext){toast('Микрофон работает только по https. Открой приложение с GitHub Pages, а не как файл.',true);return;}if(recording){recog&&recog.stop();return;}recog=new SR();recog.lang='ru-RU';recog.interimResults=true;recog.continuous=false;const base=ta.value?ta.value+' ':'';recog.onstart=()=>{recording=true;b.classList.add('rec');toast('Слушаю...');};recog.onresult=ev=>{let t='';for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;ta.value=base+t;grow();};recog.onerror=ev=>{const msg=ev.error==='not-allowed'?'Нет доступа к микрофону: разреши его в настройках сайта (нужен https)':ev.error==='no-speech'?'Речь не распознана, попробуй ещё раз':'Ошибка микрофона: '+ev.error;toast(msg,true);};recog.onend=()=>{recording=false;b.classList.remove('rec');};recog.start();});
+
+/* ---------- queue ---------- */
+$('#counter').addEventListener('click',()=>{renderQueue();show($('#view-queue'));});
+$('#queueBack').addEventListener('click',()=>show($('#view-input')));
+function renderQueue(){
+  const box=$('#qList');$('#queueRitual').disabled=!catches.length;
+  if(!catches.length){box.innerHTML='<div class="empty"><i data-lucide="inbox"></i>Улов пуст. Закинь первую мысль.</div>';lucide.createIcons();return;}
+  const excl=new Set(settings.microExclude||[]);
+  box.innerHTML=catches.map(c=>{
+    const urls=c.text.match(URL_RE)||[];
+    const off=urls.length&&urls.every(u=>excl.has(u.replace(/[),.]+$/,'')));
+    const mbtn=(settings.microPerLink&&urls.length)?`<button class="ql-btn${off?' off':''}" data-mic="${c.id}"><i data-lucide="link"></i>${off?'microlink выкл':'microlink вкл'}</button>`:'';
+    return `<div class="q-item" data-id="${c.id}">
+      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${mbtn}</div>
+      <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
+  box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',()=>{catches=catches.filter(x=>x.id!==b.dataset.del);saveCatches();refreshCount();renderQueue();}));
+  box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
+}
+$('#queueRitual').addEventListener('click',()=>runRitual());
+
+/* ---------- Gemini ---------- */
+const DEFAULT_PROMPT=`Ты — ассистент дневного brain-dump. Ниже записи пользователя за день.
+Проанализируй их и верни ТОЛЬКО markdown строго в таком виде, без вступлений:
+## 🧠 Инсайты
+- наблюдение (можно **жирным** выделять ключевое)
+## 📚 Конспекты
+Для каждой содержательной записи или ссылки сделай РАЗВЁРНУТЫЙ конспект, а не одну строку. НЕ конспектируй ссылки-ориентиры (репозитории GitHub, инструменты, библиотеки, сервисы, продукты) — их выноси в раздел «Закладки» ниже. Формат каждого источника:
+### <Ёмкий заголовок источника>
+🔗 <точный URL источника, если этот конспект по ссылке; иначе пропусти эту строку>
+<2–4 абзаца сути: о чём это, главные мысли, аргументы автора, выводы. Пиши связным текстом.>
+- ключевой тезис
+- ещё важный момент
+- практический вывод
+Если запись содержит ссылку на статью — открой страницу и законспектируй её реальное содержание. Если ссылка на YouTube-видео — законспектируй содержание видео (о чём, структура, ключевые тезисы, вывод). Не выдумывай факты: опирайся на реальный текст страницы/видео.
+## 🔗 Ссылки
+Перечисли ВСЕ ссылки из записей с их настоящими заголовками (заголовок страницы или название видео):
+- [<Настоящий заголовок>](<URL>)
+## 🔖 Закладки
+Если запись — это ссылка-ориентир, которую нужно просто сохранить (репозиторий GitHub, инструмент, библиотека, сервис, продукт), НЕ делай по ней конспект. Добавь её сюда одной строкой: придумай короткую подходящую категорию (например Инструменты, Библиотеки, ИИ, Дизайн, Обучение, DevTools) и очень краткое описание одной фразой. Формат:
+- [<Заголовок>](<URL>) | <Категория> | <краткое описание одной фразой>
+## ✅ Задачи
+- [ ] конкретное действие
+## 🏷 Теги
+#тег1 #тег2 #тег3
+Теги — короткие категории на русском (например #идея #задача #ссылка #видео #здоровье). Отвечай на русском. Записи:
+{{RECORDS}}`;
+function fmtDue(d,hasTime){const dd=d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});return hasTime?(dd+', '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})):dd;}
+function parseDateTime(text,base){
+  if(!text)return null;base=base||new Date();const t=text.toLowerCase();
+  let hasTime=false,hh=9,mm=0,hasDate=false,d=new Date(base);
+  const WD={'понедельник':1,'вторник':2,'сред':3,'четверг':4,'пятниц':5,'суббот':6,'воскрес':0};
+  const MON=[['март',2],['мая',4],['май',4],['янв',0],['фев',1],['апр',3],['июн',5],['июл',6],['авг',7],['сен',8],['окт',9],['ноя',10],['дек',11],['ма',4]];
+  let mt=t.match(/(\d{1,2}):(\d{2})(?!\d)/)||t.match(/в\s*(\d{1,2})[.:](\d{2})(?!\d)/);
+  if(mt){hh=+mt[1];mm=+mt[2];hasTime=true;}
+  else{let m2=t.match(/в\s*(\d{1,2})(?:\s*(утра|дня|вечера|ночи|час\w*))?/);if(m2){hh=+m2[1];mm=0;hasTime=true;const q=m2[2]||'';if(/вечера|дня/.test(q)&&hh<12)hh+=12;if(/ночи/.test(q)&&hh===12)hh=0;}}
+  if(/послезавтра/.test(t)){d=new Date(base);d.setDate(d.getDate()+2);hasDate=true;}
+  else if(/завтра/.test(t)){d=new Date(base);d.setDate(d.getDate()+1);hasDate=true;}
+  else if(/сегодня/.test(t)){d=new Date(base);hasDate=true;}
+  let mr=t.match(/через\s+(\d+)\s*(минут\w*|час\w*|недел\w*|дн\w*|день)/);
+  if(mr){const n=+mr[1],u=mr[2];d=new Date(base);if(/минут/.test(u)){d.setMinutes(d.getMinutes()+n);hasTime=true;hh=d.getHours();mm=d.getMinutes();}else if(/час/.test(u)){d.setHours(d.getHours()+n);hasTime=true;hh=d.getHours();mm=d.getMinutes();}else if(/недел/.test(u)){d.setDate(d.getDate()+n*7);}else{d.setDate(d.getDate()+n);}hasDate=true;}
+  if(!hasDate){for(const k in WD){if(t.includes(k)){const target=WD[k];d=new Date(base);let diff=(target-d.getDay()+7)%7;if(diff===0)diff=7;d.setDate(d.getDate()+diff);hasDate=true;break;}}}
+  let md=t.match(/(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?/);
+  if(md){const dd=+md[1],mo=+md[2]-1;let yy=md[3]?+md[3]:base.getFullYear();if(yy<100)yy+=2000;if(mo>=0&&mo<12&&dd>=1&&dd<=31){d=new Date(yy,mo,dd);hasDate=true;}}
+  if(!md){let mn=t.match(/(\d{1,2})\s+([а-я]+)/);if(mn){const dd=+mn[1],name=mn[2];let moi=-1;for(const it of MON){if(name.startsWith(it[0])){moi=it[1];break;}}if(moi>=0){d=new Date(base.getFullYear(),moi,dd);hasDate=true;}}}
+  if(!hasDate&&!hasTime)return null;
+  if(hasTime)d.setHours(hh,mm,0,0);else d.setHours(9,0,0,0);
+  if(hasTime&&!hasDate&&d.getTime()<base.getTime()-60000){d.setDate(d.getDate()+1);}
+  return {ts:d.getTime(),hasTime,label:fmtDue(d,hasTime)};
+}
+function buildPrompt(items){const recs=items.map((c,i)=>`${i+1}. ${c.text}${c.dueLabel?(' [срок: '+c.dueLabel+']'):''}`).join('\n');const tpl=(settings.prompt&&settings.prompt.trim())?settings.prompt:DEFAULT_PROMPT;return tpl.includes('{{RECORDS}}')?tpl.replace('{{RECORDS}}',recs):tpl+'\n\nЗаписи:\n'+recs;}
+const URL_RE=/https?:\/\/[^\s<>"')]+/gi;
+const isYT=u=>/(?:youtube\.com\/(?:watch|shorts|live)|youtu\.be\/)/i.test(u);
+function classifyLinks(items){const urls=[];items.forEach(c=>{(c.text.match(URL_RE)||[]).forEach(u=>urls.push(u));});return{yt:[...new Set(urls.filter(isYT))],web:[...new Set(urls.filter(u=>!isYT(u)))]};}
+function providerName(){return {gemini:'Gemini',openrouter:'OpenRouter',ollama:'Ollama'}[settings.provider||'gemini'];}
+function hasLLM(){const p=settings.provider||'gemini';if(p==='openrouter')return !!settings.orKey;if(p==='ollama')return !!settings.ollamaUrl;return !!settings.key;}
+async function fetchReader(u){try{const r=await fetch('https://r.jina.ai/'+u,{headers:{'X-Return-Format':'markdown'}});if(!r.ok)return '';return await r.text();}catch(e){return '';}}
+async function buildContextPrompt(items){
+  let prompt=buildPrompt(items);
+  const {web}=classifyLinks(items);const excl=new Set(settings.microExclude||[]);
+  const urls=web.filter(u=>!excl.has(u)).slice(0,3);
+  let ctx='';
+  for(const u of urls){const t=await fetchReader(u);if(t)ctx+=`\n\n=== Текст страницы ${u} ===\n`+t.slice(0,6000);}
+  if(ctx)prompt+='\n\nНиже реальный текст страниц по ссылкам — опирайся на него для конспектов, не выдумывай:'+ctx;
+  return prompt;
+}
+async function streamLLM(items,onChunk,signal){
+  const p=settings.provider||'gemini';
+  if(p==='gemini')return streamGemini(items,onChunk,signal);
+  const prompt=await buildContextPrompt(items);
+  if(p==='openrouter')return streamOpenRouter(prompt,onChunk,signal);
+  if(p==='ollama')return streamOllama(prompt,onChunk,signal);
+  return streamGemini(items,onChunk,signal);
+}
+async function streamOpenRouter(prompt,onChunk,signal){
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.orKey,'HTTP-Referer':location.origin,'X-Title':'NeuroCatch'},body:JSON.stringify({model:settings.orModel||'meta-llama/llama-3.3-70b-instruct:free',stream:true,messages:[{role:'user',content:prompt}]})});
+  if(!res.ok||!res.body){let m='HTTP '+res.status;try{const e=await res.json();m=(e.error&&e.error.message)||m;}catch(_){}throw new Error(m);}
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf='',full='';
+  while(true){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let idx;while((idx=buf.indexOf('\n'))>=0){const line=buf.slice(0,idx).trim();buf=buf.slice(idx+1);if(!line.startsWith('data:'))continue;const js=line.slice(5).trim();if(js==='[DONE]')continue;try{const o=JSON.parse(js);const t=(o.choices&&o.choices[0]&&o.choices[0].delta&&o.choices[0].delta.content)||'';if(t){full+=t;onChunk(full);}}catch(_){}}}
+  return full;
+}
+async function streamOllama(prompt,onChunk,signal){
+  const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');
+  const res=await fetch(base+'/api/chat',{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:settings.ollamaModel||'llama3.1',stream:true,messages:[{role:'user',content:prompt}]})});
+  if(!res.ok||!res.body)throw new Error('Ollama HTTP '+res.status);
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf='',full='';
+  while(true){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let idx;while((idx=buf.indexOf('\n'))>=0){const line=buf.slice(0,idx).trim();buf=buf.slice(idx+1);if(!line)continue;try{const o=JSON.parse(line);const t=(o.message&&o.message.content)||'';if(t){full+=t;onChunk(full);}if(o.done)return full;}catch(_){}}}
+  return full;
+}
+async function streamGemini(items,onChunk,signal){
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(settings.key)}`;
+  const {yt,web}=classifyLinks(items);
+  const parts=[{text:buildPrompt(items)}];
+  yt.forEach(u=>parts.push({fileData:{fileUri:u}}));           // YouTube — как видео-вход
+  const payload={contents:[{role:'user',parts}],generationConfig:{temperature:0.5,maxOutputTokens:8192}};
+  if(web.length)payload.tools=[{url_context:{}}];               // статьи — чтение страниц
+  const res=await fetch(url,{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!res.ok||!res.body){let m='HTTP '+res.status;try{const e=await res.json();m=e.error?.message||m;}catch(_){}throw new Error(m);}
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf='',full='';
+  while(true){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let idx;while((idx=buf.indexOf('\n'))>=0){const line=buf.slice(0,idx).trim();buf=buf.slice(idx+1);if(!line.startsWith('data:'))continue;const js=line.slice(5).trim();if(js==='[DONE]')continue;try{const o=JSON.parse(js);const t=o.candidates?.[0]?.content?.parts?.[0]?.text||'';if(t){full+=t;onChunk(full);}}catch(_){}}}
+  return full;
+}
+
+/* ---------- parse & render ---------- */
+function parseMd(md){md=md||'';const d={insights:[],summaries:[],tasks:[],tags:[],links:[],bookmarks:[]};let sec=null,cur=null;
+  const addLink=(url,title)=>{if(!url)return;url=url.replace(/[),.]+$/,'');const ex=d.links.find(l=>l.url===url);if(ex){if(title&&!ex.title)ex.title=title;}else d.links.push({url,title:title||''});};
+  md.split('\n').forEach(raw=>{const line=raw.replace(/\s+$/,'');const t=line.trim();
+    if(/^##\s/.test(t)){ // section heading (## ...)
+      if(/инсайт/i.test(t))sec='ins';else if(/конспект/i.test(t))sec='sum';else if(/закладк/i.test(t))sec='bm';else if(/задач/i.test(t))sec='task';else if(/ссылк/i.test(t))sec='link';else if(/тег/i.test(t))sec='tag';else sec=null;cur=null;return;}
+    if(sec==='sum'){ // конспекты — многострочные блоки, разбитые по ### Заголовок
+      if(/^###\s+/.test(t)){cur={title:t.replace(/^###\s+/,''),body:'',source:''};d.summaries.push(cur);return;}
+      if(cur&&!cur.body&&(t.startsWith('🔗')||/^https?:\/\/\S+$/.test(t))){const um=t.match(URL_RE);if(um){cur.source=um[0].replace(/[),.]+$/,'');addLink(cur.source,cur.title);return;}}
+      if(!cur){cur={title:'',body:'',source:''};d.summaries.push(cur);}
+      cur.body+=(cur.body?'\n':'')+line;return;}
+    if(sec==='bm'){if(!t||/^_/.test(t))return;const bm=t.replace(/^[-*]\s*/,'');const lm=bm.match(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/);let url='',title='';if(lm){title=lm[1];url=lm[2];}else{const um=bm.match(URL_RE);if(um)url=um[0];}if(!url)return;url=url.replace(/[),.]+$/,'');const parts=bm.split('|').map(x=>x.trim());let cat=parts[1]||'Прочее',desc=parts.length>=3?parts.slice(2).join(' | '):'';d.bookmarks.push({url,title:title||'',category:cat,desc:desc});return;}
+    if(sec==='link'){const lm=t.match(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/);if(lm)addLink(lm[2],lm[1]);else (t.match(URL_RE)||[]).forEach(u=>addLink(u,''));return;}
+    if(!t)return;
+    if(sec==='tag'||/^#[^\s#]/.test(t)){(t.match(/#[\wа-яёА-ЯЁ-]+/g)||[]).forEach(x=>{if(!d.tags.includes(x))d.tags.push(x);});return;}
+    const m=t.replace(/^[-*]\s*/,'');
+    if(sec==='ins')d.insights.push(m);
+    else if(sec==='task')d.tasks.push(m.replace(/^\[[ xX]?\]\s*/,''));});
+  d.summaries.forEach(s=>s.body=s.body.trim());
+  d.summaries=d.summaries.filter(s=>s.title||s.body);
+  return d;}
+function hostOf(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u.replace(/^https?:\/\//,'').split('/')[0];}}
+function assembleLinks(d,text){const map=new Map();
+  const add=(u,t)=>{if(!u)return;u=u.replace(/[),.]+$/,'');if(!map.has(u))map.set(u,t||'');else if(t&&!map.get(u))map.set(u,t);};
+  d.links.forEach(l=>add(l.url,l.title));
+  d.summaries.forEach(s=>{if(s.source)add(s.source,s.title);});
+  (text.match(URL_RE)||[]).forEach(u=>add(u,''));
+  return [...map].map(([url,title])=>({url,title:title||hostOf(url)}));}
+function mdBlock(src){const lines=(src||'').split('\n');let html='',para=[],inList=false;
+  const fp=()=>{if(para.length){html+='<p>'+safe(para.join(' '))+'</p>';para=[];}};
+  const fl=()=>{if(inList){html+='</ul>';inList=false;}};
+  lines.forEach(l=>{const t=l.trim();
+    if(!t){fp();fl();return;}
+    if(/^[-*]\s+/.test(t)){fp();if(!inList){html+='<ul class="bullets">';inList=true;}html+='<li>'+safe(t.replace(/^[-*]\s+/,''))+'</li>';}
+    else if(/^#{1,6}\s+/.test(t)){fp();fl();html+='<h5>'+safe(t.replace(/^#{1,6}\s+/,''))+'</h5>';}
+    else para.push(t);});
+  fp();fl();return html;}
+const attr=u=>String(u).replace(/"/g,'%22');
+function renderDigest(entry){
+  currentEntry=entry;const d=parseMd(entry.markdown);
+  const ins=(d.insights.length?d.insights:['Ничего заметного.']).map(x=>`<li>${safe(x)}</li>`).join('');
+  const sum=d.summaries.length?d.summaries.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
+  const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label></li>`).join(''):'<p>Задач нет.</p>';
+  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a></div>`).join('')}</div></div>`:'';
+  const covered=new Set(d.summaries.map(x=>x.source).filter(Boolean));
+  const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
+  const bms=entry.bookmarks||[];
+  const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><button class="bm-cat" data-bi="${i}" title="Изменить категорию">${esc(b.category||'Прочее')}</button></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
+  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
+  const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map(t=>`<button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`:'';
+  $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
+    <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
+    ${links}
+    ${bmBlock}
+    ${failBlock}
+    <div class="md-section"><div class="sec-head"><h3>✅ Задачи</h3><div class="sec-actions"><button class="mini" id="tasksMdBtn" title="Скачать задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="tasksTickBtn" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button></div></div><ul>${tasks}</ul></div>${tags}`;
+  $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
+  $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
+  $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.cpurl);toast('Ссылка скопирована');}catch(e){toast('Не удалось',true);}}));
+  $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
+  $('#digestCard').querySelectorAll('.bm-cat[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;const g=bookmarks.find(x=>x.url===bm.url);if(g)g.category=cat;else ingestBookmarks([bm]);saveHistory();saveBookmarks();renderDigest(entry);});}));
+  const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(failed.map(l=>l.url).join('\n'));toast('Скопированы все ссылки');}catch(e){toast('Не удалось',true);}});
+  $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
+  const tmb=$('#tasksMdBtn');if(tmb)tmb.addEventListener('click',()=>{download('tasks_'+dateKey(entry.ts)+'.md',tasksToMd(entry.tasks),'text/markdown');toast('Задачи сохранены .md');});
+  const ttb=$('#tasksTickBtn');if(ttb)ttb.addEventListener('click',()=>copyTick(entry.tasks));
+  lucide.createIcons();
+  enrichTitles(entry);
+}
+function openHistoryWithTag(tag){filterDate=null;searchQuery='';$('#searchInput').value='';tagFilter=tag;renderHistory();show($('#view-history'));}
+async function fetchMeta(url){ // YouTube -> oEmbed (без лимита); прочее -> microlink.io
+  try{
+    if(isYT(url)){const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(url));if(!r.ok)return null;const j=await r.json();return{title:j.title||'',logo:j.thumbnail_url||'',publisher:j.author_name||''};}
+    const opt=settings.microlinkKey?{headers:{'x-api-key':settings.microlinkKey}}:{};
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url),opt);
+    if(!r.ok)return null;const j=await r.json();
+    if(j&&j.status==='success'&&j.data){const dd=j.data;return{title:dd.title||'',desc:dd.description||'',logo:(dd.logo&&dd.logo.url)||(dd.image&&dd.image.url)||'',publisher:dd.publisher||''};}
+    return null;
+  }catch(e){return null;}
+}
+async function enrichTitles(entry){
+  if(!entry.links||!entry.links.length)return;let changed=false;
+  const excl=new Set(settings.microExclude||[]);
+  const todo=entry.links.filter(l=>!l._tried&&!excl.has(l.url)&&(!l.title||l.title===hostOf(l.url)||!l.logo)).slice(0,10);
+  if(!todo.length)return;
+  await Promise.all(todo.map(async l=>{l._tried=true;const m=await fetchMeta(l.url);if(!m)return;
+    if(m.title&&(!l.title||l.title===hostOf(l.url))){l.title=m.title;changed=true;}
+    if(m.logo&&!l.logo){l.logo=m.logo;changed=true;}
+    if(m.publisher&&!l.publisher){l.publisher=m.publisher;changed=true;}}));
+  if(changed){saveHistory();if(currentEntry===entry&&!$('#view-digest').hidden)renderDigest(entry);}
+}
+async function checkMicro(){setStatus('microStatus','проверяю...','wait');const m=await fetchMeta('https://example.com');if(m&&(m.title||m.publisher||m.logo!==undefined))setStatus('microStatus','работает'+(settings.microlinkKey?' (с ключом)':' (free)'),'ok');else setStatus('microStatus','нет ответа / лимит','err');}
+function aiTargets(){
+  const list=[
+    {n:'Perplexity',u:q=>'https://www.perplexity.ai/?q='+q},
+    {n:'ChatGPT',u:q=>'https://chatgpt.com/?q='+q},
+    {n:'Claude',u:q=>'https://claude.ai/new?q='+q},
+    {n:'Gemini',u:()=>'https://gemini.google.com/app'},
+    {n:'Grok',u:q=>'https://grok.com/?q='+q}
+  ];
+  if(settings.studyCustomUrl){list.push({n:settings.studyCustomName||'Свой ИИ',u:(q,url)=>settings.studyCustomUrl.replace('{q}',q).replace('{url}',encodeURIComponent(url))});}
+  return list;
+}
+function studyOutside(e){if(!e.target.closest('#studyMenu')&&!e.target.closest('.study'))closeStudyMenu();}
+function closeStudyMenu(){const m=$('#studyMenu');if(m)m.remove();document.removeEventListener('click',studyOutside);}
+function openStudyMenu(url,anchor){
+  closeStudyMenu();
+  const prompt='Изучи и сделай подробный конспект этой ссылки — ключевые тезисы и выводы:\n'+url;
+  const q=encodeURIComponent(prompt);
+  const targets=aiTargets();
+  const m=document.createElement('div');m.className='study-menu';m.id='studyMenu';
+  m.innerHTML='<div class="sm-h">Изучить в ИИ</div>'+targets.map((t,i)=>`<button data-i="${i}">${esc(t.n)}</button>`).join('');
+  document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect();
+  m.style.top=(r.bottom+6+window.scrollY)+'px';
+  let left=r.right-200+window.scrollX;if(left<8)left=8+window.scrollX;m.style.left=left+'px';
+  m.querySelectorAll('button[data-i]').forEach(b=>b.addEventListener('click',async()=>{
+    const t=targets[+b.dataset.i];
+    try{await navigator.clipboard.writeText(url);}catch(e){}
+    window.open(t.u(q,url),'_blank','noopener');
+    closeStudyMenu();toast('Ссылка скопирована → '+t.n);
+  }));
+  setTimeout(()=>document.addEventListener('click',studyOutside),0);
+}
+function openCatMenu(anchor,current,onPick,options){
+  const ex=$('#catMenu');if(ex)ex.remove();
+  const cats=(options&&options.length)?options:catList();
+  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
+  m.innerHTML='<div class="sm-h">Категория</div>'+cats.map(c=>`<button data-c="${attr(c)}"${c===current?' style="color:var(--accent-2)"':''}>${esc(c)}</button>`).join('')+'<button data-new="1">＋ Новая…</button>';
+  document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-200+window.scrollX;if(left<8+window.scrollX)left=8+window.scrollX;m.style.left=left+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};
+  function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
+  m.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.new){const nc=prompt('Новая категория:');close();if(nc&&nc.trim())onPick(nc.trim());return;}onPick(b.dataset.c);close();}));
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
+function renderBookmarks(){
+  const box=$('#bmMgr');if(!box)return;$('#bmCount').textContent=bookmarks.length;
+  if(!bookmarks.length){box.innerHTML='<div class="empty">Пока нет закладок. Ссылки-ориентиры (репозитории, инструменты) добавятся сюда автоматически при разборе, либо добавь вручную выше.</div>';return;}
+  const groups={};bookmarks.forEach(b=>{const c=b.category||'Прочее';(groups[c]=groups[c]||[]).push(b);});
+  box.innerHTML=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ru')).map(cat=>`<div class="bm-group"><div class="bm-cat-h"><i data-lucide="folder"></i>${esc(cat)}<span class="bm-n">${groups[cat].length}</span></div>${groups[cat].map(b=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-acts"><button class="mini bm-recat" data-id="${b.id}" title="Категория"><i data-lucide="folder"></i></button><button class="mini bm-del" data-id="${b.id}" title="Удалить"><i data-lucide="trash-2"></i></button></div></div>`).join('')}</div>`).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.bm-del').forEach(b=>b.addEventListener('click',()=>{bookmarks=bookmarks.filter(x=>x.id!==b.dataset.id);saveBookmarks();renderBookmarks();toast('Закладка удалена');}));
+  box.querySelectorAll('.bm-recat').forEach(b=>b.addEventListener('click',()=>{const bm=bookmarks.find(x=>x.id===b.dataset.id);if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;saveBookmarks();renderBookmarks();});}));
+}
+$('#openBookmarks')&&$('#openBookmarks').addEventListener('click',()=>{renderBookmarks();show($('#view-bookmarks'));});
+$('#bmBack')&&$('#bmBack').addEventListener('click',()=>show($('#view-input')));
+$('#bmAddBtn')&&$('#bmAddBtn').addEventListener('click',async()=>{const u=$('#bmUrl').value.trim();if(!/^https?:\/\//i.test(u)){toast('Вставь ссылку (http/https)',true);return;}$('#bmUrl').value='';let title=hostOf(u),desc='';try{const m=await fetchMeta(u);if(m){if(m.title)title=m.title;if(m.desc)desc=m.desc;}}catch(e){}ingestBookmarks([{url:u,title,desc,category:'Прочее'}]);renderBookmarks();toast('Закладка добавлена — задай категорию');});
+$('#bmUrl')&&$('#bmUrl').addEventListener('keydown',e=>{if(e.key==='Enter')$('#bmAddBtn').click();});
+function loadNoteCats(){try{return JSON.parse(localStorage.getItem('neurocatch_note_cats')||'{}');}catch(e){return {};}}
+function saveNoteCats(o){localStorage.setItem('neurocatch_note_cats',JSON.stringify(o));touchLocal();}
+function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);let d;try{d=parseMd(h.markdown);}catch(e){return;}
+  (d.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts}));
+  (d.insights||[]).forEach((ins,i)=>notes.push({id:h.id+':i'+i,kind:'ins',title:ins,body:'',source:'',tags:h.tags||[],ts:h.ts}));});
+  return notes.sort((a,b)=>b.ts-a.ts);}
+function noteCat(n,cats){return cats[n.id]||(n.tags&&n.tags[0])||'Без тега';}
+function renderNotes(){
+  const box=$('#notesList');if(!box)return;const notes=buildNotes();const cats=loadNoteCats();
+  const tset=new Set();notes.forEach(n=>n.tags.forEach(t=>tset.add(t)));const tags=[...tset];
+  $('#noteTags').innerHTML=tags.map(t=>`<button class="tagchip${noteTagFilter===t?' on':''}" data-t="${attr(t)}">${esc(t)}</button>`).join('');
+  $('#noteTags').querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=noteTagFilter===b.dataset.t?null:b.dataset.t;renderNotes();}));
+  let list=notes;
+  if(noteTagFilter)list=list.filter(n=>n.tags.includes(noteTagFilter));
+  if(noteSearch)list=list.filter(n=>((n.title||'')+' '+(n.body||'')).toLowerCase().includes(noteSearch));
+  $('#notesCount').textContent=list.length;
+  if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты и инсайты появятся здесь после разбора.</div>';return;}
+  box.innerHTML=list.map(n=>{const cat=noteCat(n,cats);const bodyHtml=n.kind==='sum'&&n.body?mdBlock(n.body):'';
+    return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions"><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp">${bodyHtml}</div><button class="note-more">Показать полностью</button>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}</div></div>`;}).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
+  box.querySelectorAll('.note-more').forEach(b=>b.addEventListener('click',()=>{const body=b.previousElementSibling;body.classList.toggle('clamp');b.textContent=body.classList.contains('clamp')?'Показать полностью':'Свернуть';}));
+  box.querySelectorAll('.note-tags .tag-pill[data-t]').forEach(p=>p.addEventListener('click',()=>{noteTagFilter=p.dataset.t;renderNotes();}));
+  box.querySelectorAll('.note-share[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)openShareMenu(b,n);}));
+  box.querySelectorAll('.note-file[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)shareNoteFile(n);}));
+}
+$('#openNotes')&&$('#openNotes').addEventListener('click',()=>{renderNotes();show($('#view-notes'));});
+$('#notesBack')&&$('#notesBack').addEventListener('click',()=>show($('#view-input')));
+$('#noteSearch')&&$('#noteSearch').addEventListener('input',e=>{noteSearch=e.target.value.toLowerCase();renderNotes();});
+function renderActionBar(mode){
+  const bar=$('#actionBar');
+  const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
+    `<button class="btn" id="mdBtn"><i data-lucide="file-down"></i>Экспорт .md</button>`,
+    `<button class="btn" id="addMoreBtn"><i data-lucide="plus-circle"></i>Дозакинуть</button>`];
+  if(mode==='fresh')btns.push(`<button class="btn btn-clear" id="clearBtn"><i data-lucide="trash-2"></i>Очистить день</button>`);
+  else btns.push(`<button class="btn btn-clear" id="delRepBtn"><i data-lucide="trash-2"></i>Удалить отчёт</button>`);
+  bar.innerHTML=btns.join('');lucide.createIcons();
+  $('#copyBtn').addEventListener('click',copyDigest);
+  $('#mdBtn').addEventListener('click',exportMd);
+  $('#addMoreBtn').addEventListener('click',()=>{show($('#view-input'));ta.focus();toast('Добавляй в улов');});
+  if(mode==='fresh')$('#clearBtn').addEventListener('click',()=>{catches=[];saveCatches();refreshCount();show($('#view-input'));toast('День очищен');});
+  else $('#delRepBtn').addEventListener('click',()=>{if(currentEntry&&confirm('Удалить этот отчёт?')){history=history.filter(x=>x.id!==currentEntry.id);saveHistory();show($('#view-history'));renderHistory();toast('Отчёт удалён');}});
+}
+const DEMO_MD=`## 🧠 Инсайты
+- Ты возвращаешься к теме **фокуса и внимания** — стоит выделить под неё отдельный блок.
+- Большинство «мыслей» вечером — это на самом деле микрозадачи, а не идеи.
+## 📚 Конспекты
+### Статья: «Building a Second Brain»
+🔗 https://fortelabs.com/blog/basboverview/
+Автор доказывает, что ценность системы заметок не в объёме сохранённого, а в регулярном пересмотре и переработке. Хранилище без ревизии быстро превращается в цифровую свалку, к которой никто не возвращается.
+
+Основной метод — **CODE**: Capture, Organize, Distill, Express. Сохраняй только то, что откликается; раскладывай по проектам, а не по темам; прогрессивно выделяй суть при каждом повторном проходе; и обязательно выражай знание наружу — в текст, проект, разговор.
+
+- **Capture** — фильтруй на входе, не тащи всё подряд.
+- **Distill** — на каждом проходе подсвечивай главное, чтобы будущему себе хватило 30 секунд.
+- **Express** — заметка без применения мертва; знание проверяется только использованием.
+### Видео: разбор утренней рутины
+🔗 https://www.youtube.com/watch?v=dQw4w9WgXcQ
+Спикер утверждает, что первые 90 минут задают тон всему дню, и разбирает три опоры: свет, движение и отсутствие входящей информации. Главный тезис — не проверять телефон до того, как определены 1–3 приоритета на день, иначе чужая повестка перехватывает внимание.
+
+- Свет в глаза в первый час запускает циркадный ритм.
+- Лёгкое движение важнее интенсивной тренировки для старта.
+- Первый экран должен быть твоим списком, а не чужой лентой.
+## ✅ Задачи
+- [ ] Ответить Диме по проекту до среды
+- [ ] Купить адаптер для аккумулятора
+- [ ] Записать идею для карусели в Constructor
+## 🔗 Ссылки
+- [Building a Second Brain — обзор метода](https://fortelabs.com/blog/basboverview/)
+- [Разбор утренней рутины (видео)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+## 🏷 Теги
+#идея #задача #фокус #видео`;
+
+/* ---------- ritual ---------- */
+function saveToHistory(md,items){const d=parseMd(md);const src=(items||catches).map(c=>c.text).join('\n');const bmUrls=new Set((d.bookmarks||[]).map(b=>b.url));const entry={id:uid('d'),ts:Date.now(),date:dateKey(Date.now()),markdown:md,tags:d.tags,links:assembleLinks(d,src).filter(l=>!bmUrls.has(l.url)),tasks:d.tasks.map((t,i)=>({id:'d'+Date.now()+'_t'+i,text:t,done:false})),bookmarks:d.bookmarks||[]};history.unshift(entry);ingestBookmarks(entry.bookmarks);saveHistory();return entry;}
+async function runRitual(items,opts){
+  opts=opts||{};items=items||catches;
+  backTarget=opts.back||'#view-input';$('#digestTitle').textContent=opts.title||'Дайджест';show($('#view-digest'));
+  $('#loader').hidden=false;$('#streamWrap').hidden=true;$('#result').hidden=true;
+  const box=$('#streamBox');box.innerHTML='';
+  const startStream=()=>{$('#loader').hidden=true;$('#streamWrap').hidden=false;};
+  const isDaily=(items===catches);crumb('ritual '+(isDaily?'daily':'link')+' n='+items.length+' via '+(settings.provider||'gemini'));
+  const finish=(md,real)=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);if(isDaily&&real&&catches.length&&settings.clearAfter!==false){catches=[];saveCatches();refreshCount();toast('Улов разобран и очищен');}renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
+  if(hasLLM()&&items.length){
+    const lk=classifyLinks(items);$('#loaderText').textContent=(lk.yt.length||lk.web.length)?('Читаю ссылки и конспектирую… ('+providerName()+')'):('Думает '+providerName()+'…');
+    let opened=false,acc='';streamAbort=new AbortController();
+    try{const full=await streamLLM(items,txt=>{acc=txt;if(!opened){opened=true;startStream();}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);
+      finish(full||acc||DEMO_MD,!!(full||acc));}
+    catch(err){
+      if(err.name==='AbortError'){finish(acc||DEMO_MD,false);toast('Остановлено');}
+      else if(acc&&acc.length>40){finish(acc,false);toast('Соединение прервалось — сохранил частичный разбор',true);}
+      else{toast(providerName()+': '+err.message+' — демо',true);typewriter(DEMO_MD,box,startStream,md=>finish(md,false));}
+    }
+  }else{if(!hasLLM())toast('Провайдер не настроен — демо-разбор');else if(!items.length)toast('Пусто — показываю пример');$('#loaderText').textContent='Разбираю…';setTimeout(()=>typewriter(DEMO_MD,box,startStream,md=>finish(md,false)),700);}
+}
+$('#ritual').addEventListener('click',()=>runRitual());
+/* single-link analyzer */
+$('#openLink').addEventListener('click',()=>{$('#linkInput').value='';$('#linkOverlay').classList.add('open');setTimeout(()=>$('#linkInput').focus(),100);});
+$('#closeLink').addEventListener('click',()=>$('#linkOverlay').classList.remove('open'));
+$('#linkOverlay').addEventListener('click',e=>{if(e.target===$('#linkOverlay'))$('#linkOverlay').classList.remove('open');});
+$('#linkGo').addEventListener('click',()=>{const u=$('#linkInput').value.trim();if(!/^https?:\/\//i.test(u)){toast('Вставь ссылку (http/https)',true);return;}$('#linkOverlay').classList.remove('open');runRitual([{id:uid('c'),text:u,at:Date.now()}],{title:'Разбор ссылки'});});
+$('#stopBtn').addEventListener('click',()=>{if(streamAbort)streamAbort.abort();else typewriterStop=true;});
+function typewriter(md,box,onStart,onDone){onStart();typewriterStop=false;let i=0;(function tick(){if(typewriterStop){onDone(md.slice(0,i)||md);return;}i=Math.min(md.length,i+2);box.innerHTML=esc(md.slice(0,i))+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;if(i<md.length)setTimeout(tick,14);else onDone(md);})();}
+
+/* ---------- digest shared actions ---------- */
+$('#backBtn').addEventListener('click',()=>show($(backTarget)));
+async function copyDigest(){if(!currentEntry)return;try{await navigator.clipboard.writeText(currentEntry.markdown);toast('Скопировано в Obsidian');}catch(e){toast('Не удалось скопировать',true);}}
+function download(name,text,mime){const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function slug(t){return (String(t||'').trim().toLowerCase().replace(/[^\wа-яё]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,40))||'konspekt';}
+function exportMd(){if(!currentEntry)return;download('neurocatch_'+dateKey(currentEntry.ts)+'.md',currentEntry.markdown,'text/markdown');toast('Экспорт .md');}
+function downloadSummary(i){if(!currentEntry)return;const s=parseMd(currentEntry.markdown).summaries[i];if(!s)return;const md='### '+(s.title||'Конспект')+(s.source?'\n\n🔗 '+s.source:'')+'\n\n'+s.body+'\n';download('konspekt_'+slug(s.title)+'.md',md,'text/markdown');toast('Конспект сохранён .md');}
+function tasksToMd(list){return list.map(t=>'- ['+(t.done?'x':' ')+'] '+t.text).join('\n')+'\n';}
+function tasksForTick(list){return list.filter(t=>!t.done).map(t=>t.text).join('\n');}
+async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Нет открытых задач');return;}try{await navigator.clipboard.writeText(txt);toast('Скопировано — вставь в TickTick как несколько задач');}catch(e){toast('Не удалось скопировать',true);}}
+function allTasksFlat(){const a=[];history.forEach(h=>{ensureEntry(h);h.tasks.forEach(t=>a.push({text:t.text,done:t.done,ts:h.ts}));});return a.sort((x,y)=>(x.done-y.done)||(y.ts-x.ts));}
+
+/* ---------- history / calendar ---------- */
+$('#openHistory').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();show($('#view-history'));});
+$('#histBack').addEventListener('click',()=>show($('#view-input')));
+$('#calPrev').addEventListener('click',()=>{calCursor.setMonth(calCursor.getMonth()-1);renderCalendar();});
+$('#calNext').addEventListener('click',()=>{calCursor.setMonth(calCursor.getMonth()+1);renderCalendar();});
+$('#clearFilter').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();});
+$('#searchInput').addEventListener('input',e=>{searchQuery=e.target.value.trim().toLowerCase();renderRepList();});
+function renderHistory(){renderCalendar();renderTagFilter();renderRepList();}
+function renderCalendar(){
+  const y=calCursor.getFullYear(),m=calCursor.getMonth();
+  $('#calMonth').textContent=calCursor.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+  const daysWith=new Set(history.map(h=>h.date));
+  const first=new Date(y,m,1);let start=first.getDay();start=start===0?6:start-1;
+  const total=new Date(y,m+1,0).getDate();const todayKey=dateKey(Date.now());
+  let html=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<start;i++)html+='<div class="cal-cell pad"></div>';
+  for(let d=1;d<=total;d++){const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const has=daysWith.has(key),today=key===todayKey,sel=filterDate===key;html+=`<div class="cal-cell${has?' has':''}${today?' today':''}${sel?' sel':''}" ${has?`data-date="${key}"`:''}>${d}${has?'<span class="pip"></span>':''}</div>`;}
+  $('#calGrid').innerHTML=html;
+  $('#calGrid').querySelectorAll('[data-date]').forEach(c=>c.addEventListener('click',()=>{filterDate=filterDate===c.dataset.date?null:c.dataset.date;renderHistory();}));
+}
+function renderTagFilter(){
+  const all=[...new Set(history.flatMap(h=>h.tags||[]))];
+  const box=$('#tagFilter');
+  box.innerHTML=all.map(t=>`<span class="tf${tagFilter===t?' on':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
+  box.querySelectorAll('.tf').forEach(el=>el.addEventListener('click',()=>{tagFilter=tagFilter===el.dataset.tag?null:el.dataset.tag;renderHistory();}));
+}
+function renderRepList(){
+  let items=history.slice().sort((a,b)=>b.ts-a.ts);
+  if(filterDate)items=items.filter(h=>h.date===filterDate);
+  if(tagFilter)items=items.filter(h=>(h.tags||[]).includes(tagFilter));
+  if(searchQuery)items=items.filter(h=>h.markdown.toLowerCase().includes(searchQuery));
+  const parts=[];if(searchQuery)parts.push(`«${$('#searchInput').value.trim()}»`);if(filterDate)parts.push(fmtDate(new Date(filterDate+'T00:00:00')));if(tagFilter)parts.push(tagFilter);
+  $('#listLabel').textContent=parts.length?parts.join(' · '):'Все отчёты';
+  $('#clearFilter').hidden=!(filterDate||searchQuery||tagFilter);
+  if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».'}</div>`;lucide.createIcons();return;}
+  $('#repList').innerHTML=items.map(h=>{const d=parseMd(h.markdown);const prev=(d.insights[0]||d.summaries[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
+    return `<div class="rep" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}</div><div class="p">${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
+  lucide.createIcons();
+  $('#repList').querySelectorAll('.rep').forEach(r=>r.addEventListener('click',()=>openReport(r.dataset.id)));
+  $('#repList').querySelectorAll('.del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteReport(b.dataset.del);}));
+}
+function deleteReport(id){if(!confirm('Удалить этот отчёт? Действие необратимо.'))return;history=history.filter(x=>x.id!==id);saveHistory();if(filterDate&&!history.some(h=>h.date===filterDate))filterDate=null;renderHistory();toast('Отчёт удалён');}
+function openReport(id){const h=history.find(x=>x.id===id);if(!h)return;ensureEntry(h);backTarget='#view-history';$('#digestTitle').textContent=fmtDate(h.ts);show($('#view-digest'));$('#loader').hidden=true;$('#streamWrap').hidden=true;renderDigest(h);renderActionBar('history');$('#result').hidden=false;}
+
+/* ---------- tasks screen ---------- */
+$('#openTasks').addEventListener('click',()=>{setSubTab(curSubTab);show($('#view-tasks'));});
+document.querySelectorAll('#view-tasks .subtab').forEach(b=>b.addEventListener('click',()=>setSubTab(b.dataset.st)));
+$('#habitAdd')&&$('#habitAdd').addEventListener('click',()=>{const v=$('#habitName').value.trim();if(!v)return;habits.unshift({id:uid('hb'),name:v,checks:{},createdAt:Date.now()});$('#habitName').value='';saveHabits();renderHabits();});
+$('#habitName')&&$('#habitName').addEventListener('keydown',e=>{if(e.key==='Enter')$('#habitAdd').click();});
+$('#tasksBack').addEventListener('click',()=>show($('#view-input')));
+function loadHabits(){try{habits=JSON.parse(localStorage.getItem('neurocatch_habits')||'[]');}catch(e){habits=[];}}
+function saveHabits(){localStorage.setItem('neurocatch_habits',JSON.stringify(habits));touchLocal();}
+function habitStreak(hb){let n=0;const d=new Date();for(;;){const k=dateKey(d.getTime());if(hb.checks&&hb.checks[k]){n++;d.setDate(d.getDate()-1);}else break;}return n;}
+function renderHabits(){
+  const box=$('#habitList');if(!box)return;
+  if(!habits.length){box.innerHTML='<div class="empty">Пока нет привычек. Добавь первую выше — и отмечай каждый день.</div>';return;}
+  const days=[];const base=new Date();for(let i=6;i>=0;i--){const d=new Date(base);d.setDate(base.getDate()-i);days.push(d);}
+  box.innerHTML=habits.map(hb=>`<div class="habit-card" data-id="${hb.id}"><div class="habit-top"><span class="habit-name">${esc(hb.name)}</span><span class="habit-streak">🔥 ${habitStreak(hb)}</span><button class="mini habit-del" data-id="${hb.id}" title="Удалить"><i data-lucide="trash-2"></i></button></div><div class="habit-week">${days.map(d=>{const k=dateKey(d.getTime());const on=hb.checks&&hb.checks[k];const today=k===dateKey(Date.now());return `<button class="habit-day${on?' on':''}${today?' today':''}" data-hid="${hb.id}" data-k="${k}"><span class="hd-dow">${['вс','пн','вт','ср','чт','пт','сб'][d.getDay()]}</span><span class="hd-num">${d.getDate()}</span></button>`;}).join('')}</div></div>`).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.habit-day').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.hid);if(!hb)return;hb.checks=hb.checks||{};if(hb.checks[b.dataset.k])delete hb.checks[b.dataset.k];else hb.checks[b.dataset.k]=1;saveHabits();renderHabits();}));
+  box.querySelectorAll('.habit-del').forEach(b=>b.addEventListener('click',()=>{habits=habits.filter(x=>x.id!==b.dataset.id);saveHabits();renderHabits();}));
+}
+function allOpenTasks(){const a=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>{if(!t.done)a.push({ref:h.id,idx:i,text:t.text,eis:t.eis||0,ts:h.ts});});});return a;}
+function renderMatrix(){
+  const un=$('#matrixUnsorted'),wrap=$('#matrixWrap');if(!wrap)return;
+  const tasks=allOpenTasks();
+  const unsorted=tasks.filter(t=>!t.eis);
+  un.innerHTML=unsorted.length?`<div class="mu-title">Нераспределённые (${unsorted.length})</div>`+unsorted.map(t=>`<button class="m-chip" data-ref="${t.ref}" data-idx="${t.idx}">${esc(t.text)}</button>`).join(''):'<div class="mu-title" style="opacity:.6">Все задачи распределены 👍</div>';
+  wrap.innerHTML=EIS.map((q,qi)=>{const list=tasks.filter(t=>t.eis===qi+1);return `<div class="m-quad ${q.c}"><div class="m-head"><b>${esc(q.n)}</b><span>${esc(q.s)}</span></div><div class="m-list">${list.map(t=>`<button class="m-chip" data-ref="${t.ref}" data-idx="${t.idx}">${esc(t.text)}</button>`).join('')||'<span class="m-empty">—</span>'}</div></div>`;}).join('');
+  wrap.querySelectorAll('.m-chip').forEach(b=>b.addEventListener('click',()=>quadMenu(b)));
+  un.querySelectorAll('.m-chip').forEach(b=>b.addEventListener('click',()=>quadMenu(b)));
+}
+function quadMenu(anchor){
+  const ex=$('#catMenu');if(ex)ex.remove();
+  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
+  m.innerHTML='<div class="sm-h">Куда отнести</div>'+EIS.map((q,i)=>`<button data-q="${i+1}">${esc(q.n)}</button>`).join('')+'<button data-q="0">Убрать</button>';
+  document.body.appendChild(m);const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.left+window.scrollX;if(left+230>window.innerWidth)left=window.innerWidth-238;m.style.left=Math.max(8,left)+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
+  m.querySelectorAll('button[data-q]').forEach(b=>b.addEventListener('click',()=>{const h=history.find(x=>x.id===anchor.dataset.ref);if(h){const t=h.tasks[+anchor.dataset.idx];t.eis=+b.dataset.q||0;saveHistory();renderMatrix();}close();}));
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
+function setSubTab(st){curSubTab=st;document.querySelectorAll('#view-tasks .subtab').forEach(b=>b.classList.toggle('active',b.dataset.st===st));document.querySelectorAll('#view-tasks .st-panel').forEach(p=>p.hidden=p.dataset.st!==st);if(st==='tasks')renderTasks();else if(st==='habits')renderHabits();else renderMatrix();}
+function taskDayStats(){const map={};history.forEach(h=>{ensureEntry(h);const rk=h.date||dateKey(h.ts);(h.tasks||[]).forEach(t=>{const k=t.due?dateKey(t.due):rk;const s=map[k]||(map[k]={done:0,total:0});s.total++;if(t.done)s.done++;});});return map;}
+function shiftTaskCal(dir){if(taskCalMode==='week')taskCalCursor.setDate(taskCalCursor.getDate()+7*dir);else taskCalCursor.setMonth(taskCalCursor.getMonth()+dir);}
+function renderTaskCal(){
+  const box=$('#taskCal');if(!box)return;const stats=taskDayStats();const todayKey=dateKey(Date.now());
+  const dots=k=>{const st=stats[k];if(!st)return '';let h='';const n=Math.min(st.total,4);for(let i=0;i<n;i++)h+='<span class="tc-dot '+(i<st.done?'d-full':'d-open')+'"></span>';if(st.total>4)h+='<span class="tc-plus">+</span>';return h;};
+  const cell=(d,k)=>{const st=stats[k];const sel=selTaskDate===k;return `<div class="tc-cell${st?' has':''}${k===todayKey?' today':''}${sel?' sel':''}" data-d="${k}"><span class="tc-num">${d.getDate()}</span><span class="tc-dots">${dots(k)}</span></div>`;};
+  let header='',cells='';
+  if(taskCalMode==='week'){
+    const base=new Date(taskCalCursor);let dw=base.getDay();dw=dw===0?6:dw-1;const mon=new Date(base);mon.setDate(base.getDate()-dw);const end=new Date(mon);end.setDate(mon.getDate()+6);
+    header=mon.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+' – '+end.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+    for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);cells+=cell(d,dateKey(d.getTime()));}
+  }else{
+    const y=taskCalCursor.getFullYear(),m=taskCalCursor.getMonth();header=taskCalCursor.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+    const first=new Date(y,m,1);let start=first.getDay();start=start===0?6:start-1;const total=new Date(y,m+1,0).getDate();
+    cells=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(x=>`<div class="tc-dow">${x}</div>`).join('');
+    for(let i=0;i<start;i++)cells+='<div class="tc-cell pad"></div>';
+    for(let d=1;d<=total;d++){const dt=new Date(y,m,d);cells+=cell(dt,dateKey(dt.getTime()));}
+  }
+  box.innerHTML=`<div class="tc-head"><button class="mini" id="tcPrev"><i data-lucide="chevron-left"></i></button><div class="tc-title">${header}</div><button class="mini" id="tcNext"><i data-lucide="chevron-right"></i></button><button class="mini" id="tcMode" title="Неделя / месяц"><i data-lucide="${taskCalMode==='week'?'chevron-down':'chevron-up'}"></i></button></div><div class="tc-grid ${taskCalMode}">${cells}</div>`;
+  lucide.createIcons();
+  $('#tcPrev').onclick=()=>{shiftTaskCal(-1);renderTaskCal();};
+  $('#tcNext').onclick=()=>{shiftTaskCal(1);renderTaskCal();};
+  $('#tcMode').onclick=()=>{taskCalMode=taskCalMode==='week'?'month':'week';renderTaskCal();};
+  box.querySelectorAll('[data-d]').forEach(c=>c.addEventListener('click',()=>{selTaskDate=selTaskDate===c.dataset.d?null:c.dataset.d;renderTaskCal();renderTaskList();}));
+}
+function renderTaskList(){
+  const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts))}));});
+  const scoped=selTaskDate?all.filter(t=>t.date===selTaskDate):all;
+  const openL=scoped.filter(t=>!t.done).sort((a,b)=>b.ts-a.ts);
+  const doneL=scoped.filter(t=>t.done).sort((a,b)=>b.ts-a.ts);
+  $('#tasksLabel').textContent=(selTaskDate?('За '+selTaskDate+' · '):'')+'Открыто: '+openL.length+' из '+scoped.length;
+  const row=t=>`<div class="t-row${t.done?' done':''}" data-ref="${t.ref}" data-idx="${t.idx}"><span class="box"><i data-lucide="check"></i></span><div class="tt"><div class="tx">${safe(t.text)}</div><div class="src">${fmtDate(t.ts)}${t.due?` · <span class="due-badge">⏰ ${esc(fmtDueShort(t.due))}</span>`:''}</div></div><button class="mini t-date" data-ref="${t.ref}" data-idx="${t.idx}" title="Срок"><i data-lucide="calendar"></i></button></div>`;
+  $('#taskList').innerHTML=openL.length?openL.map(row).join(''):`<div class="empty"><i data-lucide="list-todo"></i>Открытых задач нет${selTaskDate?' в этот день':''}.</div>`;
+  $('#doneWrap').innerHTML=doneL.length?`<details class="done-spoiler"${doneOpen?' open':''}><summary><i data-lucide="chevron-down"></i>Выполненные (${doneL.length})</summary><div class="rep-list" style="margin-top:10px">${doneL.map(row).join('')}</div></details>`:'';
+  lucide.createIcons();
+  document.querySelectorAll('#taskList .t-row, #doneWrap .t-row').forEach(r=>r.addEventListener('click',()=>{const h=history.find(x=>x.id===r.dataset.ref);if(!h)return;const t=h.tasks[+r.dataset.idx];t.done=!t.done;saveHistory();renderTasks();}));
+  document.querySelectorAll('#view-tasks .t-date').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openDateMenu(b);}));
+  const det=$('#doneWrap').querySelector('details');if(det)det.addEventListener('toggle',()=>{doneOpen=det.open;});
+}
+function fmtDueShort(ts){return new Date(ts).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});}
+function openDateMenu(anchor){
+  const ex=$('#catMenu');if(ex)ex.remove();
+  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
+  const opts=[['today','Сегодня'],['tomorrow','Завтра'],['week','Через неделю'],['pick','Выбрать дату…'],['clear','Убрать срок']];
+  m.innerHTML='<div class="sm-h">Срок задачи</div>'+opts.map(o=>`<button data-o="${o[0]}">${o[1]}</button>`).join('');
+  document.body.appendChild(m);const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-210+window.scrollX;if(left<8)left=8;m.style.left=left+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
+  const setDue=(ts)=>{const h=history.find(x=>x.id===anchor.dataset.ref);if(!h)return;const t=h.tasks[+anchor.dataset.idx];if(ts)t.due=ts;else delete t.due;saveHistory();renderTasks();};
+  m.querySelectorAll('button[data-o]').forEach(b=>b.addEventListener('click',()=>{const o=b.dataset.o;const d=new Date();d.setHours(9,0,0,0);
+    if(o==='today')setDue(d.getTime());
+    else if(o==='tomorrow'){d.setDate(d.getDate()+1);setDue(d.getTime());}
+    else if(o==='week'){d.setDate(d.getDate()+7);setDue(d.getTime());}
+    else if(o==='clear')setDue(0);
+    else if(o==='pick'){const inp=document.createElement('input');inp.type='date';inp.style.position='fixed';inp.style.left='-9999px';document.body.appendChild(inp);inp.onchange=()=>{if(inp.value){const dd=new Date(inp.value+'T09:00');setDue(dd.getTime());}inp.remove();};inp.showPicker?inp.showPicker():inp.click();}
+    close();}));
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
+function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}}
+
+/* ---------- export / import (merge) ---------- */
+$('#exportBtn').addEventListener('click',()=>{const payload={app:'NeuroCatch',version:3,exportedAt:new Date().toISOString(),settings,catches,history};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Данные выгружены');});
+$('#importBtn').addEventListener('click',()=>$('#importFile').click());
+$('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);let addedH=0,addedC=0;
+    const hIds=new Set(history.map(h=>h.id));
+    (o.history||[]).forEach(h=>{if(h&&h.id&&!hIds.has(h.id)){ensureEntry(h);history.push(h);hIds.add(h.id);addedH++;}});
+    history.sort((a,b)=>b.ts-a.ts);
+    const cKeys=new Set(catches.map(c=>c.id||(c.at+'|'+c.text)));
+    (o.catches||[]).forEach(c=>{const key=c.id||(c.at+'|'+c.text);if(!cKeys.has(key)){if(!c.id)c.id=uid('c');catches.push(c);cKeys.add(key);addedC++;}});
+    if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.microlinkKey)settings.microlinkKey=o.settings.microlinkKey;if(typeof o.settings.microPerLink==='boolean')settings.microPerLink=o.settings.microPerLink;if(Array.isArray(o.settings.microExclude))settings.microExclude=o.settings.microExclude;if(o.settings.studyCustomUrl){settings.studyCustomName=o.settings.studyCustomName||'';settings.studyCustomUrl=o.settings.studyCustomUrl;}if(o.settings.provider)settings.provider=o.settings.provider;if(o.settings.orKey)settings.orKey=o.settings.orKey;if(o.settings.orModel)settings.orModel=o.settings.orModel;if(o.settings.ollamaUrl)settings.ollamaUrl=o.settings.ollamaUrl;if(o.settings.ollamaModel)settings.ollamaModel=o.settings.ollamaModel;if(typeof o.settings.clearAfter==='boolean')settings.clearAfter=o.settings.clearAfter;if(typeof o.settings.autoClip==='boolean')settings.autoClip=o.settings.autoClip;if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;$('#apikey').value=settings.key;$('#model').value=settings.model;buildSwatches();}
+    saveSettings();saveCatches();saveHistory();refreshCount();renderHistory();
+    toast(`Слито: +${addedH} отчётов, +${addedC} записей`);
+  }catch(err){toast('Битый файл импорта',true);}e.target.value='';};
+  r.readAsText(f);});
+
+/* ---------- settings ---------- */
+const ov=$('#overlay');
+$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov.classList.add('open');});
+$('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
+$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
+$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
+ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
+
+/* ---------- cloud sync (Supabase, optional) ---------- */
+let sb=null, sbUser=null, cloudTimer=null, cloudBusy=false;
+function setCloudStatus(t,on){const el=$('#cloudStatus');if(el){el.textContent=t;el.classList.toggle('on',!!on);}}
+function updateCloudButtons(){const io=!!sbUser;$('#sbLogout').hidden=!io;$('#sbLogin').textContent='';const i=document.createElement('i');i.setAttribute('data-lucide','link');$('#sbLogin').appendChild(i);$('#sbLogin').appendChild(document.createTextNode(io?'Сменить аккаунт':'Войти по ссылке'));lucide.createIcons();}
+async function sbClient(){
+  if(!settings.sbUrl||!settings.sbKey)return null;
+  if(sb)return sb;
+  try{const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2');
+    sb=createClient(settings.sbUrl,settings.sbKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    return sb;
+  }catch(e){toast('Не удалось загрузить Supabase (нужен интернет)',true);return null;}
+}
+async function cloudInit(){
+  const c=await sbClient();if(!c)return;
+  try{const {data}=await c.auth.getSession();
+    if(data&&data.session){sbUser=data.session.user;setCloudStatus(sbUser.email,true);setSync('ok');await cloudPull(true);}
+    else{setCloudStatus('не в сети');setSync();}
+    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{setCloudStatus('не в сети');setSync();}updateCloudButtons();});
+  }catch(e){setCloudStatus('ошибка',false);}
+  updateCloudButtons();
+}
+function cloudAppSettings(){return {model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt};}
+function setSync(state){const el=$('#syncDot');if(!el)return;el.hidden=!sbUser;el.className='sync-dot'+(state?' '+state:'');el.innerHTML=state==='ok'?'<span class="d"></span>':state==='err'?'<span class="d"></span>':state==='sync'?'':'<span class="d"></span>';}
+function replaceState(remote){ // last-writer-wins: полностью заменяем локальное состояние удалённым
+  applyingRemote=true;
+  if(Array.isArray(remote.catches)){catches=remote.catches;catches.forEach(c=>{if(!c.id)c.id=uid('c');});}
+  if(Array.isArray(remote.history)){history=remote.history;history.forEach(ensureEntry);history.sort((a,b)=>b.ts-a.ts);}
+  if(remote.settings&&typeof remote.settings==='object'){const rs=remote.settings;if(rs.model)settings.model=rs.model;if(typeof rs.prompt==='string')settings.prompt=rs.prompt;if(rs.seed){settings.seed=rs.seed;setAccent(rs.seed,false);buildSwatches();}if(rs.themeMode)applyThemeMode(rs.themeMode,false);$('#model').value=settings.model;$('#promptInput').value=settings.prompt||DEFAULT_PROMPT;}
+  localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
+  localStorage.setItem('neurocatch_history',JSON.stringify(history));
+  saveSettings();refreshCount();
+  applyingRemote=false;
+}
+async function cloudPull(silent){
+  const c=await sbClient();if(!c||!sbUser)return;
+  cloudBusy=true;setSync('sync');
+  try{const {data,error}=await c.from('states').select('data,updated_at').eq('id',sbUser.id).maybeSingle();
+    if(error)throw error;
+    const remoteTs=data&&data.updated_at?new Date(data.updated_at).getTime():0;
+    if(data&&data.data&&remoteTs>localUpdatedAt){ // облако свежее — принимаем его
+      replaceState(data.data);localUpdatedAt=remoteTs;localStorage.setItem('neurocatch_updated',String(remoteTs));
+      cloudBusy=false;setSync('ok');if(!silent)toast('Загружено из облака (свежее)');
+    }else{ // локальное свежее или равно — выгружаем
+      cloudBusy=false;await cloudPush(true);if(!silent)toast('Синхронизировано');
+    }
+  }catch(e){cloudBusy=false;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
+}
+async function cloudPush(silent){
+  if(cloudBusy||applyingRemote){return;}const c=await sbClient();if(!c||!sbUser)return;
+  setSync('sync');
+  try{const ts=localUpdatedAt||Date.now();const payload={catches,history,settings:cloudAppSettings()};
+    const {error}=await c.from('states').upsert({id:sbUser.id,data:payload,updated_at:new Date(ts).toISOString()});
+    if(error)throw error;setSync('ok');if(!silent)toast('Выгружено в облако');
+  }catch(e){setSync('err');if(!silent)toast('Выгрузка: '+(e.message||e),true);}
+}
+function scheduleCloudPush(){if(!sbUser)return;setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);}
+$('#sbLogin').addEventListener('click',async()=>{
+  settings.sbUrl=$('#sbUrl').value.trim().replace(/\/$/,'');settings.sbKey=$('#sbKey').value.trim();settings.sbEmail=$('#sbEmail').value.trim();saveSettings();sb=null;
+  if(!settings.sbUrl||!settings.sbKey){toast('Укажи Supabase URL и anon key',true);return;}
+  if(!settings.sbEmail){toast('Укажи email',true);return;}
+  const c=await sbClient();if(!c)return;
+  try{const {error}=await c.auth.signInWithOtp({email:settings.sbEmail,options:{emailRedirectTo:location.href.split('#')[0]}});
+    if(error)throw error;toast('Ссылка для входа отправлена на почту');
+  }catch(e){toast('Вход: '+(e.message||e),true);}
+});
+$('#sbSync').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPull(false);});
+$('#sbLogout').addEventListener('click',async()=>{const c=await sbClient();if(c){try{await c.auth.signOut();}catch(e){}}sbUser=null;updateCloudButtons();setCloudStatus('не в сети');toast('Вышел из облака');});
+
+$('#cloudPushNow').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPush(false);});
+
+/* ---------- status checks ---------- */
+function setStatus(id,txt,cls){const el=$('#'+id);if(!el)return;el.className='status'+(cls?' '+cls:'');el.innerHTML='<span class="sd"></span>'+txt;}
+function updateProviderUI(){const p=settings.provider||'gemini';document.querySelectorAll('.prov').forEach(el=>el.hidden=true);const b=document.querySelector('.prov-'+p);if(b)b.hidden=false;}
+
+async function checkGemini(){
+  const p=settings.provider||'gemini';setStatus('gemStatus','проверяю…','wait');
+  try{
+    if(p==='gemini'){if(!settings.key){setStatus('gemStatus','нет ключа Gemini');return;}const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(settings.key));if(r.ok)setStatus('gemStatus','Gemini подключён','ok');else{const e=await r.json().catch(()=>({}));setStatus('gemStatus','Gemini: '+((e.error&&e.error.message)||r.status),'err');}}
+    else if(p==='openrouter'){if(!settings.orKey){setStatus('gemStatus','нет ключа OpenRouter');return;}const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+settings.orKey}});if(r.ok){const j=await r.json().catch(()=>({}));const d=j.data||{};let extra='';if(d.limit!=null)extra=' • осталось $'+Math.max(0,(d.limit-(d.usage||0))).toFixed(2);else if(d.usage!=null)extra=' • потрачено $'+(+d.usage).toFixed(2);setStatus('gemStatus','OpenRouter подключён'+extra,'ok');}else setStatus('gemStatus','OpenRouter: '+r.status,'err');}
+    else{const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');const r=await fetch(base+'/api/tags');if(r.ok)setStatus('gemStatus','Ollama доступен','ok');else setStatus('gemStatus','Ollama: '+r.status,'err');}
+  }catch(e){setStatus('gemStatus','нет ответа / CORS','err');}
+}
+async function checkDb(){
+  if(!settings.sbUrl||!settings.sbKey){setStatus('dbStatus','не настроено');return;}
+  setStatus('dbStatus','проверяю...','wait');
+  const c=await sbClient();if(!c){setStatus('dbStatus','нет библиотеки','err');return;}
+  try{const {data}=await c.auth.getSession();
+    if(data&&data.session){setStatus('dbStatus','вошёл: '+data.session.user.email,'ok');}
+    else setStatus('dbStatus','ключи ок, не авторизован');
+  }catch(e){setStatus('dbStatus','ошибка ключей','err');}
+}
+$('#checkGem')&&$('#checkGem').addEventListener('click',checkGemini);
+$('#provDiag')&&$('#provDiag').addEventListener('click',()=>runGuideCheck(settings.provider||'gemini','provCheck'));
+$('#sbDiag')&&$('#sbDiag').addEventListener('click',()=>checkSupabaseSetup('sbCheck'));
+$('#provider')&&$('#provider').addEventListener('change',e=>{settings.provider=e.target.value;saveSettings();updateProviderUI();});
+$('#checkMicro')&&$('#checkMicro').addEventListener('click',checkMicro);
+$('#microPerLink').addEventListener('change',e=>{settings.microPerLink=e.target.checked;saveSettings();if(!$('#view-queue').hidden)renderQueue();});
+$('#allTasksMd').addEventListener('click',()=>{const l=allTasksFlat();if(!l.length){toast('Задач нет');return;}download('all_tasks_'+dateKey(Date.now())+'.md',tasksToMd(l),'text/markdown');toast('Все задачи сохранены .md');});
+$('#allTasksTick').addEventListener('click',()=>copyTick(allTasksFlat()));
+$('#checkDb')&&$('#checkDb').addEventListener('click',checkDb);
+
+/* ---------- notifications ---------- */
+let notifyTimer=null;
+function initNotify(){$('#notifyOn').checked=!!settings.notifyOn;$('#notifyTime').value=settings.notifyTime||'21:00';startNotifyLoop();}
+$('#notifyOn').addEventListener('change',async e=>{
+  if(e.target.checked){if('Notification'in window){const p=await Notification.requestPermission();if(p!=='granted'){toast('Уведомления запрещены в браузере',true);e.target.checked=false;settings.notifyOn=false;saveSettings();return;}}else{toast('Уведомления не поддерживаются',true);e.target.checked=false;return;}}
+  settings.notifyOn=e.target.checked;saveSettings();startNotifyLoop();
+});
+$('#notifyTime').addEventListener('change',e=>{settings.notifyTime=e.target.value;saveSettings();});
+$('#notifyTest').addEventListener('click',async()=>{if('Notification'in window&&Notification.permission!=='granted')await Notification.requestPermission();fireNotify('Тест уведомления','Так будет выглядеть напоминание о ритуале.');});
+function fireNotify(title,body){
+  try{
+    const opt={body,icon:'icon.svg',badge:'icon.svg',tag:'neurocatch'};
+    if(navigator.serviceWorker&&navigator.serviceWorker.ready&&location.protocol.startsWith('http')){navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,opt)).catch(()=>{new Notification(title,opt);});}
+    else if('Notification'in window&&Notification.permission==='granted'){new Notification(title,opt);}
+    else toast(title+' — '+body);
+  }catch(e){toast(title);}
+}
+function startNotifyLoop(){
+  clearInterval(notifyTimer);
+  if(!settings.notifyOn)return;
+  notifyTimer=setInterval(()=>{
+    if(!settings.notifyOn)return;
+    const now=new Date();const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const today=dateKey(Date.now());
+    if(hhmm===(settings.notifyTime||'21:00')&&localStorage.getItem('neurocatch_lastnotify')!==today){
+      localStorage.setItem('neurocatch_lastnotify',today);
+      fireNotify('NeuroCatch','Пора провести вечерний ритуал — разбери дневной улов.');
+    }
+  },30000);
+}
+
+/* ---------- bug report ---------- */
+let bugStorage=null;
+function buildBugData(){
+  const safeSettings=Object.assign({},settings);['key','sbKey','microlinkKey','microExclude','orKey'].forEach(k=>delete safeSettings[k]);
+  let dm='browser';try{if((matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone)dm='standalone';}catch(e){}
+  const av=[...document.querySelectorAll('.view')].find(v=>!v.hidden);
+  const conn=(navigator.connection&&navigator.connection.effectiveType)||'?';
+  return {app:'NeuroCatch',version:APP_VERSION,swCache:SW_VER,when:new Date().toISOString(),url:location.href,
+    secureContext:window.isSecureContext,displayMode:dm,ua:navigator.userAgent,lang:navigator.language,
+    online:navigator.onLine,connection:conn,theme:document.documentElement.getAttribute('data-theme'),
+    effectiveThemeMode:settings.themeMode,provider:settings.provider,
+    viewport:innerWidth+'x'+innerHeight+' @'+(window.devicePixelRatio||1)+'x',
+    activeView:av?av.id:'?',currentEntry:currentEntry?currentEntry.id:null,
+    counts:{catches:catches.length,history:history.length},
+    cloud:{configured:!!(settings.sbUrl&&settings.sbKey),signedIn:!!sbUser,localUpdatedAt:localUpdatedAt},
+    storage:bugStorage,breadcrumbs:crumbs,recentErrors:lastErrors,settings:safeSettings};
+}
+async function openBug(prefillNote){
+  $('#bugNote').value=prefillNote||'';
+  $('#bugData').value=JSON.stringify(buildBugData(),null,2);
+  $('#bugOverlay').classList.add('open');
+  try{if(navigator.storage&&navigator.storage.estimate){const est=await navigator.storage.estimate();bugStorage={usageKB:Math.round((est.usage||0)/1024),quotaMB:Math.round((est.quota||0)/1048576)};$('#bugData').value=JSON.stringify(buildBugData(),null,2);}}catch(e){}
+}
+/* error modal */
+function showErrorModal(msg){
+  if(!msg||msg==='Script error.'||/ResizeObserver/.test(msg))return;
+  const el=$('#errMsg');if(el)el.textContent=msg;
+  const ov=$('#errOverlay');if(ov&&!ov.classList.contains('open'))ov.classList.add('open');
+}
+$('#errClose')&&$('#errClose').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
+$('#errDismiss')&&$('#errDismiss').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
+$('#errReport')&&$('#errReport').addEventListener('click',()=>{$('#errOverlay').classList.remove('open');const last=lastErrors[lastErrors.length-1];openBug(last?('Ошибка: '+last.msg):'');});
+/* setup guides */
+const SB_SQL_RAW=`create table if not exists public.states (
+  id uuid primary key references auth.users on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.states enable row level security;
+create policy "own-select" on public.states for select using (auth.uid() = id);
+create policy "own-insert" on public.states for insert with check (auth.uid() = id);
+create policy "own-update" on public.states for update using (auth.uid() = id) with check (auth.uid() = id);
+
+-- Публичные ссылки на заметки (с отзывом доступа):
+create table if not exists public.shares (
+  token text primary key,
+  data jsonb not null,
+  owner uuid not null default auth.uid() references auth.users on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.shares enable row level security;
+create policy "shares public read" on public.shares for select using (true);
+create policy "shares owner insert" on public.shares for insert with check (auth.uid() = owner);
+create policy "shares owner delete" on public.shares for delete using (auth.uid() = owner);`;
+function openGuide(which){
+  const cur=location.href.split('#')[0];
+  const G={
+    gemini:{t:'Настройка Gemini',h:`<ol>
+      <li>Открой <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio → API keys</a>, войди Google-аккаунтом.</li>
+      <li>Нажми <b>Create API key</b> и скопируй ключ.</li>
+      <li>В настройках выбери провайдера <b>Google Gemini</b> и вставь ключ в поле <b>Gemini API Key</b>.</li>
+      <li>Нажми <b>Сохранить</b>, затем <b>Проверить подключение</b> — статус станет «подключено».</li>
+    </ol><div class="guide-note">Есть бесплатный лимит. Ключ хранится только в твоём браузере.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
+    openrouter:{t:'Настройка OpenRouter',h:`<ol>
+      <li>Зарегистрируйся на <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a>.</li>
+      <li>Открой <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> → <b>Create Key</b> → скопируй (<code>sk-or-...</code>).</li>
+      <li>Выбери провайдера <b>OpenRouter</b> и вставь ключ.</li>
+      <li>Укажи модель. Бесплатные помечены <code>:free</code> — <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">список бесплатных</a>. Напр. <code>meta-llama/llama-3.3-70b-instruct:free</code>.</li>
+      <li>Сохрани и проверь подключение.</li>
+    </ol><div class="guide-note">Статьи по ссылкам читаются через r.jina.ai. Видео (в отличие от Gemini) не разбирается.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
+    microlink:{t:'Настройка Microlink',h:`<ol>
+      <li>Можно не настраивать — работает без ключа: 50 запросов/день.</li>
+      <li>Для большего лимита зарегистрируйся на <a href="https://microlink.io" target="_blank" rel="noopener">microlink.io</a>.</li>
+      <li>В Dashboard возьми <b>API key</b> и вставь в поле <b>Microlink API key</b>, сохрани.</li>
+    </ol><div class="guide-note">Тянет заголовок, лого и издателя ссылок. Приватные ссылки исключаются тумблером «Microlink для отдельных ссылок».</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
+    supabase:{t:'Настройка Supabase',h:`<ol>
+      <li>На <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> создай проект (New project). Запомни пароль БД, регион — поближе.</li>
+      <li><b>Project Settings → API</b>: скопируй <b>Project URL</b> и ключ <b>anon public</b>.</li>
+      <li>Открой <b>SQL Editor</b>, вставь и выполни:
+        <div class="guide-code"><button class="mini" id="guideSqlCopy" title="Скопировать" style="position:absolute;top:8px;right:8px"><i data-lucide="clipboard"></i></button><pre>${esc(SB_SQL_RAW)}</pre></div></li>
+      <li><b>Authentication → Providers → Email</b>: включи, оставь <b>Magic Link</b>.</li>
+      <li><b>Authentication → URL Configuration</b>: в <b>Site URL</b> и <b>Redirect URLs</b> добавь:<br><code>${esc(cur)}</code></li>
+      <li>В настройках вставь <b>URL</b>, <b>anon key</b>, <b>email</b> → <b>Войти по ссылке</b> → открой письмо, вернёшься авторизованным.</li>
+      <li>(Опц.) GitHub Actions пинг раз в 3 дня, чтобы free-проект не засыпал.</li>
+    </ol><div class="guide-note">anon-ключ публичный — держать в приложении безопасно (данные защищены RLS). Никогда не вставляй service_role ключ.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`}
+  };
+  const g=G[which]||G.gemini;
+  $('#guideTitle').textContent=g.t;$('#guideBody').innerHTML=g.h;lucide.createIcons();
+  const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(SB_SQL_RAW);toast('SQL скопирован');}catch(e){toast('Не удалось',true);}});
+  const cb=$('#guideCheckBtn');if(cb)cb.addEventListener('click',()=>runGuideCheck(which,'guideCheck'));
+  $('#guideOverlay').classList.add('open');
+}
+function guideChecker(run){return async function(boxId){const box=$('#'+(boxId||'guideCheck'));if(!box)return;box.innerHTML='<div class="chk">Проверяю…</div>';const lines=[];const add=(b,t)=>{lines.push('<div class="chk '+(b?'ok':'bad')+'">'+(b?'✓ ':'✗ ')+t+'</div>');box.innerHTML=lines.join('');};try{await run(add);}catch(e){add(false,'Сбой проверки: '+(e.message||e));}};}
+const checkGeminiSetup=guideChecker(async add=>{
+  const key=($('#apikey')&&$('#apikey').value.trim())||settings.key;
+  add(!!key,key?'Ключ указан':'Ключ не указан');if(!key)return;
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
+  if(!r.ok){const e=await r.json().catch(()=>({}));add(false,'Ключ отклонён: '+((e.error&&e.error.message)||r.status));return;}
+  const j=await r.json();const models=(j.models||[]).map(m=>(m.name||'').replace('models/',''));
+  add(true,'Ключ рабочий, моделей доступно: '+models.length);
+  const qh=r.headers.get('x-ratelimit-remaining')||r.headers.get('x-goog-quota-remaining');if(qh)add(true,'Остаток квоты (по заголовку): '+qh);else add(true,'Точный остаток квоты Google по API не отдаёт — смотри в AI Studio / Cloud Console');
+  const sel=($('#model')&&$('#model').value)||settings.model;
+  add(models.some(m=>m===sel||m.startsWith(sel)),'Модель '+sel+(models.some(m=>m===sel||m.startsWith(sel))?' доступна':' не найдена'));
+});
+const checkOpenRouterSetup=guideChecker(async add=>{
+  const key=($('#orKey')&&$('#orKey').value.trim())||settings.orKey;
+  add(!!key,key?'Ключ указан':'Ключ не указан');if(!key)return;
+  const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+key}});
+  if(!r.ok){add(false,'Ключ отклонён: HTTP '+r.status);return;}
+  const j=await r.json().catch(()=>({}));const d=j.data||{};add(true,'Ключ рабочий'+(d.label?(' ('+d.label+')'):''));
+  if(d.limit!=null||d.usage!=null){const used=(d.usage!=null?('$'+(+d.usage).toFixed(4)):'?');const lim=(d.limit!=null?('$'+(+d.limit).toFixed(2)):'∞');const left=(d.limit!=null?(' • осталось $'+Math.max(0,(d.limit-(d.usage||0))).toFixed(4)):'');add(true,'Лимит: '+used+' из '+lim+left);}
+  if(d.is_free_tier)add(true,'Free-tier аккаунт');
+  if(d.rate_limit&&d.rate_limit.requests)add(true,'Rate limit: '+d.rate_limit.requests+' / '+(d.rate_limit.interval||'?'));
+  const model=($('#orModel')&&$('#orModel').value.trim())||settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
+  try{const rm=await fetch('https://openrouter.ai/api/v1/models');const jm=await rm.json();const ids=(jm.data||[]).map(m=>m.id);add(ids.includes(model),'Модель '+model+(ids.includes(model)?' найдена':' не найдена — проверь имя'));}catch(e){add(false,'Список моделей недоступен');}
+});
+const checkMicrolinkSetup=guideChecker(async add=>{
+  const key=($('#microKey')&&$('#microKey').value.trim())||settings.microlinkKey;
+  add(true,key?'Ключ указан (лимит снят)':'Без ключа — 50 запросов/день (это ок)');
+  const opt=key?{headers:{'x-api-key':key}}:{};
+  const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent('https://example.com'),opt);
+  const j=await r.json().catch(()=>({}));
+  add(j&&j.status==='success','Тестовый запрос: '+((j&&j.status==='success')?'работает':('ответ '+((j&&j.status)||r.status))));
+  const rlLimit=r.headers.get('x-rate-limit-limit')||r.headers.get('x-ratelimit-limit');
+  const rlRem=r.headers.get('x-rate-limit-remaining')||r.headers.get('x-ratelimit-remaining');
+  if(rlLimit||rlRem)add(true,'Лимит запросов: осталось '+(rlRem!=null?rlRem:'?')+' из '+(rlLimit!=null?rlLimit:'?'));
+});
+function runGuideCheck(which,boxId){const map={gemini:checkGeminiSetup,openrouter:checkOpenRouterSetup,microlink:checkMicrolinkSetup,supabase:checkSupabaseSetup};(map[which]||function(){})(boxId||'guideCheck');}
+async function checkSupabaseSetup(boxId){
+  const box=$('#'+(boxId||'guideCheck'));if(!box)return;box.innerHTML='<div class="chk">Проверяю…</div>';
+  const lines=[];const add=(b,t)=>lines.push('<div class="chk '+(b?'ok':'bad')+'">'+(b?'✓ ':'✗ ')+t+'</div>');
+  const paint=()=>{box.innerHTML=lines.join('');};
+  const url=($('#sbUrl')&&$('#sbUrl').value.trim())||settings.sbUrl;
+  const key=($('#sbKey')&&$('#sbKey').value.trim())||settings.sbKey;
+  const email=($('#sbEmail')&&$('#sbEmail').value.trim())||settings.sbEmail;
+  add(!!url,url?'URL указан':'URL не указан');
+  add(!!key,key?'anon-ключ указан':'anon-ключ не указан');
+  add(!!email,email?'Email для входа указан':'Email не указан (нужен для входа)');
+  if(!url||!key){paint();return;}
+  let client;
+  try{const m=await import('https://esm.sh/@supabase/supabase-js@2');client=m.createClient(url,key);add(true,'Библиотека Supabase и клиент загружены');}
+  catch(e){add(false,'Не удалось создать клиент: '+(e.message||e)+' (проверь интернет)');paint();return;}
+  try{const {data}=await client.auth.getSession();const signed=!!(data&&data.session);add(signed,signed?('Вход выполнен: '+data.session.user.email):'Не авторизован — нажми «Войти по ссылке» и открой письмо');}
+  catch(e){add(false,'Auth недоступен: '+(e.message||e));}
+  try{const {error}=await client.from('states').select('id').limit(1);
+    if(!error){add(true,'Таблица states доступна');try{const {data:row}=await client.from('states').select('data,updated_at').limit(1).maybeSingle();if(row&&row.data){const kb=Math.round(new Blob([JSON.stringify(row.data)]).size/1024);add(true,'Размер облачных данных: ~'+kb+' КБ (лимит free — 500 МБ БД)');}}catch(_){}}
+    else if(/does not exist|42P01|relation/i.test(error.message||''))add(false,'Таблицы states нет — выполни SQL выше в SQL Editor');
+    else if(/permission|rls|row-level|jwt|not authorized/i.test(error.message||''))add(true,'Таблица есть, доступ ограничен RLS (это нормально)');
+    else add(false,'Проблема с таблицей: '+error.message);
+  }catch(e){add(false,'Сеть/URL: '+(e.message||e));}
+  paint();
+}
+$('#guideClose')&&$('#guideClose').addEventListener('click',()=>$('#guideOverlay').classList.remove('open'));
+$('#guideOverlay')&&$('#guideOverlay').addEventListener('click',e=>{if(e.target===$('#guideOverlay'))$('#guideOverlay').classList.remove('open');});
+$('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('[data-guide]');if(b){e.preventDefault();e.stopPropagation();openGuide(b.dataset.guide);}});
+$('#bugBtn').addEventListener('click',()=>openBug(''));
+$('#closeBug').addEventListener('click',()=>$('#bugOverlay').classList.remove('open'));
+$('#bugOverlay').addEventListener('click',e=>{if(e.target===$('#bugOverlay'))$('#bugOverlay').classList.remove('open');});
+$('#bugCopy').addEventListener('click',async()=>{const rep='ПРОБЛЕМА:\n'+($('#bugNote').value||'(не описано)')+'\n\nДАННЫЕ:\n'+$('#bugData').value;try{await navigator.clipboard.writeText(rep);toast('Отчёт скопирован — вставь его мне');}catch(e){toast('Не удалось скопировать',true);}});
+$('#bugDownload').addEventListener('click',()=>{const rep={note:$('#bugNote').value,data:buildBugData()};const blob=new Blob([JSON.stringify(rep,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_bug_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Отчёт сохранён');});
+
+/* ---------- PWA ---------- */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+
+/* ---------- init ---------- */
+/* ---------- render guards (graceful degradation) ---------- */
+function logRenderErr(name,e){try{lastErrors.push({t:Date.now(),msg:name+': '+(e&&e.message||e)});if(lastErrors.length>10)lastErrors.shift();crumb('render err '+name);}catch(_){}}
+function digestFallback(e,args){try{const entry=args&&args[0];currentEntry=entry||currentEntry;$('#digestCard').innerHTML='<div class="md-section"><h3>⚠️ Не удалось отрисовать отчёт</h3><p style="margin-bottom:10px">Показываю исходный текст. Пожалуйста, отправь баг-репорт.</p><pre class="raw-md">'+esc((entry&&entry.markdown)||'(пусто)')+'</pre></div>';try{renderActionBar('history');}catch(_){}}catch(_){}}
+function guard(name,fn,fb){return function(){try{return fn.apply(this,arguments);}catch(e){logRenderErr(name,e);if(fb){try{fb(e,arguments);}catch(_){}}else{try{toast('Ошибка отрисовки: '+name,true);}catch(__){}}}};}
+renderDigest=guard('renderDigest',renderDigest,digestFallback);
+renderHistory=guard('renderHistory',renderHistory);
+renderTasks=guard('renderTasks',renderTasks);
+renderQueue=guard('renderQueue',renderQueue);
+renderActionBar=guard('renderActionBar',renderActionBar);
+renderCalendar=guard('renderCalendar',renderCalendar);
+renderRepList=guard('renderRepList',renderRepList);
+renderTagFilter=guard('renderTagFilter',renderTagFilter);
+renderBookmarks=guard('renderBookmarks',renderBookmarks);
+renderNotes=guard('renderNotes',renderNotes);
+renderHabits=guard('renderHabits',renderHabits);
+renderMatrix=guard('renderMatrix',renderMatrix);
+renderTasks=guard('renderTasks',renderTasks);
+
+/* ---------- clipboard auto-read ---------- */
+let lastClip='';
+async function checkClipboard(){
+  if(settings.autoClip===false)return;
+  if(!navigator.clipboard||!navigator.clipboard.readText)return;
+  if($('#view-input').hidden)return;
+  let txt='';try{txt=await navigator.clipboard.readText();}catch(e){return;}
+  txt=(txt||'').trim();if(!txt||txt===lastClip)return;if(ta.value.includes(txt))return;
+  lastClip=txt;
+  const isUrl=/^https?:\/\//i.test(txt);const prev=txt.length>56?txt.slice(0,56)+'…':txt;
+  const chip=$('#clipChip');if(!chip)return;
+  chip.innerHTML='<span class="cc-label"><i data-lucide="clipboard"></i>'+(isUrl?'Ссылка в буфере: ':'В буфере: ')+esc(prev)+'</span><span class="cc-actions"><button class="cc-add">Вставить</button><button class="cc-x" aria-label="Скрыть">✕</button></span>';
+  chip.hidden=false;lucide.createIcons();
+  chip.querySelector('.cc-add').onclick=()=>{ta.value=(ta.value?ta.value+'\n':'')+txt;grow();ta.focus();chip.hidden=true;};
+  chip.querySelector('.cc-x').onclick=()=>{chip.hidden=true;};
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(checkClipboard,300);});
+window.addEventListener('focus',()=>setTimeout(checkClipboard,300));
+window.addEventListener('pointerdown',()=>setTimeout(checkClipboard,120),{once:true});
+/* ---------- settings tabs ---------- */
+function setTab(t){document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;}
+$('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)setTab(b.dataset.tab);});
+
+/* ---------- today's tasks button ---------- */
+function todayOpenCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done)n++;});});return n;}
+function refreshTodayBtn(){const b=$('#todayCount');if(!b)return;const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
+$('#todayTasks')&&$('#todayTasks').addEventListener('click',()=>{selTaskDate=dateKey(Date.now());taskCalCursor=new Date();taskCalMode='week';curSubTab='tasks';setSubTab('tasks');show($('#view-tasks'));});
+
+/* ---------- share note (self-contained link + file, no auth) ---------- */
+function b64e(str){return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64d(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';return decodeURIComponent(escape(atob(str)));}
+function encodeNote(n){return b64e(JSON.stringify({t:n.title,b:n.body,s:n.source,g:n.tags,d:n.ts,k:n.kind}));}
+function noteShareUrl(n){return location.origin+location.pathname+'#n='+encodeNote(n);}
+function noteHtml(n){const body=(n.body?mdBlock(n.body):'');const tags=(n.tags||[]).map(t=>'<span class="tg">#'+esc(t)+'</span>').join(' ');const dt=new Date(n.ts||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(n.title||'Заметка')}</title>
+  <style>body{margin:0;background:#0b0d18;color:#e8eaf5;font-family:-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.6;padding:24px}.wrap{max-width:680px;margin:0 auto;background:#141830;border:1px solid #2a2f52;border-radius:18px;padding:28px}h1{font-size:22px;margin:0 0 6px}.meta{color:#8b90b5;font-size:13px;margin-bottom:18px}a{color:#9b8cff}.tg{color:#9b8cff;font-size:13px;margin-right:6px}p{margin:0 0 12px}h5{margin:16px 0 6px}ul{margin:0 0 12px;padding-left:20px}.src{display:inline-block;margin:6px 0 16px;color:#9b8cff;font-size:13px;word-break:break-all}.foot{margin-top:24px;color:#6b7099;font-size:12px}</style></head>
+  <body><div class="wrap"><h1>${esc(n.title||'Заметка')}</h1><div class="meta">${dt}</div>${n.source?`<a class="src" href="${esc(n.source)}">${esc(n.source)}</a>`:''}${body||'<p>'+esc(n.title||'')+'</p>'}<div>${tags}</div><div class="foot">Создано в NeuroCatch</div></div></body></html>`;}
+function loadShareMap(){try{return JSON.parse(localStorage.getItem('neurocatch_shares')||'{}');}catch(e){return {};}}
+function saveShareMap(m){localStorage.setItem('neurocatch_shares',JSON.stringify(m));}
+async function createShareLink(note){
+  const c=await sbClient();if(!c||!sbUser)throw new Error('Нужен вход в облако');
+  const token=Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+  const payload={t:note.title,b:note.body,s:note.source,g:note.tags,d:note.ts,k:note.kind};
+  const {error}=await c.from('shares').insert({token,data:payload,owner:sbUser.id});
+  if(error)throw error;
+  const map=loadShareMap();map[note.id]=token;saveShareMap(map);
+  return location.origin+location.pathname+'#s='+b64e(JSON.stringify({t:token,u:settings.sbUrl,k:settings.sbKey}));
+}
+async function revokeShareToken(token){const c=await sbClient();if(!c)return;await c.from('shares').delete().eq('token',token);}
+function openShareMenu(anchor,note){
+  const ex=$('#catMenu');if(ex)ex.remove();
+  const map=loadShareMap();const shared=map[note.id];
+  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
+  let html='<div class="sm-h">Поделиться</div>';
+  if(sbUser)html+='<button data-a="short">🔗 Короткая ссылка (Supabase)</button>';
+  if(sbUser&&shared)html+='<button data-a="revoke" style="color:var(--red)">Отозвать доступ</button>';
+  html+='<button data-a="self">Автономная ссылка</button><button data-a="file">Скачать .html</button>';
+  m.innerHTML=html;document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-230+window.scrollX;if(left<8)left=8;m.style.left=left+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
+  m.querySelectorAll('button[data-a]').forEach(b=>b.addEventListener('click',async()=>{const a=b.dataset.a;close();
+    if(a==='self'){shareNote(note);}
+    else if(a==='file'){shareNoteFile(note);}
+    else if(a==='short'){try{toast('Создаю ссылку…');const url=await createShareLink(note);if(navigator.share){try{await navigator.share({title:note.title||'Заметка',url});return;}catch(_){}}await navigator.clipboard.writeText(url);toast('Короткая ссылка скопирована');}catch(e){toast('Ошибка: '+(e.message||e),true);}}
+    else if(a==='revoke'){try{await revokeShareToken(shared);const mp=loadShareMap();delete mp[note.id];saveShareMap(mp);toast('Доступ по ссылке отозван');}catch(e){toast('Не удалось отозвать',true);}}
+  }));
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
+async function shareNote(n){
+  const url=noteShareUrl(n);
+  try{
+    if(navigator.share){await navigator.share({title:n.title||'Заметка',text:(n.title||'Заметка')+' — читать по ссылке',url});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(url);toast('Ссылка на заметку скопирована');}catch(e){toast('Не удалось скопировать',true);}
+}
+async function shareNoteFile(n){
+  const html=noteHtml(n);const fname=(slug(n.title||'note'))+'.html';
+  try{const file=new File([html],fname,{type:'text/html'});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:n.title||'Заметка'});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+  download(fname,html,'text/html');toast('Файл заметки сохранён');
+}
+/* render shared note (read-only) if opened via #n= */
+function renderSharedNote(n){
+  const dt=new Date(n.d||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  const body=n.b?mdBlock(n.b):'';const tags=(n.g||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('');
+  $('#sharedBody').innerHTML=`<h1 class="shared-title">${n.k==='ins'?'💡 ':''}${esc(n.t||'Заметка')}</h1><div class="shared-meta">${dt}</div>${n.s?`<a class="note-src" href="${attr(n.s)}" target="_blank" rel="noopener">${esc(n.s)}</a>`:''}<div class="note-body">${body}</div><div class="note-tags" style="margin-top:14px">${tags}</div>`;
+  $('#sharedView').hidden=false;document.querySelector('.app').style.display='none';
+  lucide.createIcons();
+}
+async function loadSharedFromSupabase(cfg){
+  $('#sharedBody').innerHTML='<div class="empty">Загрузка заметки…</div>';$('#sharedView').hidden=false;const app=document.querySelector('.app');if(app)app.style.display='none';
+  try{const m=await import('https://esm.sh/@supabase/supabase-js@2');const c=m.createClient(cfg.u,cfg.k);
+    const {data,error}=await c.from('shares').select('data').eq('token',cfg.t).maybeSingle();
+    if(error||!data){$('#sharedBody').innerHTML='<div class="empty">Ссылка недействительна или доступ отозван.</div>';return;}
+    renderSharedNote(data.data);
+  }catch(e){$('#sharedBody').innerHTML='<div class="empty">Не удалось загрузить заметку.</div>';}
+}
+function checkSharedHash(){const hs=location.hash||'';
+  let m=hs.match(/[#&]s=([^&]+)/);if(m){try{loadSharedFromSupabase(JSON.parse(b64d(m[1])));return true;}catch(e){}}
+  m=hs.match(/[#&]n=([^&]+)/);if(m){try{renderSharedNote(JSON.parse(b64d(m[1])));return true;}catch(e){}}
+  return false;}
+
+loadAll();
+initNotify();
+lucide.createIcons();
+booting=false;
+try{refreshTodayBtn();}catch(e){}
+if(checkSharedHash()){/* read-only share view */}
+setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
