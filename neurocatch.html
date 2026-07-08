@@ -674,7 +674,7 @@ let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget=
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v16';
+const APP_VERSION='2025.7-06';const SW_VER='v18';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
 window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
@@ -1227,7 +1227,7 @@ async function checkGemini(){
   const p=settings.provider||'gemini';setStatus('gemStatus','проверяю…','wait');
   try{
     if(p==='gemini'){if(!settings.key){setStatus('gemStatus','нет ключа Gemini');return;}const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(settings.key));if(r.ok)setStatus('gemStatus','Gemini подключён','ok');else{const e=await r.json().catch(()=>({}));setStatus('gemStatus','Gemini: '+((e.error&&e.error.message)||r.status),'err');}}
-    else if(p==='openrouter'){if(!settings.orKey){setStatus('gemStatus','нет ключа OpenRouter');return;}const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+settings.orKey}});if(r.ok)setStatus('gemStatus','OpenRouter подключён','ok');else setStatus('gemStatus','OpenRouter: '+r.status,'err');}
+    else if(p==='openrouter'){if(!settings.orKey){setStatus('gemStatus','нет ключа OpenRouter');return;}const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+settings.orKey}});if(r.ok){const j=await r.json().catch(()=>({}));const d=j.data||{};let extra='';if(d.limit!=null)extra=' • осталось $'+Math.max(0,(d.limit-(d.usage||0))).toFixed(2);else if(d.usage!=null)extra=' • потрачено $'+(+d.usage).toFixed(2);setStatus('gemStatus','OpenRouter подключён'+extra,'ok');}else setStatus('gemStatus','OpenRouter: '+r.status,'err');}
     else{const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');const r=await fetch(base+'/api/tags');if(r.ok)setStatus('gemStatus','Ollama доступен','ok');else setStatus('gemStatus','Ollama: '+r.status,'err');}
   }catch(e){setStatus('gemStatus','нет ответа / CORS','err');}
 }
@@ -1329,19 +1329,19 @@ function openGuide(which){
       <li>Нажми <b>Create API key</b> и скопируй ключ.</li>
       <li>В настройках выбери провайдера <b>Google Gemini</b> и вставь ключ в поле <b>Gemini API Key</b>.</li>
       <li>Нажми <b>Сохранить</b>, затем <b>Проверить подключение</b> — статус станет «подключено».</li>
-    </ol><div class="guide-note">Есть бесплатный лимит. Ключ хранится только в твоём браузере.</div>`},
+    </ol><div class="guide-note">Есть бесплатный лимит. Ключ хранится только в твоём браузере.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
     openrouter:{t:'Настройка OpenRouter',h:`<ol>
       <li>Зарегистрируйся на <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a>.</li>
       <li>Открой <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> → <b>Create Key</b> → скопируй (<code>sk-or-...</code>).</li>
       <li>Выбери провайдера <b>OpenRouter</b> и вставь ключ.</li>
       <li>Укажи модель. Бесплатные помечены <code>:free</code> — <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">список бесплатных</a>. Напр. <code>meta-llama/llama-3.3-70b-instruct:free</code>.</li>
       <li>Сохрани и проверь подключение.</li>
-    </ol><div class="guide-note">Статьи по ссылкам читаются через r.jina.ai. Видео (в отличие от Gemini) не разбирается.</div>`},
+    </ol><div class="guide-note">Статьи по ссылкам читаются через r.jina.ai. Видео (в отличие от Gemini) не разбирается.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
     microlink:{t:'Настройка Microlink',h:`<ol>
       <li>Можно не настраивать — работает без ключа: 50 запросов/день.</li>
       <li>Для большего лимита зарегистрируйся на <a href="https://microlink.io" target="_blank" rel="noopener">microlink.io</a>.</li>
       <li>В Dashboard возьми <b>API key</b> и вставь в поле <b>Microlink API key</b>, сохрани.</li>
-    </ol><div class="guide-note">Тянет заголовок, лого и издателя ссылок. Приватные ссылки исключаются тумблером «Microlink для отдельных ссылок».</div>`},
+    </ol><div class="guide-note">Тянет заголовок, лого и издателя ссылок. Приватные ссылки исключаются тумблером «Microlink для отдельных ссылок».</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`},
     supabase:{t:'Настройка Supabase',h:`<ol>
       <li>На <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> создай проект (New project). Запомни пароль БД, регион — поближе.</li>
       <li><b>Project Settings → API</b>: скопируй <b>Project URL</b> и ключ <b>anon public</b>.</li>
@@ -1356,9 +1356,45 @@ function openGuide(which){
   const g=G[which]||G.gemini;
   $('#guideTitle').textContent=g.t;$('#guideBody').innerHTML=g.h;lucide.createIcons();
   const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(SB_SQL_RAW);toast('SQL скопирован');}catch(e){toast('Не удалось',true);}});
-  const cb=$('#guideCheckBtn');if(cb)cb.addEventListener('click',checkSupabaseSetup);
+  const cb=$('#guideCheckBtn');if(cb)cb.addEventListener('click',()=>runGuideCheck(which));
   $('#guideOverlay').classList.add('open');
 }
+function guideChecker(run){return async function(){const box=$('#guideCheck');if(!box)return;box.innerHTML='<div class="chk">Проверяю…</div>';const lines=[];const add=(b,t)=>{lines.push('<div class="chk '+(b?'ok':'bad')+'">'+(b?'✓ ':'✗ ')+t+'</div>');box.innerHTML=lines.join('');};try{await run(add);}catch(e){add(false,'Сбой проверки: '+(e.message||e));}};}
+const checkGeminiSetup=guideChecker(async add=>{
+  const key=($('#apikey')&&$('#apikey').value.trim())||settings.key;
+  add(!!key,key?'Ключ указан':'Ключ не указан');if(!key)return;
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
+  if(!r.ok){const e=await r.json().catch(()=>({}));add(false,'Ключ отклонён: '+((e.error&&e.error.message)||r.status));return;}
+  const j=await r.json();const models=(j.models||[]).map(m=>(m.name||'').replace('models/',''));
+  add(true,'Ключ рабочий, моделей доступно: '+models.length);
+  const qh=r.headers.get('x-ratelimit-remaining')||r.headers.get('x-goog-quota-remaining');if(qh)add(true,'Остаток квоты (по заголовку): '+qh);else add(true,'Точный остаток квоты Google по API не отдаёт — смотри в AI Studio / Cloud Console');
+  const sel=($('#model')&&$('#model').value)||settings.model;
+  add(models.some(m=>m===sel||m.startsWith(sel)),'Модель '+sel+(models.some(m=>m===sel||m.startsWith(sel))?' доступна':' не найдена'));
+});
+const checkOpenRouterSetup=guideChecker(async add=>{
+  const key=($('#orKey')&&$('#orKey').value.trim())||settings.orKey;
+  add(!!key,key?'Ключ указан':'Ключ не указан');if(!key)return;
+  const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+key}});
+  if(!r.ok){add(false,'Ключ отклонён: HTTP '+r.status);return;}
+  const j=await r.json().catch(()=>({}));const d=j.data||{};add(true,'Ключ рабочий'+(d.label?(' ('+d.label+')'):''));
+  if(d.limit!=null||d.usage!=null){const used=(d.usage!=null?('$'+(+d.usage).toFixed(4)):'?');const lim=(d.limit!=null?('$'+(+d.limit).toFixed(2)):'∞');const left=(d.limit!=null?(' • осталось $'+Math.max(0,(d.limit-(d.usage||0))).toFixed(4)):'');add(true,'Лимит: '+used+' из '+lim+left);}
+  if(d.is_free_tier)add(true,'Free-tier аккаунт');
+  if(d.rate_limit&&d.rate_limit.requests)add(true,'Rate limit: '+d.rate_limit.requests+' / '+(d.rate_limit.interval||'?'));
+  const model=($('#orModel')&&$('#orModel').value.trim())||settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
+  try{const rm=await fetch('https://openrouter.ai/api/v1/models');const jm=await rm.json();const ids=(jm.data||[]).map(m=>m.id);add(ids.includes(model),'Модель '+model+(ids.includes(model)?' найдена':' не найдена — проверь имя'));}catch(e){add(false,'Список моделей недоступен');}
+});
+const checkMicrolinkSetup=guideChecker(async add=>{
+  const key=($('#microKey')&&$('#microKey').value.trim())||settings.microlinkKey;
+  add(true,key?'Ключ указан (лимит снят)':'Без ключа — 50 запросов/день (это ок)');
+  const opt=key?{headers:{'x-api-key':key}}:{};
+  const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent('https://example.com'),opt);
+  const j=await r.json().catch(()=>({}));
+  add(j&&j.status==='success','Тестовый запрос: '+((j&&j.status==='success')?'работает':('ответ '+((j&&j.status)||r.status))));
+  const rlLimit=r.headers.get('x-rate-limit-limit')||r.headers.get('x-ratelimit-limit');
+  const rlRem=r.headers.get('x-rate-limit-remaining')||r.headers.get('x-ratelimit-remaining');
+  if(rlLimit||rlRem)add(true,'Лимит запросов: осталось '+(rlRem!=null?rlRem:'?')+' из '+(rlLimit!=null?rlLimit:'?'));
+});
+function runGuideCheck(which){const map={gemini:checkGeminiSetup,openrouter:checkOpenRouterSetup,microlink:checkMicrolinkSetup,supabase:checkSupabaseSetup};(map[which]||function(){})();}
 async function checkSupabaseSetup(){
   const box=$('#guideCheck');if(!box)return;box.innerHTML='<div class="chk">Проверяю…</div>';
   const lines=[];const add=(b,t)=>lines.push('<div class="chk '+(b?'ok':'bad')+'">'+(b?'✓ ':'✗ ')+t+'</div>');
@@ -1376,7 +1412,7 @@ async function checkSupabaseSetup(){
   try{const {data}=await client.auth.getSession();const signed=!!(data&&data.session);add(signed,signed?('Вход выполнен: '+data.session.user.email):'Не авторизован — нажми «Войти по ссылке» и открой письмо');}
   catch(e){add(false,'Auth недоступен: '+(e.message||e));}
   try{const {error}=await client.from('states').select('id').limit(1);
-    if(!error)add(true,'Таблица states доступна');
+    if(!error){add(true,'Таблица states доступна');try{const {data:row}=await client.from('states').select('data,updated_at').limit(1).maybeSingle();if(row&&row.data){const kb=Math.round(new Blob([JSON.stringify(row.data)]).size/1024);add(true,'Размер облачных данных: ~'+kb+' КБ (лимит free — 500 МБ БД)');}}catch(_){}}
     else if(/does not exist|42P01|relation/i.test(error.message||''))add(false,'Таблицы states нет — выполни SQL выше в SQL Editor');
     else if(/permission|rls|row-level|jwt|not authorized/i.test(error.message||''))add(true,'Таблица есть, доступ ограничен RLS (это нормально)');
     else add(false,'Проблема с таблицей: '+error.message);
