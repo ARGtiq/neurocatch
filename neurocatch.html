@@ -448,6 +448,12 @@ html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
 .guide-code pre{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#cdd3f0;white-space:pre;line-height:1.45}
 .guide-note{background:rgba(var(--seed-rgb),.09);border:1px solid rgba(var(--seed-rgb),.22);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted);margin-top:14px}
 .guide-btn{font-size:12px;font-weight:600}
+pre.raw-md{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--glass);border:1px solid var(--stroke);border-radius:10px;padding:12px;max-height:52vh;overflow:auto;color:var(--muted)}
+.guide-check{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.guide-check .chk{font-size:13px;padding:9px 11px;border-radius:9px;background:var(--glass);border:1px solid var(--stroke);color:var(--muted)}
+.guide-check .chk.ok{color:var(--green);border-color:rgba(61,220,151,.3)}
+.guide-check .chk.bad{color:var(--red);border-color:rgba(255,107,107,.3)}
+
 .bug-fab{position:fixed;right:16px;bottom:18px;z-index:45;width:40px;height:40px;border-radius:50%;
   background:rgba(20,20,40,.35);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
   display:grid;place-items:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -668,7 +674,7 @@ let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget=
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v15';
+const APP_VERSION='2025.7-06';const SW_VER='v16';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
 window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
@@ -1345,12 +1351,37 @@ function openGuide(which){
       <li><b>Authentication → URL Configuration</b>: в <b>Site URL</b> и <b>Redirect URLs</b> добавь:<br><code>${esc(cur)}</code></li>
       <li>В настройках вставь <b>URL</b>, <b>anon key</b>, <b>email</b> → <b>Войти по ссылке</b> → открой письмо, вернёшься авторизованным.</li>
       <li>(Опц.) GitHub Actions пинг раз в 3 дня, чтобы free-проект не засыпал.</li>
-    </ol><div class="guide-note">anon-ключ публичный — держать в приложении безопасно (данные защищены RLS). Никогда не вставляй service_role ключ.</div>`}
+    </ol><div class="guide-note">anon-ключ публичный — держать в приложении безопасно (данные защищены RLS). Никогда не вставляй service_role ключ.</div><button type="button" class="btn" id="guideCheckBtn" style="width:100%;margin-top:14px"><i data-lucide="refresh-cw"></i>Проверить настройку</button><div id="guideCheck" class="guide-check"></div>`}
   };
   const g=G[which]||G.gemini;
   $('#guideTitle').textContent=g.t;$('#guideBody').innerHTML=g.h;lucide.createIcons();
   const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(SB_SQL_RAW);toast('SQL скопирован');}catch(e){toast('Не удалось',true);}});
+  const cb=$('#guideCheckBtn');if(cb)cb.addEventListener('click',checkSupabaseSetup);
   $('#guideOverlay').classList.add('open');
+}
+async function checkSupabaseSetup(){
+  const box=$('#guideCheck');if(!box)return;box.innerHTML='<div class="chk">Проверяю…</div>';
+  const lines=[];const add=(b,t)=>lines.push('<div class="chk '+(b?'ok':'bad')+'">'+(b?'✓ ':'✗ ')+t+'</div>');
+  const paint=()=>{box.innerHTML=lines.join('');};
+  const url=($('#sbUrl')&&$('#sbUrl').value.trim())||settings.sbUrl;
+  const key=($('#sbKey')&&$('#sbKey').value.trim())||settings.sbKey;
+  const email=($('#sbEmail')&&$('#sbEmail').value.trim())||settings.sbEmail;
+  add(!!url,url?'URL указан':'URL не указан');
+  add(!!key,key?'anon-ключ указан':'anon-ключ не указан');
+  add(!!email,email?'Email для входа указан':'Email не указан (нужен для входа)');
+  if(!url||!key){paint();return;}
+  let client;
+  try{const m=await import('https://esm.sh/@supabase/supabase-js@2');client=m.createClient(url,key);add(true,'Библиотека Supabase и клиент загружены');}
+  catch(e){add(false,'Не удалось создать клиент: '+(e.message||e)+' (проверь интернет)');paint();return;}
+  try{const {data}=await client.auth.getSession();const signed=!!(data&&data.session);add(signed,signed?('Вход выполнен: '+data.session.user.email):'Не авторизован — нажми «Войти по ссылке» и открой письмо');}
+  catch(e){add(false,'Auth недоступен: '+(e.message||e));}
+  try{const {error}=await client.from('states').select('id').limit(1);
+    if(!error)add(true,'Таблица states доступна');
+    else if(/does not exist|42P01|relation/i.test(error.message||''))add(false,'Таблицы states нет — выполни SQL выше в SQL Editor');
+    else if(/permission|rls|row-level|jwt|not authorized/i.test(error.message||''))add(true,'Таблица есть, доступ ограничен RLS (это нормально)');
+    else add(false,'Проблема с таблицей: '+error.message);
+  }catch(e){add(false,'Сеть/URL: '+(e.message||e));}
+  paint();
 }
 $('#guideClose')&&$('#guideClose').addEventListener('click',()=>$('#guideOverlay').classList.remove('open'));
 $('#guideOverlay')&&$('#guideOverlay').addEventListener('click',e=>{if(e.target===$('#guideOverlay'))$('#guideOverlay').classList.remove('open');});
@@ -1365,6 +1396,19 @@ $('#bugDownload').addEventListener('click',()=>{const rep={note:$('#bugNote').va
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
 /* ---------- init ---------- */
+/* ---------- render guards (graceful degradation) ---------- */
+function logRenderErr(name,e){try{lastErrors.push({t:Date.now(),msg:name+': '+(e&&e.message||e)});if(lastErrors.length>10)lastErrors.shift();crumb('render err '+name);}catch(_){}}
+function digestFallback(e,args){try{const entry=args&&args[0];currentEntry=entry||currentEntry;$('#digestCard').innerHTML='<div class="md-section"><h3>⚠️ Не удалось отрисовать отчёт</h3><p style="margin-bottom:10px">Показываю исходный текст. Пожалуйста, отправь баг-репорт.</p><pre class="raw-md">'+esc((entry&&entry.markdown)||'(пусто)')+'</pre></div>';try{renderActionBar('history');}catch(_){}}catch(_){}}
+function guard(name,fn,fb){return function(){try{return fn.apply(this,arguments);}catch(e){logRenderErr(name,e);if(fb){try{fb(e,arguments);}catch(_){}}else{try{toast('Ошибка отрисовки: '+name,true);}catch(__){}}}};}
+renderDigest=guard('renderDigest',renderDigest,digestFallback);
+renderHistory=guard('renderHistory',renderHistory);
+renderTasks=guard('renderTasks',renderTasks);
+renderQueue=guard('renderQueue',renderQueue);
+renderActionBar=guard('renderActionBar',renderActionBar);
+renderCalendar=guard('renderCalendar',renderCalendar);
+renderRepList=guard('renderRepList',renderRepList);
+renderTagFilter=guard('renderTagFilter',renderTagFilter);
+
 loadAll();
 initNotify();
 lucide.createIcons();
