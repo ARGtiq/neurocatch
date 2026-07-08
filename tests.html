@@ -1,0 +1,61 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>NeuroCatch · тесты парсеров</title>
+<style>body{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b0d18;color:#e8eaf5;padding:20px;line-height:1.5}
+h1{font-size:18px}.ok{color:#3ddc97}.bad{color:#ff6b6b}.sum{margin:14px 0;font-size:15px}
+.case{padding:3px 0;border-bottom:1px solid #1c2138}small{color:#8b90b5}</style></head>
+<body><h1>Тесты парсеров (nc-parsers.js)</h1><div id="out"></div>
+<script src="nc-parsers.js"></script>
+<script>
+const out=document.getElementById('out');let pass=0,fail=0;
+function ok(name,cond,got){const d=document.createElement('div');d.className='case';d.innerHTML=(cond?'<span class="ok">✓</span> ':'<span class="bad">✗</span> ')+name+(cond?'':' <small>→ '+JSON.stringify(got)+'</small>');out.appendChild(d);cond?pass++:fail++;}
+function eq(name,a,b){ok(name+' <small>('+JSON.stringify(b)+')</small>',JSON.stringify(a)===JSON.stringify(b),a);}
+
+/* ---- parseDateTime ---- */
+const base=new Date(2026,6,8,10,0,0); // ср, 8 июл 2026, 10:00
+function pd(t){const r=parseDateTime(t,base);return r?{label:r.label,hasTime:r.hasTime}:null;}
+ok('«купить молоко» → нет даты', pd('купить молоко')===null, pd('купить молоко'));
+eq('«завтра в 15:00»', pd('встреча завтра в 15:00'), {label:'09 июл., 15:00', hasTime:true});
+eq('«позвонить 12.07» (дата, не время)', pd('позвонить 12.07'), {label:'12 июл.', hasTime:false});
+eq('«через 3 дня»', pd('дедлайн через 3 дня'), {label:'11 июл.', hasTime:false});
+eq('«в понедельник в 9 утра»', pd('созвон в понедельник в 9 утра'), {label:'13 июл., 09:00', hasTime:true});
+eq('«послезавтра»', pd('послезавтра'), {label:'10 июл.', hasTime:false});
+eq('«25 декабря»', pd('отчёт 25 декабря'), {label:'25 дек.', hasTime:false});
+eq('«через 2 часа»', pd('через 2 часа'), {label:'08 июл., 12:00', hasTime:true});
+eq('«сегодня в 18:30»', pd('сегодня в 18:30'), {label:'08 июл., 18:30', hasTime:true});
+eq('«в пятницу»', pd('в пятницу'), {label:'10 июл.', hasTime:false});
+(()=>{const r=parseDateTime('в 8:00',base);ok('время в прошлом → перенос на завтра', r && new Date(r.ts).getDate()===9, r);})();
+
+/* ---- parseMd ---- */
+const md=`## 🧠 Инсайты
+- Первая мысль
+- Вторая мысль
+## 📚 Конспекты
+### Статья про сон
+🔗 https://example.com/sleep
+Тело конспекта, первый абзац.
+Второй абзац.
+## 🔖 Закладки
+- [Repo](https://github.com/acme/tool) | Инструменты | удобный CLI
+## ✅ Задачи
+- [ ] Позвонить врачу
+- [x] Купить хлеб
+## 🏷 Теги
+#здоровье #сон`;
+const d=parseMd(md);
+eq('инсайтов: 2', d.insights.length, 2);
+eq('конспектов: 1', d.summaries.length, 1);
+eq('заголовок конспекта', d.summaries[0].title, 'Статья про сон');
+eq('источник конспекта', d.summaries[0].source, 'https://example.com/sleep');
+ok('тело конспекта содержит оба абзаца', /первый абзац[\s\S]*Второй абзац/.test(d.summaries[0].body), d.summaries[0].body);
+eq('закладок: 1', d.bookmarks.length, 1);
+eq('категория закладки', d.bookmarks[0].category, 'Инструменты');
+eq('URL закладки', d.bookmarks[0].url, 'https://github.com/acme/tool');
+eq('задач: 2', d.tasks.length, 2);
+eq('чекбоксы убраны из задач', d.tasks[0], 'Позвонить врачу');
+eq('тегов: 2', d.tags.length, 2);
+ok('тег #сон присутствует', d.tags.includes('#сон'), d.tags);
+eq('пустой markdown → пустые секции', parseMd('').summaries.length, 0);
+
+const s=document.createElement('div');s.className='sum';
+s.innerHTML=(fail===0?'<span class="ok">ВСЁ ЗЕЛЁНОЕ</span> ':'<span class="bad">ЕСТЬ ОШИБКИ</span> ')+'· пройдено '+pass+', провалено '+fail;
+out.prepend(s);
+</script></body></html>
