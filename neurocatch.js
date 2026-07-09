@@ -13,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v43';
+const APP_VERSION='2025.7-06';const SW_VER='v44';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -130,6 +130,7 @@ $('#mic')&&$('#mic').addEventListener('click',e=>{const b=e.currentTarget;if(!SR
 /* ---------- queue ---------- */
 $('#ritualCount')&&$('#ritualCount').addEventListener('click',e=>{e.stopPropagation();renderQueue();show($('#view-queue'));});
 $('#queueBack')&&$('#queueBack').addEventListener('click',()=>show($('#view-input')));
+$('#queueRitual')&&$('#queueRitual').addEventListener('click',()=>runRitual());
 function renderQueue(){
   const box=$('#qList');if(!box)return;const qr=$('#queueRitual');if(qr)qr.disabled=!catches.length;
   if(!catches.length){box.innerHTML='<div class="empty"><i data-lucide="inbox"></i>Улов пуст. Закинь первую мысль.</div>';lucide.createIcons();return;}
@@ -147,7 +148,6 @@ function renderQueue(){
   box.querySelectorAll('.q-item').forEach(it=>attachSwipe(it,{onLeft:()=>{catches=catches.filter(x=>x.id!==it.dataset.id);saveCatches();refreshCount();renderQueue();toast('Удалено');}}));
   box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
 }
-$('#queueRitual')&&$('#queueRitual').addEventListener('click',()=>runRitual());
 
 /* ---------- Gemini ---------- */
 const PRESET_INTRO={
@@ -680,7 +680,7 @@ async function runRitual(items,opts){
     else{showRitualError(providerName()+': '+(err.message||'неизвестная ошибка')+'. Технические детали сохранены — если повторится, отправь баг-репорт.');}
   }
 }
-$('#ritual')&&$('#ritual').addEventListener('click',()=>runRitual());
+$('#ritual')&&$('#ritual').addEventListener('click',()=>{if(!catches.length){toast('Улов пуст — сначала закинь что-нибудь',true);return;}renderQueue();show($('#view-queue'));});
 /* single-link analyzer */
 $('#openLink')&&$('#openLink').addEventListener('click',()=>{$('#linkInput').value='';$('#linkOverlay').classList.add('open');setTimeout(()=>$('#linkInput').focus(),100);});
 $('#closeLink')&&$('#closeLink').addEventListener('click',()=>$('#linkOverlay').classList.remove('open'));
