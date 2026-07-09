@@ -17,13 +17,37 @@ async function buildContextPrompt(items){
   if(ctx)prompt+='\n\nНиже реальный текст страниц по ссылкам — опирайся на него для конспектов, не выдумывай:'+ctx;
   return prompt;
 }
-async function streamLLM(items,onChunk,signal){
+const RETRYABLE_STATUS=new Set([503]);
+function isRetryableErr(err){
+  const status=lastRitualDebug&&lastRitualDebug.httpStatus;
+  if(RETRYABLE_STATUS.has(status))return true;
+  return /UNAVAILABLE|overloaded|high demand|перегруж/i.test((err&&err.message)||'');
+}
+async function streamLLM(items,onChunk,signal,onRetry){
   const p=settings.provider||'gemini';
-  if(p==='gemini')return streamGemini(items,onChunk,signal);
-  const prompt=await buildContextPrompt(items);
-  if(p==='openrouter')return streamOpenRouter(prompt,onChunk,signal);
-  if(p==='ollama')return streamOllama(prompt,onChunk,signal);
-  return streamGemini(items,onChunk,signal);
+  let prompt=null;
+  if(p==='openrouter'||p==='ollama')prompt=await buildContextPrompt(items);
+  const run=()=>{
+    if(p==='gemini')return streamGemini(items,onChunk,signal);
+    if(p==='openrouter')return streamOpenRouter(prompt,onChunk,signal);
+    if(p==='ollama')return streamOllama(prompt,onChunk,signal);
+    return streamGemini(items,onChunk,signal);
+  };
+  const delays=[2000,5000]; // 2 повторные попытки при перегрузке провайдера (503/UNAVAILABLE)
+  for(let attempt=0;;attempt++){
+    try{return await run();}
+    catch(err){
+      if(signal&&signal.aborted)throw err;
+      if(attempt>=delays.length||!isRetryableErr(err))throw err;
+      const wait=delays[attempt];
+      try{onRetry&&onRetry(attempt+1,delays.length,wait);}catch(_){}
+      await new Promise(res=>{
+        const t=setTimeout(res,wait);
+        if(signal)signal.addEventListener('abort',()=>{clearTimeout(t);res();},{once:true});
+      });
+      if(signal&&signal.aborted)throw err;
+    }
+  }
 }
 async function streamOpenRouter(prompt,onChunk,signal){
   lastRitualDebug={provider:'openrouter',model:settings.orModel||'meta-llama/llama-3.3-70b-instruct:free',chunks:0,finishReason:null,httpStatus:null,startedAt:Date.now()};

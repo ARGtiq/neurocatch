@@ -364,6 +364,17 @@
   </div>
 </div>
 
+<div class="overlay" id="draftOverlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
+    <div class="modal-head"><h2><i data-lucide="file-clock"></i>Есть несохранённый разбор</h2><button class="icon-btn" id="draftClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <p style="color:var(--muted);margin-bottom:14px">От <span id="draftWhen"></span> остался черновик разбора — реши, сохранить его в историю или удалить. Улов при этом не пострадает.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn" id="draftReview" style="flex:1"><i data-lucide="eye"></i>Посмотреть</button>
+      <button class="btn btn-clear" id="draftDiscardBoot" style="flex:1"><i data-lucide="trash-2"></i>Удалить</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="errOverlay">
   <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
     <div class="modal-head"><h2><i data-lucide="alert-triangle"></i>Что-то пошло не так</h2><button class="icon-btn" id="errClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>

@@ -13,13 +13,17 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v42';
+const APP_VERSION='2025.7-09';const SW_VER='v43';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
 window.addEventListener('error',e=>{lastErrors.push({t:Date.now(),msg:e.message,src:e.filename,line:e.lineno});if(lastErrors.length>10)lastErrors.shift();showErrorModal(e.message);});
 window.addEventListener('unhandledrejection',e=>{const m='promise: '+(e.reason&&e.reason.message||e.reason);lastErrors.push({t:Date.now(),msg:m});if(lastErrors.length>10)lastErrors.shift();showErrorModal(m);});
 let localUpdatedAt=0, applyingRemote=false, booting=true;
+let draftEntry=null; // {d, items, itemIds, isDaily, real, title, back, ts} — несохранённый разбор, ждёт подтверждения
+function loadDraft(){try{return JSON.parse(localStorage.getItem('neurocatch_draft')||'null');}catch(e){return null;}}
+function saveDraft(){if(draftEntry)localStorage.setItem('neurocatch_draft',JSON.stringify(draftEntry));}
+function clearDraftStorage(){localStorage.removeItem('neurocatch_draft');}
 
 /* ---------- persistence ---------- */
 function loadBookmarks(){try{bookmarks=JSON.parse(localStorage.getItem('neurocatch_bookmarks')||'[]');}catch(e){bookmarks=[];}}
@@ -138,14 +142,23 @@ function renderQueue(){
     const urls=c.text.match(URL_RE)||[];
     const off=urls.length&&urls.every(u=>excl.has(u.replace(/[),.]+$/,'')));
     const mbtn=(settings.microPerLink&&urls.length)?`<button class="ql-btn${off?' off':''}" data-mic="${c.id}"><i data-lucide="link"></i>${off?'microlink выкл':'microlink вкл'}</button>`:'';
+    const bmbtn=urls.length?`<button class="ql-btn" data-bm="${c.id}" title="Отправить прямо в закладки, без разбора ИИ"><i data-lucide="bookmark"></i>это закладка</button>`:'';
     return `<div class="q-item" data-id="${c.id}">
-      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${mbtn}</div>
+      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${mbtn}${bmbtn}</div>
       <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
   box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',()=>{catches=catches.filter(x=>x.id!==b.dataset.del);saveCatches();refreshCount();renderQueue();}));
   box.querySelectorAll('.q-item').forEach(it=>attachSwipe(it,{onLeft:()=>{catches=catches.filter(x=>x.id!==it.dataset.id);saveCatches();refreshCount();renderQueue();toast('Удалено');}}));
   box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
+  box.querySelectorAll('[data-bm]').forEach(b=>b.addEventListener('click',()=>{
+    const c=catches.find(x=>x.id===b.dataset.bm);if(!c)return;
+    const url=(c.text.match(URL_RE)||[])[0];if(!url){toast('В записи нет ссылки',true);return;}
+    const clean=url.replace(/[),.]+$/,'');const desc=c.text.replace(url,'').trim();
+    ingestBookmarks([{url:clean,title:hostOf(clean),category:'Прочее',desc}]);
+    catches=catches.filter(x=>x.id!==c.id);saveCatches();refreshCount();renderQueue();
+    toast('Добавлено в закладки — ИИ это разбирать не будет');
+  }));
 }
 $('#queueRitual')&&$('#queueRitual').addEventListener('click',()=>runRitual());
 
@@ -250,6 +263,66 @@ function renderDigest(entry){
   lucide.createIcons();
   enrichTitles(entry);
 }
+/* ---------- draft review (черновик перед сохранением в базу) ---------- */
+function renderDraftDigest(){
+  if(!draftEntry)return;const d=draftEntry.d;
+  $('#digestTitle').textContent=draftEntry.title;
+  const delBtn=(kind,i)=>`<button class="q-del draft-del" data-kind="${kind}" data-i="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>`;
+  const ins=d.insights.length?d.insights.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span>${delBtn('ins',i)}</li>`).join(''):'<li><span class="ins-text">Ничего заметного.</span></li>';
+  const sum=d.summaries.length?d.summaries.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4>${delBtn('sum',i)}</div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
+  const tasks=d.tasks.length?d.tasks.map((t,i)=>`<li style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span class="task-label">${safe(t)}</span>${delBtn('task',i)}</li>`).join(''):'<p>Задач нет.</p>';
+  const links=d.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${d.links.map((l,i)=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic"><i data-lucide="link"></i></span><span class="lt"><span class="ltt">${esc(l.title||hostOf(l.url))}</span></span></a>${delBtn('link',i)}</div>`).join('')}</div></div>`:'';
+  const bms=d.bookmarks.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-list">${d.bookmarks.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div>${delBtn('bm',i)}</div>`).join('')}</div></div>`:'';
+  const tags=d.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${d.tags.map((t,i)=>`<span class="tag-pill" style="display:inline-flex;align-items:center;gap:4px">${esc(t)}${delBtn('tag',i)}</span>`).join('')}</div></div>`:'';
+  $('#digestCard').innerHTML=`<div class="bm-summary" style="padding:10px 14px;border-radius:12px;background:var(--glass);border:1px solid var(--stroke)">📝 Черновик — удали лишнее и сохрани в базу. Не сохранишь сейчас — на главном экране появится напоминание.</div>
+    <div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
+    <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
+    ${links}${bms}
+    <div class="md-section"><h3>✅ Задачи</h3><ul>${tasks}</ul></div>
+    ${tags}`;
+  $('#digestCard').querySelectorAll('.draft-del').forEach(b=>b.addEventListener('click',()=>{
+    const kind=b.dataset.kind,i=+b.dataset.i;
+    if(kind==='ins')d.insights.splice(i,1);
+    else if(kind==='sum')d.summaries.splice(i,1);
+    else if(kind==='task')d.tasks.splice(i,1);
+    else if(kind==='link')d.links.splice(i,1);
+    else if(kind==='bm')d.bookmarks.splice(i,1);
+    else if(kind==='tag')d.tags.splice(i,1);
+    saveDraft();renderDraftDigest();
+  }));
+  lucide.createIcons();
+}
+function commitDraft(){
+  if(!draftEntry)return;
+  const md=serializeMd(draftEntry.d);
+  const entry=saveToHistory(md,draftEntry.items);
+  if(draftEntry.isDaily&&draftEntry.real&&settings.clearAfter!==false&&draftEntry.itemIds){
+    const ids=new Set(draftEntry.itemIds);
+    catches=catches.filter(c=>!ids.has(c.id));saveCatches();refreshCount();
+  }
+  clearDraftStorage();draftEntry=null;
+  renderDigest(entry);renderActionBar('fresh');
+  toast('Сохранено в историю');
+}
+function discardDraft(silent){
+  if(!draftEntry)return;
+  if(!silent&&!confirm('Удалить черновик разбора без сохранения? Улов при этом останется на месте.'))return;
+  draftEntry=null;clearDraftStorage();
+  show($('#view-input'));
+  if(!silent)toast('Черновик удалён');
+}
+function showDraftRecovery(){
+  if(!draftEntry)return;
+  const el=$('#draftWhen');if(el)el.textContent=fmtDate(draftEntry.ts)+', '+fmtTime(draftEntry.ts);
+  const ov=$('#draftOverlay');if(ov)ov.classList.add('open');
+}
+$('#draftClose')&&$('#draftClose').addEventListener('click',()=>$('#draftOverlay').classList.remove('open'));
+$('#draftReview')&&$('#draftReview').addEventListener('click',()=>{
+  $('#draftOverlay').classList.remove('open');
+  backTarget='#view-input';show($('#view-digest'));$('#loader').hidden=true;$('#streamWrap').hidden=true;
+  renderDraftDigest();renderActionBar('draft');$('#result').hidden=false;
+});
+$('#draftDiscardBoot')&&$('#draftDiscardBoot').addEventListener('click',()=>{$('#draftOverlay').classList.remove('open');discardDraft(true);});
 function openHistoryWithTag(tag){filterDate=null;searchQuery='';$('#searchInput').value='';tagFilter=tag;renderHistory();show($('#view-history'));}
 async function fetchMeta(url){ // YouTube -> oEmbed (без лимита); прочее -> microlink.io
   try{
@@ -600,6 +673,13 @@ $('#openDash')&&$('#openDash').addEventListener('click',()=>{renderDashboard();s
 $('#dashBack')&&$('#dashBack').addEventListener('click',()=>show($('#view-input')));
 function renderActionBar(mode){
   const bar=$('#actionBar');
+  if(mode==='draft'){
+    bar.innerHTML=`<button class="btn btn-primary" id="draftSaveBtn"><i data-lucide="save"></i>Сохранить в базу</button><button class="btn btn-clear" id="draftDelBtn"><i data-lucide="trash-2"></i>Удалить черновик</button>`;
+    lucide.createIcons();
+    $('#draftSaveBtn').addEventListener('click',commitDraft);
+    $('#draftDelBtn').addEventListener('click',()=>discardDraft(false));
+    return;
+  }
   const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
     `<button class="btn" id="mdBtn"><i data-lucide="file-down"></i>Экспорт .md</button>`,
     `<button class="btn" id="addMoreBtn"><i data-lucide="plus-circle"></i>Дозакинуть</button>`];
@@ -643,13 +723,21 @@ async function processRitualQueue(){
 window.addEventListener('online',()=>{setTimeout(processRitualQueue,800);});
 async function runRitual(items,opts){
   opts=opts||{};items=items||catches;
+  if(draftEntry&&!confirm('Есть несохранённый черновик разбора — новый разбор заменит его. Продолжить?'))return;
   if(!$('#view-digest')||!$('#loader')||!$('#digestTitle')){toast('Разбор доступен только в основном приложении',true);return;}
   backTarget=opts.back||'#view-input';$('#digestTitle').textContent=opts.title||'Дайджест';show($('#view-digest'));
   $('#loader').hidden=false;$('#streamWrap').hidden=true;$('#result').hidden=true;
   const box=$('#streamBox');box.innerHTML='';
   const startStream=()=>{$('#loader').hidden=true;$('#streamWrap').hidden=false;};
   const isDaily=(items===catches);crumb('ritual '+(isDaily?'daily':'link')+' n='+items.length+' via '+(settings.provider||'gemini'));
-  const finish=(md,real)=>{streamAbort=null;$('#streamWrap').hidden=true;const entry=saveToHistory(md,items);if(isDaily&&real&&catches.length&&settings.clearAfter!==false){catches=[];saveCatches();refreshCount();toast('Улов разобран и очищен');}renderDigest(entry);renderActionBar('fresh');$('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));};
+  const finish=(md,real)=>{
+    streamAbort=null;$('#streamWrap').hidden=true;
+    const d=parseMd(md);
+    draftEntry={d,items:items.map(c=>({text:c.text})),itemIds:isDaily?items.map(c=>c.id):null,isDaily,real,title:opts.title||'Дайджест',back:backTarget,ts:Date.now()};
+    saveDraft();
+    renderDraftDigest();renderActionBar('draft');
+    $('#result').hidden=false;$('#result').classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>$('#result').classList.remove('enter')));
+  };
   const showRitualError=(msg)=>{
     $('#loader').hidden=true;$('#streamWrap').hidden=true;
     show($('#view-input'));
@@ -662,7 +750,8 @@ async function runRitual(items,opts){
   crumb('stream start provider='+(settings.provider||'gemini')+' links(yt='+lk.yt.length+',web='+lk.web.length+')');
   let opened=false,acc='',lastChunkAt=Date.now();streamAbort=new AbortController();
   const stallCheck=setInterval(()=>{if(Date.now()-lastChunkAt>45000){crumb('stream stall >45s, aborting');streamAbort.abort();}},5000);
-  try{const full=await streamLLM(items,txt=>{acc=txt;lastChunkAt=Date.now();if(!opened){opened=true;startStream();crumb('stream first chunk');}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal);
+  const onRetry=(n,max,wait)=>{crumb('retry '+n+'/'+max+' in '+wait+'ms');if(!opened){const lt=$('#loaderText');if(lt)lt.textContent='Провайдер перегружен, повтор через '+Math.round(wait/1000)+'с… ('+n+'/'+max+')';}};
+  try{const full=await streamLLM(items,txt=>{acc=txt;lastChunkAt=Date.now();if(!opened){opened=true;startStream();crumb('stream first chunk');}box.innerHTML=esc(txt)+'<span class="cursor"></span>';box.scrollTop=box.scrollHeight;},streamAbort.signal,onRetry);
     clearInterval(stallCheck);
     crumb('stream done len='+(full||'').length+(lastRitualDebug&&lastRitualDebug.finishReason?(' finishReason='+lastRitualDebug.finishReason):''));
     if(!full&&!acc){showRitualError('Провайдер '+providerName()+' вернул пустой ответ. Проверь ключ/модель и попробуй ещё раз, либо открой баг-репорт — там сохранены технические детали последнего запроса.');return;}
@@ -680,7 +769,7 @@ async function runRitual(items,opts){
     else{showRitualError(providerName()+': '+(err.message||'неизвестная ошибка')+'. Технические детали сохранены — если повторится, отправь баг-репорт.');}
   }
 }
-$('#ritual')&&$('#ritual').addEventListener('click',()=>runRitual());
+$('#ritual')&&$('#ritual').addEventListener('click',()=>{if(!catches.length){toast('Улов пуст — нечего разбирать',true);return;}renderQueue();show($('#view-queue'));});
 /* single-link analyzer */
 $('#openLink')&&$('#openLink').addEventListener('click',()=>{$('#linkInput').value='';$('#linkOverlay').classList.add('open');setTimeout(()=>$('#linkInput').focus(),100);});
 $('#closeLink')&&$('#closeLink').addEventListener('click',()=>$('#linkOverlay').classList.remove('open'));
@@ -1607,6 +1696,7 @@ lucide.createIcons();
 booting=false;
 try{refreshTodayBtn();}catch(e){}
 try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();applyBbConfig();if($('#bottomBar'))document.body.classList.add('has-bottombar');if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
+try{const dr=loadDraft();if(dr){draftEntry=dr;setTimeout(showDraftRecovery,700);}}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
 setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
 

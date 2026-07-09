@@ -47,3 +47,18 @@ function parseMd(md){md=md||'';const d={insights:[],summaries:[],tasks:[],tags:[
   d.summaries.forEach(s=>s.body=s.body.trim());
   d.summaries=d.summaries.filter(s=>s.title||s.body);
   return d;}
+function serializeMd(d){ // обратное к parseMd — собирает markdown из распарсенной структуры (после ручных удалений в черновике)
+  const hostOf2=u=>{try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u;}};
+  let out='## 🧠 Инсайты\n';
+  out+=(d.insights.length?d.insights.map(x=>'- '+x).join('\n'):'- Ничего заметного.')+'\n\n';
+  out+='## 📚 Конспекты\n';
+  out+=d.summaries.length?d.summaries.map(s=>'### '+(s.title||'')+'\n'+(s.source?('🔗 '+s.source+'\n'):'')+(s.body||'')).join('\n\n')+'\n\n':'Конспектировать нечего.\n\n';
+  out+='## 🔗 Ссылки\n';
+  out+=(d.links.length?d.links.map(l=>'- ['+(l.title||hostOf2(l.url))+']('+l.url+')').join('\n'):'')+'\n\n';
+  out+='## 🔖 Закладки\n';
+  out+=(d.bookmarks.length?d.bookmarks.map(b=>'- ['+(b.title||hostOf2(b.url))+']('+b.url+') | '+(b.category||'Прочее')+(b.desc?(' | '+b.desc):'')).join('\n'):'')+'\n\n';
+  out+='## ✅ Задачи\n';
+  out+=(d.tasks.length?d.tasks.map(t=>'- [ ] '+t).join('\n'):'')+'\n\n';
+  out+='## 🏷 Теги\n';
+  out+=(d.tags||[]).join(' ')+'\n';
+  return out;}
