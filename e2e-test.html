@@ -82,24 +82,26 @@ async function runE2E() {
   const doc = win.document;
 
   // 1) Ключевые функции существуют
-  const fnsOk = await waitFor(win, w => typeof w.saveToHistory === 'function' && typeof w.parseMd === 'function' && typeof w.catches !== 'undefined');
-  logStep('Инициализация JS (saveToHistory, parseMd, catches доступны)', fnsOk ? 'ok' : 'bad');
+  const fnsOk = await waitFor(win, w => typeof w.saveToHistory === 'function' && typeof w.parseMd === 'function' && w.__nc && Array.isArray(w.__nc.catches));
+  logStep('Инициализация JS (saveToHistory, parseMd, состояние доступно)', fnsOk ? 'ok' : 'bad',
+    fnsOk ? '' : 'нет window.__nc — проверь, что URL содержит ?e2e= и залит свежий neurocatch.js');
   if (!fnsOk) return finish();
+  const nc = win.__nc;
 
   // 2) Добавление записи в улов через реальный UI (textarea + submit)
   const ta = doc.getElementById('brain');
   const submitBtn = doc.getElementById('submit');
-  const before = win.catches.length;
+  const before = nc.catches.length;
   ta.value = 'Проверить анализы пациента завтра в 15:00';
   ta.dispatchEvent(new win.Event('input', { bubbles: true }));
   submitBtn.click();
   await wait(100);
-  const afterAdd = win.catches.length;
+  const afterAdd = nc.catches.length;
   const added = afterAdd === before + 1;
   logStep('Добавление записи в улов через UI', added ? 'ok' : 'bad', `было ${before}, стало ${afterAdd}`);
 
   // 3) Распознавание даты в добавленной записи
-  const lastCatch = win.catches[win.catches.length - 1];
+  const lastCatch = nc.catches[nc.catches.length - 1];
   const dateOk = !!(lastCatch && lastCatch.dueLabel);
   logStep('Распознавание даты/времени в записи (parseDateTime)', dateOk ? 'ok' : 'bad', dateOk ? ('срок: ' + lastCatch.dueLabel) : 'dueLabel не найден');
 
@@ -119,11 +121,11 @@ async function runE2E() {
     '#тест #e2e'
   ].join('\n');
   let entry = null, saveErr = null;
-  try { entry = win.saveToHistory(fakeMd, win.catches); } catch (e) { saveErr = e.message; }
+  try { entry = win.saveToHistory(fakeMd, nc.catches); } catch (e) { saveErr = e.message; }
   logStep('saveToHistory() создаёт запись в истории', (entry && entry.id) ? 'ok' : 'bad', saveErr || (entry ? 'id: ' + entry.id : ''));
 
   // 5) history действительно пополнилась
-  const inHistory = win.history.some(h => h.id === entry?.id);
+  const inHistory = nc.history.some(h => h.id === entry?.id);
   logStep('Запись появилась в history[]', inHistory ? 'ok' : 'bad');
 
   // 6) parseMd корректно вытащил задачи/теги/закладки из этой записи
@@ -141,7 +143,7 @@ async function runE2E() {
   logStep('renderDigest() отрисовал отчёт без падения', (!renderErr && digestVisible && digestHasContent) ? 'ok' : 'bad', renderErr || '');
 
   // 8) Закладка из отчёта появилась в общем хранилище закладок
-  const bmOk = win.bookmarks.some(b => b.url.includes('example.com/tool'));
+  const bmOk = nc.bookmarks.some(b => b.url.includes('example.com/tool'));
   logStep('Закладка из отчёта сохранена в bookmarks[]', bmOk ? 'ok' : 'bad');
 
   // 9) Задача появилась в списке задач и корректно переключается
@@ -156,31 +158,31 @@ async function runE2E() {
     const taskId = row.dataset.ref;
     row.click();
     await wait(50);
-    const h = win.history.find(x => x.id === taskId);
+    const h = nc.history.find(x => x.id === taskId);
     const taskDone = h && h.tasks[0] && h.tasks[0].done === true;
     logStep('Клик по задаче переключает done=true', taskDone ? 'ok' : 'bad');
   }
 
   // 10) Дедупликация закладок: повторное добавление той же ссылки не плодит дубль
-  const bmCountBefore = win.bookmarks.length;
+  const bmCountBefore = nc.bookmarks.length;
   const res = win.ingestBookmarks([{ url: 'https://example.com/tool/', title: 'dup', category: 'Прочее' }]);
-  const bmCountAfter = win.bookmarks.length;
+  const bmCountAfter = nc.bookmarks.length;
   const dedupOk = bmCountAfter === bmCountBefore && res.dupes === 1;
   logStep('Дедупликация закладок (нормализация URL со слэшем)', dedupOk ? 'ok' : 'bad', `было:${bmCountBefore} стало:${bmCountAfter} dupes:${res.dupes}`);
 
   // 11) Архивация отчёта
   win.archiveReport(entry.id, true);
   await wait(50);
-  const archivedEntry = win.history.find(x => x.id === entry.id);
+  const archivedEntry = nc.history.find(x => x.id === entry.id);
   logStep('Архивация отчёта устанавливает archived=true', archivedEntry && archivedEntry.archived === true ? 'ok' : 'bad');
 
   // 12) Архивный отчёт не попадает в обычный список, но виден в архиве
   win.show(doc.getElementById('view-history'));
-  win.showArchived = false;
+  nc.showArchived = false;
   win.renderHistory();
   await wait(50);
   const hiddenFromMain = !doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
-  win.showArchived = true;
+  nc.showArchived = true;
   win.renderHistory();
   await wait(50);
   const visibleInArchive = !!doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
@@ -189,7 +191,7 @@ async function runE2E() {
 
   // 13) Разархивация возвращает в общий список
   win.archiveReport(entry.id, false);
-  win.showArchived = false;
+  nc.showArchived = false;
   win.renderHistory();
   await wait(50);
   const backInMain = !!doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
@@ -204,10 +206,10 @@ async function runE2E() {
   logStep('Глобальный поиск находит отчёт по тексту конспекта', searchResults > 0 ? 'ok' : 'bad', `результатов: ${searchResults}`);
 
   // 15) Удаление отчёта (очистка за собой)
-  const countBeforeDel = win.history.length;
-  win.history = win.history.filter(x => x.id !== entry.id);
+  const countBeforeDel = nc.history.length;
+  nc.history = nc.history.filter(x => x.id !== entry.id);
   win.saveHistory();
-  const countAfterDel = win.history.length;
+  const countAfterDel = nc.history.length;
   logStep('Удаление отчёта (очистка за тестом)', countAfterDel === countBeforeDel - 1 ? 'ok' : 'bad');
 
   // ===== БАГ-РЕПОРТ =====
@@ -236,11 +238,11 @@ async function runE2E() {
   logStep('В отчёте есть диагностика (notify / offline / lastRitualDebug)', diagOk ? 'ok' : 'bad');
 
   // 19) Ошибки попадают в lastErrors и оттуда в отчёт
-  const errsBefore = win.lastErrors.length;
-  win.lastErrors.push({ t: Date.now(), msg: 'E2E тестовая ошибка' });
+  const errsBefore = nc.lastErrors.length;
+  nc.lastErrors.push({ t: Date.now(), msg: 'E2E тестовая ошибка' });
   const bug2 = win.buildBugData();
   const errCaptured = bug2.recentErrors.some(e => e.msg === 'E2E тестовая ошибка');
-  win.lastErrors.length = errsBefore; // откат
+  nc.lastErrors.length = errsBefore; // откат
   logStep('Ошибки из lastErrors попадают в баг-репорт', errCaptured ? 'ok' : 'bad');
 
   // 20) openBug() открывает модалку и кладёт валидный JSON в поле
@@ -278,7 +280,7 @@ async function runE2E() {
   doc.getElementById('errOverlay').classList.remove('open');
 
   // 23) Никаких неперехваченных JS-ошибок за время прогона
-  const jsErrors = win.lastErrors || [];
+  const jsErrors = nc.lastErrors || [];
   logStep('Нет неперехваченных JS-ошибок за время теста', jsErrors.length === 0 ? 'ok' : 'bad',
     jsErrors.length ? jsErrors.map(e => e.msg).join('; ') : '');
 

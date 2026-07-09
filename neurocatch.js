@@ -13,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v41';
+const APP_VERSION='2025.7-06';const SW_VER='v42';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1609,3 +1609,24 @@ try{refreshTodayBtn();}catch(e){}
 try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();applyBbConfig();if($('#bottomBar'))document.body.classList.add('has-bottombar');if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
 setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
+
+/* ---------- E2E debug bridge ----------
+   Переменные, объявленные через let на верхнем уровне классического скрипта,
+   НЕ становятся свойствами window — для тестов пробрасываем их явно.
+   Выносим в отдельное пространство window.__nc, чтобы НЕ затенять встроенные
+   свойства окна (window.history — это History API браузера!).
+   Мост включается только при ?e2e=... и невидим для обычных пользователей. */
+if(/[?&]e2e=/.test(location.search)){
+  window.__nc={
+    get catches(){return catches;}, set catches(v){catches=v;},
+    get history(){return history;}, set history(v){history=v;},
+    get bookmarks(){return bookmarks;}, set bookmarks(v){bookmarks=v;},
+    get habits(){return habits;}, set habits(v){habits=v;},
+    get lastErrors(){return lastErrors;}, set lastErrors(v){lastErrors=v;},
+    get showArchived(){return showArchived;}, set showArchived(v){showArchived=v;},
+    get currentEntry(){return currentEntry;}, set currentEntry(v){currentEntry=v;},
+    get noteTagFilter(){return noteTagFilter;}, set noteTagFilter(v){noteTagFilter=v;},
+    get noteSearch(){return noteSearch;}, set noteSearch(v){noteSearch=v;},
+    get settings(){return settings;}
+  };
+}
