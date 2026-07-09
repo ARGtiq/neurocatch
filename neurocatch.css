@@ -542,9 +542,6 @@ html[data-theme="light"] .bug-fab{background:rgba(255,255,255,.5)}
 /* clipboard chip under actions */
 .clip-chip{margin:12px 0 0}
 /* minimal UI mode */
-.ui-toggle{color:var(--faint)}
-.ui-toggle:hover{color:var(--accent-2)}
-body.minimal .topbar .icon-btn:not(#uiToggle){display:none}
 body.minimal #todayTasks{display:none}
 /* background pattern picker */
 .bg-picker{display:flex;flex-wrap:wrap;gap:8px}
@@ -611,7 +608,6 @@ body.minimal .hero-sub{display:none}
 .tag-cloud-item .tcn{font-size:.62em;color:var(--faint);font-weight:600}
 
 /* buttons moved into "ещё" menu */
-.icon-btn.in-more{display:none}
 .study-menu button i,.study-menu button svg{width:16px;height:16px;flex:0 0 auto}
 .study-menu button{display:flex;align-items:center;gap:9px}
 
@@ -696,3 +692,11 @@ body:not(.minimal) .ui-toggle-tab{bottom:calc(78px + env(safe-area-inset-bottom,
 .nd-preview-title{font-weight:600;color:var(--text);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nd-preview-host{font-size:12px;color:var(--faint);margin-top:2px}
 .note-open{cursor:pointer}
+
+/* bottom bar separator + chevron button */
+.bb-sep{width:1px;align-self:stretch;background:var(--stroke);margin:2px 2px}
+#uiToggle{color:var(--faint)}
+#uiToggle:hover{color:var(--accent-2)}
+/* show-tab appears only when bar is hidden (minimal mode) */
+.ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
+.ui-toggle-tab:hover{color:var(--accent-2)}

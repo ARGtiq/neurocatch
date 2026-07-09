@@ -12,7 +12,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v34';
+const APP_VERSION='2025.7-06';const SW_VER='v35';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -85,8 +85,9 @@ setInterval(()=>{if(settings.themeMode==='auto')applyEffective();},600000);
 
 /* ---------- helpers ---------- */
 function show(view){crumb('view '+(view&&view.id));document.querySelectorAll('.view').forEach(v=>{if(v!==view)v.hidden=true;});view.hidden=false;view.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>view.classList.remove('enter')));
-  const zt=$('#uiToggle');if(zt)zt.hidden=!(view&&view.id==='view-input');
-  if(!(view&&view.id==='view-input')&&document.body.classList.contains('minimal')){localStorage.setItem('neurocatch_minimal','0');applyMinimal();}
+  const isHome=!!(view&&view.id==='view-input');
+  const zt=$('#uiToggle');if(zt)zt.hidden=!isHome;
+  if(!isHome&&document.body.classList.contains('minimal')){localStorage.setItem('neurocatch_minimal','0');applyMinimal();}
 }
 let toastTimer;
 function toast(msg,err){$('#toastText').textContent=msg;$('#toast').classList.toggle('err',!!err);$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2600);}
@@ -1252,20 +1253,13 @@ function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=se
 function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
 $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
 /* ---------- minimal UI toggle ---------- */
-function applyMinimal(){const on=localStorage.getItem('neurocatch_minimal')==='1';document.body.classList.toggle('minimal',on);if($('#uiToggle')){$('#uiToggle').innerHTML='<i data-lucide="'+(on?'chevron-up':'chevron-down')+'"></i>';lucide.createIcons();}}
-$('#uiToggle')&&$('#uiToggle').addEventListener('click',()=>{const on=localStorage.getItem('neurocatch_minimal')==='1';localStorage.setItem('neurocatch_minimal',on?'0':'1');applyMinimal();});
-function openMoreMenu(anchor){
-  const ex=$('#catMenu');if(ex)ex.remove();
-  const items=[['openLink','link','Разобрать ссылку'],['openBookmarks','bookmark','Закладки'],['openNotes','notebook-pen','Заметки'],['openDash','bar-chart-3','Дашборд']];
-  const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
-  m.innerHTML='<div class="sm-h">Ещё</div>'+items.map(it=>`<button data-id="${it[0]}"><i data-lucide="${it[1]}"></i>${it[2]}</button>`).join('');
-  document.body.appendChild(m);lucide.createIcons();
-  const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.left+window.scrollX;if(left+220>window.innerWidth)left=window.innerWidth-228;m.style.left=Math.max(8,left)+'px';
-  const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor&&!anchor.contains(e.target))close();}
-  m.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>{close();const el=$('#'+b.dataset.id);if(el)el.click();}));
-  setTimeout(()=>document.addEventListener('click',out),0);
+function applyMinimal(){
+  const on=localStorage.getItem('neurocatch_minimal')==='1';
+  document.body.classList.toggle('minimal',on);
+  const showTab=$('#uiShowTab');if(showTab)showTab.hidden=!on;
 }
-$('#openMore')&&$('#openMore').addEventListener('click',()=>openMoreMenu($('#openMore')));
+$('#uiToggle')&&$('#uiToggle').addEventListener('click',()=>{localStorage.setItem('neurocatch_minimal','1');applyMinimal();});
+$('#uiShowTab')&&$('#uiShowTab').addEventListener('click',()=>{localStorage.setItem('neurocatch_minimal','0');applyMinimal();});
 /* ---------- today's tasks button ---------- */
 function todayOpenCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done)n++;});});return n;}
 function refreshTodayBtn(){const b=$('#todayCount');if(!b)return;const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
