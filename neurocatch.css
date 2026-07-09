@@ -725,3 +725,16 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .rep .arch{flex:0 0 auto;color:var(--faint);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid transparent;background:none;cursor:pointer;transition:.18s}
 .rep .arch svg{width:16px;height:16px}
 .rep .arch:hover{color:var(--accent-2)}
+
+/* collapsible tag panel */
+.tag-collapse{margin-bottom:16px}
+.tag-collapse summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--muted);user-select:none;padding:4px 0}
+.tag-collapse summary::-webkit-details-marker{display:none}
+.tag-collapse summary svg{width:15px;height:15px;transition:.2s;color:var(--faint)}
+.tag-collapse[open] summary svg{transform:rotate(180deg)}
+.tag-collapse .tag-filter,.tag-collapse .tag-row{margin-top:10px;margin-bottom:0}
+.tc-badge{color:var(--faint);font-weight:600}
+/* manual note edit button in detail title */
+.nd-edit-btn{display:inline-flex;vertical-align:middle;margin-left:8px;color:var(--faint)}
+.nd-edit-btn:hover{color:var(--accent-2)}
+.nd-edit-btn svg{width:16px;height:16px}

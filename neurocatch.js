@@ -13,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v37';
+const APP_VERSION='2025.7-06';const SW_VER='v38';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -401,11 +401,14 @@ $('#bmAddBtn')&&$('#bmAddBtn').addEventListener('click',async()=>{const u=$('#bm
 $('#bmUrl')&&$('#bmUrl').addEventListener('keydown',e=>{if(e.key==='Enter')$('#bmAddBtn').click();});
 function loadNoteCats(){try{return JSON.parse(localStorage.getItem('neurocatch_note_cats')||'{}');}catch(e){return {};}}
 function saveNoteCats(o){localStorage.setItem('neurocatch_note_cats',JSON.stringify(o));touchLocal();}
+function loadManualNotes(){try{return JSON.parse(localStorage.getItem('neurocatch_manual_notes')||'[]');}catch(e){return [];}}
+function saveManualNotes(arr){localStorage.setItem('neurocatch_manual_notes',JSON.stringify(arr));touchLocal();}
 function loadExtracted(){try{return JSON.parse(localStorage.getItem('neurocatch_extracted')||'[]');}catch(e){return [];}}
 function saveExtracted(arr){localStorage.setItem('neurocatch_extracted',JSON.stringify(arr));touchLocal();}
 function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);let d;try{d=parseMd(h.markdown);}catch(e){return;}
   (d.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));});
   loadExtracted().forEach(ex=>notes.push({id:ex.id,kind:'ins',title:ex.text,body:'',source:'',tags:ex.tags||[],ts:ex.ts,extracted:true}));
+  loadManualNotes().forEach(mn=>notes.push({id:mn.id,kind:'man',title:mn.title,body:mn.body||'',source:'',tags:mn.tags||[],ts:mn.ts,manual:true}));
   return notes.sort((a,b)=>b.ts-a.ts);}
 function loadNoteLinks(){try{return JSON.parse(localStorage.getItem('neurocatch_note_links')||'{}');}catch(e){return {};}}
 function saveNoteLinks(o){localStorage.setItem('neurocatch_note_links',JSON.stringify(o));touchLocal();}
@@ -425,22 +428,25 @@ function renderNotes(){
   const tset=new Set();notes.forEach(n=>n.tags.forEach(t=>tset.add(t)));const tags=[...tset];
   $('#noteTags').innerHTML=tags.map(t=>`<button class="tagchip${noteTagFilter===t?' on':''}" data-t="${attr(t)}">${esc(t)}</button>`).join('');
   $('#noteTags').querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=noteTagFilter===b.dataset.t?null:b.dataset.t;renderNotes();}));
+  const ntCnt=$('#noteTagsCount');if(ntCnt)ntCnt.textContent=tags.length?('('+tags.length+')'):'';
+  initTagCollapse('noteTagsWrap');
   let list=notes;
   if(noteTagFilter)list=list.filter(n=>n.tags.includes(noteTagFilter));
   if(noteSearch)list=list.filter(n=>((n.title||'')+' '+(n.body||'')).toLowerCase().includes(noteSearch));
   $('#notesCount').textContent=list.length;
   if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты и инсайты появятся здесь после разбора.</div>';return;}
-  box.innerHTML=list.map(n=>{const cat=noteCat(n,cats);const bodyHtml=n.kind==='sum'&&n.body?mdBlock(n.body):'';
-    return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions"><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;}).join('');
+  box.innerHTML=list.map(n=>{const cat=noteCat(n,cats);const bodyHtml=(n.kind==='sum'||n.kind==='man')&&n.body?mdBlock(n.body):'';
+    return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions">${n.manual?`<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button>`:''}<button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
   box.querySelectorAll('.note-open[data-nid]').forEach(el=>el.addEventListener('click',()=>{const n=notes.find(x=>x.id===el.dataset.nid);if(n)openNoteDetail(n);}));
   box.querySelectorAll('.note-tags .tag-pill[data-t]').forEach(p=>p.addEventListener('click',()=>{noteTagFilter=p.dataset.t;renderNotes();}));
   box.querySelectorAll('.note-share[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)openShareMenu(b,n);}));
   box.querySelectorAll('.note-file[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)shareNoteFile(n);}));
+  box.querySelectorAll('.note-edit[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const mn=loadManualNotes().find(x=>x.id===b.dataset.nid);if(mn)openNoteEditor(mn);}));
 }
 async function openNoteDetail(n){
-  $('#ndKindLabel').textContent=n.kind==='ins'?'Инсайт':'Конспект';
+  $('#ndKindLabel').textContent=n.kind==='ins'?'Инсайт':n.kind==='man'?'Заметка':'Конспект';
   const dt=new Date(n.ts||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
   let preview='';
   if(n.source){
@@ -452,7 +458,7 @@ async function openNoteDetail(n){
   const linked=linkedIds.map(id=>allNotes.find(x=>x.id===id)).filter(Boolean);
   const relBlock=`<div class="nd-links"><div class="nd-links-h">🔗 Связанные заметки<button class="mini nd-link-add" id="ndLinkAdd" title="Добавить связь"><i data-lucide="plus"></i></button></div>${linked.length?linked.map(ln=>`<div class="nd-link-row"><button class="nd-link-open" data-lid="${attr(ln.id)}">${ln.kind==='ins'?'💡 ':'📄 '}${esc(ln.title)}</button><button class="mini nd-link-rm" data-lid="${attr(ln.id)}" title="Убрать связь"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:10px 0;font-size:13px">Пока нет связей — нажми «+», чтобы связать с другой заметкой.</div>'}</div>`;
   $('#ndBody').innerHTML=`
-    <h1 class="nd-title">${n.kind==='ins'?'💡 ':''}${esc(n.title)}</h1>
+    <h1 class="nd-title">${n.kind==='ins'?'💡 ':n.kind==='man'?'📝 ':''}${esc(n.title)}${n.manual?`<button class="mini nd-edit-btn" id="ndEditBtn" title="Изменить"><i data-lucide="pencil"></i></button>`:''}</h1>
     <div class="nd-meta"><i data-lucide="calendar"></i>${esc(dt)}</div>
     ${preview}
     ${body?`<div class="note-body" style="margin-top:16px">${body}</div>`:''}
@@ -461,6 +467,7 @@ async function openNoteDetail(n){
   `;
   lucide.createIcons();
   $('#noteDetailOverlay').classList.add('open');
+  $('#ndEditBtn')&&$('#ndEditBtn').addEventListener('click',()=>{$('#noteDetailOverlay').classList.remove('open');const mn=loadManualNotes().find(x=>x.id===n.id);if(mn)openNoteEditor(mn);});
   $('#ndLinkAdd')&&$('#ndLinkAdd').addEventListener('click',()=>openNotePicker(n,allNotes));
   $('#ndBody').querySelectorAll('.nd-link-open[data-lid]').forEach(b=>b.addEventListener('click',()=>{const ln=allNotes.find(x=>x.id===b.dataset.lid);if(ln)openNoteDetail(ln);}));
   $('#ndBody').querySelectorAll('.nd-link-rm[data-lid]').forEach(b=>b.addEventListener('click',()=>{unlinkNotes(n.id,b.dataset.lid);openNoteDetail(n);}));
@@ -489,6 +496,43 @@ function openNotePicker(n,allNotes){
   ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
   setTimeout(()=>ov.querySelector('#npSearch').focus(),50);
 }
+/* ---------- manual note create/edit ---------- */
+let neEditingId=null;
+function openNoteEditor(existing){
+  neEditingId=existing?existing.id:null;
+  $('#neTitle').textContent=existing?'Изменить заметку':'Новая заметка';
+  $('#neTitleInput').value=existing?existing.title:'';
+  $('#neBodyInput').value=existing?existing.body:'';
+  $('#neTagsInput').value=existing&&existing.tags?existing.tags.join(', '):'';
+  $('#neDelete').hidden=!existing;
+  $('#noteEditOverlay').classList.add('open');
+  setTimeout(()=>$('#neTitleInput').focus(),50);
+}
+$('#noteAddBtn')&&$('#noteAddBtn').addEventListener('click',()=>openNoteEditor(null));
+$('#neClose')&&$('#neClose').addEventListener('click',()=>$('#noteEditOverlay').classList.remove('open'));
+$('#noteEditOverlay')&&$('#noteEditOverlay').addEventListener('click',e=>{if(e.target===$('#noteEditOverlay'))$('#noteEditOverlay').classList.remove('open');});
+$('#neSave')&&$('#neSave').addEventListener('click',()=>{
+  const title=$('#neTitleInput').value.trim();
+  if(!title){toast('Название не может быть пустым',true);return;}
+  const body=$('#neBodyInput').value.trim();
+  const tags=$('#neTagsInput').value.split(',').map(t=>t.trim()).filter(Boolean).map(t=>t.startsWith('#')?t:'#'+t);
+  const arr=loadManualNotes();
+  if(neEditingId){const mn=arr.find(x=>x.id===neEditingId);if(mn){mn.title=title;mn.body=body;mn.tags=tags;}}
+  else{arr.unshift({id:uid('mn'),title,body,tags,ts:Date.now()});}
+  saveManualNotes(arr);
+  $('#noteEditOverlay').classList.remove('open');
+  toast(neEditingId?'Заметка обновлена':'Заметка добавлена');
+  renderNotes();
+});
+$('#neDelete')&&$('#neDelete').addEventListener('click',()=>{
+  if(!neEditingId)return;
+  if(!confirm('Удалить эту заметку?'))return;
+  saveManualNotes(loadManualNotes().filter(x=>x.id!==neEditingId));
+  $('#noteEditOverlay').classList.remove('open');
+  $('#noteDetailOverlay').classList.remove('open');
+  toast('Заметка удалена');
+  renderNotes();
+});
 $('#ndClose')&&$('#ndClose').addEventListener('click',()=>$('#noteDetailOverlay').classList.remove('open'));
 $('#noteDetailOverlay')&&$('#noteDetailOverlay').addEventListener('click',e=>{if(e.target===$('#noteDetailOverlay'))$('#noteDetailOverlay').classList.remove('open');});
 $('#openNotes')&&$('#openNotes').addEventListener('click',()=>{renderNotes();show($('#view-notes'));});
@@ -678,11 +722,19 @@ function renderCalendar(){
   $('#calGrid').innerHTML=html;
   $('#calGrid').querySelectorAll('[data-date]').forEach(c=>c.addEventListener('click',()=>{filterDate=filterDate===c.dataset.date?null:c.dataset.date;renderHistory();}));
 }
+function initTagCollapse(id){
+  const det=$('#'+id);if(!det||det.dataset.wired)return;det.dataset.wired='1';
+  const key='neurocatch_tagcol_'+id;
+  det.open=localStorage.getItem(key)!=='0';
+  det.addEventListener('toggle',()=>localStorage.setItem(key,det.open?'1':'0'));
+}
 function renderTagFilter(){
   const all=[...new Set(history.flatMap(h=>h.tags||[]))];
   const box=$('#tagFilter');
   box.innerHTML=all.map(t=>`<span class="tf${tagFilter===t?' on':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
   box.querySelectorAll('.tf').forEach(el=>el.addEventListener('click',()=>{tagFilter=tagFilter===el.dataset.tag?null:el.dataset.tag;renderHistory();}));
+  const cnt=$('#tagFilterCount');if(cnt)cnt.textContent=all.length?('('+all.length+')'):'';
+  initTagCollapse('tagFilterWrap');
 }
 function autoArchiveOldReports(){
   const days=settings.archiveDays;if(!days)return;
@@ -749,6 +801,42 @@ function renderHabits(){
   box.querySelectorAll('.habit-day').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.hid);if(!hb)return;hb.checks=hb.checks||{};if(hb.checks[b.dataset.k])delete hb.checks[b.dataset.k];else hb.checks[b.dataset.k]=1;saveHabits();renderHabits();}));
   box.querySelectorAll('.habit-del').forEach(b=>b.addEventListener('click',()=>{habits=habits.filter(x=>x.id!==b.dataset.id);saveHabits();renderHabits();}));
   box.querySelectorAll('.habit-goal').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.id);if(!hb)return;openCatMenu(b,String(hb.goal||7),cat=>{hb.goal=+cat||7;saveHabits();renderHabits();},['1','2','3','4','5','6','7']);}));
+}
+function icsEscape(t){return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
+function icsDate(ts){const d=new Date(ts);const p=n=>String(n).padStart(2,'0');return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'T'+p(d.getUTCHours())+p(d.getUTCMinutes())+'00Z';}
+function buildIcs(tasks){
+  const now=icsDate(Date.now());
+  const events=tasks.filter(t=>t.due).map(t=>{
+    const start=icsDate(t.due);const end=icsDate(t.due+30*60000);
+    return ['BEGIN:VEVENT','UID:'+t.ref+'_'+t.idx+'@neurocatch','DTSTAMP:'+now,'DTSTART:'+start,'DTEND:'+end,'SUMMARY:'+icsEscape(t.text),'DESCRIPTION:'+icsEscape('Задача из NeuroCatch'),'END:VEVENT'].join('\r\n');
+  });
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NeuroCatch//Tasks//RU','CALSCALE:GREGORIAN','X-WR-CALNAME:NeuroCatch — Задачи',...events,'END:VCALENDAR'].join('\r\n');
+}
+function exportTasksIcs(){
+  const tasks=allOpenTasks().filter(t=>t.due);
+  if(!tasks.length){toast('Нет открытых задач со сроком — нечего экспортировать',true);return;}
+  download('neurocatch-tasks.ics',buildIcs(tasks),'text/calendar');
+  toast('Экспортировано '+tasks.length+' задач(и) — импортируй .ics в календарь');
+}
+async function getOrCreateIcsFeed(){
+  const c=await sbClient();if(!c)throw new Error('Нужна облачная синхронизация (Supabase)');
+  if(!sbUser)throw new Error('Нужен вход в облако');
+  let token=localStorage.getItem('neurocatch_ics_token');
+  if(token){const {data}=await c.from('ics_feeds').select('token').eq('token',token).maybeSingle();if(data)return token;}
+  token=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+  const {error}=await c.from('ics_feeds').insert({token,owner:sbUser.id});
+  if(error)throw error;
+  localStorage.setItem('neurocatch_ics_token',token);
+  return token;
+}
+async function subscribeCalendar(){
+  try{
+    toast('Создаю ссылку подписки…');
+    const token=await getOrCreateIcsFeed();
+    const url=settings.sbUrl.replace(/\/$/,'')+'/functions/v1/ics-feed?token='+token;
+    await copyText(url);
+    toast('Ссылка подписки скопирована — добавь её в календарь (см. инструкцию)');
+  }catch(e){toast('Не удалось: '+(e.message||e),true);}
 }
 function allOpenTasks(){const a=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>{if(!t.done)a.push({ref:h.id,idx:i,text:t.text,eis:t.eis||0,ts:h.ts});});});return a;}
 function renderMatrix(){
@@ -954,6 +1042,8 @@ $('#provider')&&$('#provider').addEventListener('change',e=>{settings.provider=e
 $('#checkMicro')&&$('#checkMicro').addEventListener('click',checkMicro);
 $('#microPerLink')&&$('#microPerLink').addEventListener('change',e=>{settings.microPerLink=e.target.checked;saveSettings();if(!$('#view-queue').hidden)renderQueue();});
 $('#allTasksMd')&&$('#allTasksMd').addEventListener('click',()=>{const l=allTasksFlat();if(!l.length){toast('Задач нет');return;}download('all_tasks_'+dateKey(Date.now())+'.md',tasksToMd(l),'text/markdown');toast('Все задачи сохранены .md');});
+$('#allTasksIcs')&&$('#allTasksIcs').addEventListener('click',exportTasksIcs);
+$('#allTasksSub')&&$('#allTasksSub').addEventListener('click',subscribeCalendar);
 $('#allTasksTick')&&$('#allTasksTick').addEventListener('click',()=>copyTick(allTasksFlat()));
 $('#checkDb')&&$('#checkDb').addEventListener('click',checkDb);
 
