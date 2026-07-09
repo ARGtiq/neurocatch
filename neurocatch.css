@@ -1,22 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 :root{
   --seed:#7c5cff;--seed-rgb:124,92,255;
   --glass:rgba(255,255,255,.055);--glass-2:rgba(255,255,255,.09);
   --stroke:rgba(255,255,255,.10);--stroke-strong:rgba(255,255,255,.18);
   --text:#e7e9f2;--muted:#8a8fa6;--faint:#5a5f75;
   --accent:var(--seed);--accent-2:#9d7bff;--glow:rgba(var(--seed-rgb),.55);
-  --green:#3ddc97;--red:#ff6b6b;--r:22px;--ease:cubic-bezier(.22,1,.36,1);
+  --green:#3ddc97;--red:#ff6b6b;--r:24px;--ease:cubic-bezier(.22,1,.36,1);
   --panel:rgba(20,20,40,.9);
 }
 html[data-theme="light"]{
-  --glass:rgba(255,255,255,.45);--glass-2:rgba(255,255,255,.6);
-  --stroke:rgba(24,26,60,.10);--stroke-strong:rgba(24,26,60,.20);
-  --text:#1b1e2e;--muted:#5c6178;--faint:#9aa0b8;
-  --glow:rgba(var(--seed-rgb),.4);--panel:rgba(255,255,255,.94);
+  --glass:rgba(255,255,255,.4);--glass-2:rgba(255,255,255,.7);
+  --stroke:rgba(255,255,255,.5);--stroke-strong:rgba(103,80,164,.22);
+  --text:#1d1b1a;--muted:#494551;--faint:#7a7582;
+  --glow:rgba(var(--seed-rgb),.16);--panel:rgba(255,248,245,.92);
+  --warm-bg:#fff8f5;--primary:#4f378a;--primary-fixed:#e9ddff;--secondary-fixed:#e8def9;
+  --card-shadow:0 8px 32px 0 rgba(var(--seed-rgb),.08);--card-shadow-hover:0 12px 48px 0 rgba(var(--seed-rgb),.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--text);letter-spacing:-.01em;
   background:
     radial-gradient(1200px 800px at 80% -10%, rgba(var(--seed-rgb),.24), transparent 60%),
     radial-gradient(900px 700px at 10% 110%, rgba(61,220,151,.12), transparent 55%),
@@ -27,24 +30,26 @@ body{
 }
 html[data-theme="light"] body{
   background:
-    radial-gradient(1000px 760px at 84% -8%, rgba(var(--seed-rgb),.34), transparent 58%),
-    radial-gradient(880px 680px at 6% 108%, rgba(61,220,151,.22), transparent 55%),
-    radial-gradient(760px 620px at 50% 50%, rgba(70,168,255,.20), transparent 60%),
-    linear-gradient(160deg,#e7ebfb,#dfe4fb 45%,#eae2fd);
+    radial-gradient(50% 50% at 90% -10%, rgba(var(--seed-rgb),.28), transparent 70%),
+    radial-gradient(60% 60% at -20% 70%, var(--secondary-fixed), transparent 70%),
+    linear-gradient(180deg,var(--warm-bg),var(--warm-bg));
 }
 .bg-pattern{position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:radial-gradient(circle at 1px 1px, rgba(var(--seed-rgb),.13) 1px, transparent 0);
   background-size:24px 24px;
   -webkit-mask-image:radial-gradient(125% 90% at 50% 0%, #000 0%, transparent 72%);
   mask-image:radial-gradient(125% 90% at 50% 0%, #000 0%, transparent 72%)}
-html[data-theme="light"] .bg-pattern{background-image:radial-gradient(circle at 1px 1px, rgba(var(--seed-rgb),.16) 1px, transparent 0)}
+html[data-theme="light"] .bg-pattern{background-image:radial-gradient(circle at 1px 1px, rgba(103,80,164,.10) 1px, transparent 0)}
 .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .ambient span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.6;animation:drift 22s var(--ease) infinite alternate}
 .ambient span:nth-child(1){width:380px;height:380px;background:rgba(var(--seed-rgb),.55);top:-90px;right:-70px}
 .ambient span:nth-child(2){width:320px;height:320px;background:rgba(70,168,255,.45);bottom:-110px;left:-70px;animation-delay:-8s}
 .ambient span:nth-child(3){width:300px;height:300px;background:rgba(61,220,151,.32);top:38%;left:-90px;animation-delay:-14s}
 .ambient span:nth-child(4){width:280px;height:280px;background:rgba(255,92,147,.30);top:20%;right:-80px;animation-delay:-4s}
-html[data-theme="light"] .ambient span{opacity:.7}
+html[data-theme="light"] .ambient span{opacity:1;filter:blur(100px)}
+html[data-theme="light"] .ambient span:nth-child(1){background:rgba(var(--seed-rgb),.5);width:50vw;height:50vw;top:-15%;right:-15%}
+html[data-theme="light"] .ambient span:nth-child(2){background:var(--secondary-fixed);width:60vw;height:60vw;bottom:10%;left:-25%;opacity:.85}
+html[data-theme="light"] .ambient span:nth-child(3),html[data-theme="light"] .ambient span:nth-child(4){opacity:0}
 @keyframes drift{to{transform:translate3d(-40px,50px,0) scale(1.15)}}
 
 .app{position:relative;z-index:1;min-height:100dvh;display:flex;justify-content:center;padding:max(34px,env(safe-area-inset-top,34px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
@@ -756,3 +761,34 @@ body:has(#bottomBar) .bug-fab,body.has-bottombar .bug-fab{bottom:calc(18px + 58p
 .bb-row button.mini svg{width:14px;height:14px}
 .bb-row button.mini:disabled{opacity:.3;cursor:default}
 .bb-row .bb-vis svg{color:var(--faint)}
+
+/* ===== "Воздушная Эстетика" — тёплый светлый режим в стиле Stitch/Material You =====
+   Мягкие стеклянные поверхности со свечением цвета primary вместо плотных серых теней. */
+html[data-theme="light"] .glass-input,
+html[data-theme="light"] .topbar,
+html[data-theme="light"] .bottombar,
+html[data-theme="light"] .modal,
+html[data-theme="light"] .rep,
+html[data-theme="light"] .note-card,
+html[data-theme="light"] .stat,
+html[data-theme="light"] .habit-card,
+html[data-theme="light"] .bm-row,
+html[data-theme="light"] .m-quad,
+html[data-theme="light"] .task-cal,
+html[data-theme="light"] .shared-card{
+  box-shadow:var(--card-shadow);
+}
+html[data-theme="light"] .glass-input:hover,
+html[data-theme="light"] .rep:hover,
+html[data-theme="light"] .note-card:hover,
+html[data-theme="light"] .habit-card:hover{
+  box-shadow:var(--card-shadow-hover);
+}
+html[data-theme="light"] .bottombar{box-shadow:var(--card-shadow-hover)}
+/* тёплые заголовки: чуть плотнее, с отрицательным трекингом — в духе Manrope Bold */
+html[data-theme="light"] .modal-head h2,
+html[data-theme="light"] .nd-title,
+html[data-theme="light"] .stat-n,
+html[data-theme="light"] .note-title{
+  letter-spacing:-.02em;font-weight:700;
+}
