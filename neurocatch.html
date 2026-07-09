@@ -207,7 +207,13 @@
         <div id="habitList"></div>
       </div>
       <div class="st-panel" data-st="matrix" hidden>
-        <div class="matrix-hint">Разложи открытые задачи по важности и срочности. Нераспределённые — в полосе сверху.</div>
+        <div class="matrix-date-row">
+          <button class="mini" id="matrixDatePrev" title="Предыдущий день"><i data-lucide="chevron-left"></i></button>
+          <input type="date" id="matrixDateInput">
+          <button class="mini" id="matrixDateNext" title="Следующий день"><i data-lucide="chevron-right"></i></button>
+          <button class="chip" id="matrixDateToday">Сегодня</button>
+        </div>
+        <div class="matrix-hint">Разложи открытые задачи по важности и срочности за выбранный день. Нераспределённые — в полосе сверху.</div>
         <div id="matrixUnsorted" class="matrix-unsorted"></div>
         <div id="matrixWrap" class="matrix-grid"></div>
       </div>

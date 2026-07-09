@@ -690,6 +690,8 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .nd-preview-link:hover{border-color:var(--stroke-strong)}
 .nd-preview-img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:0 0 auto;background:var(--glass-2)}
 .nd-preview-ph{display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.nd-preview-ph svg{width:22px;height:22px;flex:0 0 auto}
+.nd-preview-link>svg{width:16px;height:16px;flex:0 0 auto;color:var(--faint)}
 .nd-preview-txt{flex:1;min-width:0}
 .nd-preview-title{font-weight:600;color:var(--text);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nd-preview-host{font-size:12px;color:var(--faint);margin-top:2px}
@@ -824,3 +826,23 @@ html[data-theme="light"] .note-title{
 .t-group-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--accent-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding:0 2px}
 .t-group-n{background:var(--glass);border:1px solid var(--stroke);border-radius:999px;padding:1px 8px;font-size:11px;color:var(--faint);text-transform:none;letter-spacing:0;font-weight:600}
 .t-group .t-row{margin-bottom:8px}
+
+/* dedicated insights block in Notes */
+.insights-block{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--stroke)}
+.insights-block-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px}
+.insights-block-h svg{width:17px;height:17px;color:#f5a623}
+.insights-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:560px){.insights-grid{grid-template-columns:1fr 1fr}}
+.insights-grid .note-card{margin-bottom:0}
+
+/* bookmark-mark button in ritual review screen */
+.q-btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.q-btnrow .ql-btn{margin-top:0}
+.ql-btn.bm-on{background:rgba(var(--seed-rgb),.16);border-color:rgba(var(--seed-rgb),.4);color:var(--accent-2)}
+.q-item.as-bookmark{opacity:.75;border-style:dashed}
+
+/* matrix date navigation */
+.matrix-date-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.matrix-date-row input[type="date"]{flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font:inherit;font-size:13px}
+.matrix-date-row .chip{padding:8px 13px;border-radius:10px;border:1px solid rgba(var(--seed-rgb),.35);background:rgba(var(--seed-rgb),.10);color:var(--accent-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.matrix-date-row .chip:hover{background:rgba(var(--seed-rgb),.18)}
