@@ -210,7 +210,74 @@ async function runE2E() {
   const countAfterDel = win.history.length;
   logStep('Удаление отчёта (очистка за тестом)', countAfterDel === countBeforeDel - 1 ? 'ok' : 'bad');
 
-  // 16) Никаких неперехваченных JS-ошибок за время прогона
+  // ===== БАГ-РЕПОРТ =====
+
+  // 16) buildBugData() собирает отчёт с ключевыми полями
+  let bug = null, bugErr = null;
+  try { bug = win.buildBugData(); } catch (e) { bugErr = e.message; }
+  const bugFieldsOk = bug && bug.app === 'NeuroCatch' && bug.version && bug.swCache &&
+    Array.isArray(bug.breadcrumbs) && Array.isArray(bug.recentErrors) && bug.counts && bug.settings;
+  logStep('buildBugData() собирает отчёт с ключевыми полями', bugFieldsOk ? 'ok' : 'bad',
+    bugErr || (bug ? `поля: app, version, swCache=${bug.swCache}, breadcrumbs=${bug.breadcrumbs.length}` : ''));
+
+  // 17) Секреты НЕ попадают в баг-репорт (критично для приватности)
+  if (bug) {
+    const s = bug.settings || {};
+    const leaked = ['key', 'sbKey', 'orKey', 'microlinkKey'].filter(k => k in s);
+    logStep('Секреты (ключи API) вырезаны из баг-репорта', leaked.length === 0 ? 'ok' : 'bad',
+      leaked.length ? ('УТЕЧКА: ' + leaked.join(', ')) : 'ключей нет в settings');
+  } else {
+    logStep('Секреты (ключи API) вырезаны из баг-репорта', 'bad', 'buildBugData() не отработал');
+  }
+
+  // 18) Диагностика провайдера/уведомлений/офлайна присутствует
+  const diagOk = bug && bug.notify && typeof bug.notify.permission !== 'undefined' &&
+    bug.offline && typeof bug.offline.online === 'boolean' && 'lastRitualDebug' in bug;
+  logStep('В отчёте есть диагностика (notify / offline / lastRitualDebug)', diagOk ? 'ok' : 'bad');
+
+  // 19) Ошибки попадают в lastErrors и оттуда в отчёт
+  const errsBefore = win.lastErrors.length;
+  win.lastErrors.push({ t: Date.now(), msg: 'E2E тестовая ошибка' });
+  const bug2 = win.buildBugData();
+  const errCaptured = bug2.recentErrors.some(e => e.msg === 'E2E тестовая ошибка');
+  win.lastErrors.length = errsBefore; // откат
+  logStep('Ошибки из lastErrors попадают в баг-репорт', errCaptured ? 'ok' : 'bad');
+
+  // 20) openBug() открывает модалку и кладёт валидный JSON в поле
+  let openErr = null;
+  try { await win.openBug('E2E проверка'); } catch (e) { openErr = e.message; }
+  await wait(120);
+  const bugOverlayOpen = doc.getElementById('bugOverlay').classList.contains('open');
+  let jsonValid = false;
+  try { JSON.parse(doc.getElementById('bugData').value); jsonValid = true; } catch (e) {}
+  const noteFilled = doc.getElementById('bugNote').value === 'E2E проверка';
+  logStep('openBug() открывает модалку с валидным JSON и заметкой',
+    (bugOverlayOpen && jsonValid && noteFilled) ? 'ok' : 'bad', openErr || '');
+  doc.getElementById('bugOverlay').classList.remove('open');
+
+  // 21) Русификация частых ошибок API (translateError)
+  const cases = [
+    ['429 Too Many Requests', /лимит/i],
+    ['401 invalid api key', /ключ/i],
+    ['Failed to fetch', /сет/i],
+  ];
+  const trOk = cases.every(([raw, re]) => {
+    const r = win.translateError(raw);
+    return r && r.ru && re.test(r.ru);
+  });
+  logStep('translateError() переводит частые ошибки на русский', trOk ? 'ok' : 'bad');
+
+  // 22) showErrorModal() показывает ошибку и сохраняет исходный текст для копирования
+  win.showErrorModal('429 rate limit exceeded');
+  await wait(80);
+  const errOpen = doc.getElementById('errOverlay').classList.contains('open');
+  const rawSaved = doc.getElementById('errOverlay').dataset.rawmsg === '429 rate limit exceeded';
+  const hasRu = /лимит/i.test(doc.getElementById('errMsg').textContent || '');
+  logStep('showErrorModal(): русский текст + исходник сохранён для копирования',
+    (errOpen && rawSaved && hasRu) ? 'ok' : 'bad');
+  doc.getElementById('errOverlay').classList.remove('open');
+
+  // 23) Никаких неперехваченных JS-ошибок за время прогона
   const jsErrors = win.lastErrors || [];
   logStep('Нет неперехваченных JS-ошибок за время теста', jsErrors.length === 0 ? 'ok' : 'bad',
     jsErrors.length ? jsErrors.map(e => e.msg).join('; ') : '');
