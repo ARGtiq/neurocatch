@@ -1,7 +1,7 @@
 // Отдельный service worker для мини-приложения «Задачи» (tasks.html).
 // Работает независимо от sw.js — так установка этого webapp не зависит от главного.
-const CACHE='neurocatch-tasks-v1';
-const ASSETS=['./tasks.html','./neurocatch.css','./nc-parsers.js','./neurocatch.js','./tasks.webmanifest','./icon.svg'];
+const CACHE='neurocatch-tasks-v2';
+const ASSETS=['./tasks.html','./neurocatch.css','./nc-parsers.js','./nc-ai.js','./neurocatch.js','./tasks.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{

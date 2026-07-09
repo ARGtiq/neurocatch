@@ -130,7 +130,7 @@
       <div class="preset-row" id="presetRow"></div>
       <div class="ritual-wrap">
         <button class="btn btn-today" id="todayTasks"><i data-lucide="list-checks"></i>Задачи на сегодня<span id="todayCount" class="today-badge" hidden>0</span></button>
-        <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span></button>
+        <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span><span id="ritualQueueBadge" class="ritual-badge queue-badge" title="В офлайн-очереди" hidden>0</span></button>
       </div>
     </section>
 
@@ -225,6 +225,7 @@
 
     <section class="view" id="view-dashboard" hidden>
       <div class="head-row"><button class="back" id="dashBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Дашборд</h2></div>
+      <div class="period-report-row"><button class="btn" id="periodWeekBtn"><i data-lucide="sparkle"></i>Отчёт за неделю</button><button class="btn" id="periodMonthBtn"><i data-lucide="sparkle"></i>Отчёт за месяц</button></div>
       <div id="dashBody"></div>
     </section>
 
@@ -408,6 +409,7 @@
 })();
 </script>
 <script src="nc-parsers.js"></script>
+<script src="nc-ai.js"></script>
 <script src="neurocatch.js"></script>
 </body>
 </html>
