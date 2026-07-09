@@ -645,10 +645,7 @@ body.minimal .hero-sub{display:none}
 /* bottom bar (moved from topbar) */
 .bottombar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;display:flex;gap:4px;padding:7px;border-radius:20px;background:var(--panel);border:1px solid var(--stroke);backdrop-filter:blur(22px) saturate(175%);box-shadow:0 12px 34px rgba(0,0,0,.35);transition:transform .25s var(--ease),opacity .25s var(--ease)}
 body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;pointer-events:none}
-.ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
-.ui-toggle-tab:hover{color:var(--accent-2)}
-body.minimal .ui-toggle-tab{bottom:calc(18px + env(safe-area-inset-bottom,0px))}
-body:not(.minimal) .ui-toggle-tab{bottom:calc(78px + env(safe-area-inset-bottom,0px));border-radius:0 0 12px 12px;border-top:none;border-bottom:1px solid var(--stroke)}
+
 /* ritual button badge */
 .btn-ritual{position:relative}
 .ritual-badge{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:800;margin-left:9px}
@@ -698,8 +695,7 @@ body:not(.minimal) .ui-toggle-tab{bottom:calc(78px + env(safe-area-inset-bottom,
 #uiToggle{color:var(--faint)}
 #uiToggle:hover{color:var(--accent-2)}
 /* show-tab appears only when bar is hidden (minimal mode) */
-.ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
-.ui-toggle-tab:hover{color:var(--accent-2)}
+
 
 /* note links (Obsidian-style) */
 .nd-links{margin-top:20px;padding-top:16px;border-top:1px solid var(--stroke)}
@@ -715,3 +711,17 @@ body:not(.minimal) .ui-toggle-tab{bottom:calc(78px + env(safe-area-inset-bottom,
 .np-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}
 .np-item{text-align:left;background:var(--glass);border:1px solid var(--stroke);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
 .np-item:hover{border-color:var(--stroke-strong)}
+
+/* show-tab: appears only when bar is collapsed (JS toggles [hidden]) */
+.ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
+.ui-toggle-tab[hidden]{display:none}
+.ui-toggle-tab:not([hidden]){display:flex}
+.ui-toggle-tab:hover{color:var(--accent-2)}
+
+/* archive UI */
+#toggleArchive.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+.rep.archived{opacity:.72}
+.arch-badge{font-size:10px;font-weight:700;color:var(--accent-2);background:rgba(var(--seed-rgb),.14);padding:1px 7px;border-radius:999px;vertical-align:middle;margin-left:4px}
+.rep .arch{flex:0 0 auto;color:var(--faint);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid transparent;background:none;cursor:pointer;transition:.18s}
+.rep .arch svg{width:16px;height:16px}
+.rep .arch:hover{color:var(--accent-2)}

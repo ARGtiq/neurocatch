@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>NeuroCatch · E2E тест</title>
+<style>
+  body{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b0d18;color:#e8eaf5;padding:20px;line-height:1.5}
+  h1{font-size:18px;margin-bottom:4px}
+  .sub{color:#8b90b5;font-size:13px;margin-bottom:18px}
+  .step{padding:8px 0;border-bottom:1px solid #1c2138;display:flex;gap:10px;align-items:flex-start}
+  .ok{color:#3ddc97}.bad{color:#ff6b6b}.pending{color:#f5a623}
+  .name{flex:1}
+  small{color:#6b7099;display:block;margin-top:2px}
+  .sum{margin:14px 0;font-size:15px;padding:12px 14px;border-radius:10px;background:#141830;border:1px solid #2a2f52}
+  #frame{width:100%;height:640px;border:1px solid #2a2f52;border-radius:10px;margin-top:20px;background:#fff}
+  button{background:#7c5cff;color:#fff;border:none;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer;margin-bottom:16px}
+  button:disabled{opacity:.5;cursor:default}
+</style>
+</head>
+<body>
+<h1>NeuroCatch · E2E тест приложения</h1>
+<div class="sub">
+  Гоняет реальный сценарий пользователя внутри живого приложения (в iframe), без моков DOM.
+  Сеть до внешних ИИ-провайдеров не дёргается — вместо настоящего API-стрима используется
+  прямая запись в историю через <code>saveToHistory()</code>, как будто разбор уже пришёл.
+  Это честно проверяет весь путь данных и рендера, но не сам сетевой стриминг (для этого
+  нужен реальный ключ провайдера — тестировать вручную).
+</div>
+<button id="runBtn">Запустить тест</button>
+<div id="steps"></div>
+<div id="summary" class="sum" style="display:none"></div>
+<iframe id="frame" src="about:blank"></iframe>
+
+<script>
+const stepsBox = document.getElementById('steps');
+const iframe = document.getElementById('frame');
+let pass = 0, fail = 0;
+
+function logStep(name, status, detail) {
+  const el = document.createElement('div');
+  el.className = 'step';
+  const icon = status === 'ok' ? '<span class="ok">✓</span>' : status === 'bad' ? '<span class="bad">✗</span>' : '<span class="pending">…</span>';
+  el.innerHTML = `${icon}<div class="name">${name}${detail ? `<small>${detail}</small>` : ''}</div>`;
+  stepsBox.appendChild(el);
+  if (status === 'ok') pass++;
+  if (status === 'bad') fail++;
+  return el;
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function waitFor(win, fn, timeout = 4000, interval = 50) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try { if (fn(win)) return true; } catch (e) {}
+    await wait(interval);
+  }
+  return false;
+}
+
+async function runE2E() {
+  stepsBox.innerHTML = '';
+  document.getElementById('summary').style.display = 'none';
+  pass = 0; fail = 0;
+  document.getElementById('runBtn').disabled = true;
+
+  // Изолированная площадка: своя localStorage-версия через query flag, чтобы не трогать
+  // реальные данные пользователя. Каждый прогон — с чистого листа (уникальный namespace).
+  const testId = 'e2e_' + Date.now();
+  iframe.src = 'neurocatch.html?e2e=' + testId;
+
+  logStep('Загрузка приложения в iframe', 'pending');
+  const loaded = await waitFor(null, () => {
+    try { return iframe.contentWindow && iframe.contentWindow.document.readyState === 'complete'; }
+    catch (e) { return false; }
+  }, 5000);
+  stepsBox.lastChild.remove();
+  if (!loaded) { logStep('Загрузка приложения в iframe', 'bad', 'Не удалось загрузить neurocatch.html'); return finish(); }
+  logStep('Загрузка приложения в iframe', 'ok');
+
+  const win = iframe.contentWindow;
+  const doc = win.document;
+
+  // 1) Ключевые функции существуют
+  const fnsOk = await waitFor(win, w => typeof w.saveToHistory === 'function' && typeof w.parseMd === 'function' && typeof w.catches !== 'undefined');
+  logStep('Инициализация JS (saveToHistory, parseMd, catches доступны)', fnsOk ? 'ok' : 'bad');
+  if (!fnsOk) return finish();
+
+  // 2) Добавление записи в улов через реальный UI (textarea + submit)
+  const ta = doc.getElementById('brain');
+  const submitBtn = doc.getElementById('submit');
+  const before = win.catches.length;
+  ta.value = 'Проверить анализы пациента завтра в 15:00';
+  ta.dispatchEvent(new win.Event('input', { bubbles: true }));
+  submitBtn.click();
+  await wait(100);
+  const afterAdd = win.catches.length;
+  const added = afterAdd === before + 1;
+  logStep('Добавление записи в улов через UI', added ? 'ok' : 'bad', `было ${before}, стало ${afterAdd}`);
+
+  // 3) Распознавание даты в добавленной записи
+  const lastCatch = win.catches[win.catches.length - 1];
+  const dateOk = !!(lastCatch && lastCatch.dueLabel);
+  logStep('Распознавание даты/времени в записи (parseDateTime)', dateOk ? 'ok' : 'bad', dateOk ? ('срок: ' + lastCatch.dueLabel) : 'dueLabel не найден');
+
+  // 4) Симуляция разбора (без сети): пишем готовый markdown через saveToHistory, как будто ИИ ответил
+  const fakeMd = [
+    '## 🧠 Инсайты',
+    '- Не забудь результаты анализов',
+    '## 📚 Конспекты',
+    '### Тестовая статья',
+    '🔗 https://example.com/test-article',
+    'Текст конспекта для проверки рендера.',
+    '## 🔖 Закладки',
+    '- [Test Tool](https://example.com/tool) | Инструменты | Тестовый сервис для проверки закладок и категорий.',
+    '## ✅ Задачи',
+    '- [ ] Проверить анализы',
+    '## 🏷 Теги',
+    '#тест #e2e'
+  ].join('\n');
+  let entry = null, saveErr = null;
+  try { entry = win.saveToHistory(fakeMd, win.catches); } catch (e) { saveErr = e.message; }
+  logStep('saveToHistory() создаёт запись в истории', (entry && entry.id) ? 'ok' : 'bad', saveErr || (entry ? 'id: ' + entry.id : ''));
+
+  // 5) history действительно пополнилась
+  const inHistory = win.history.some(h => h.id === entry?.id);
+  logStep('Запись появилась в history[]', inHistory ? 'ok' : 'bad');
+
+  // 6) parseMd корректно вытащил задачи/теги/закладки из этой записи
+  const parsed = win.parseMd(fakeMd);
+  const parseOk = parsed.tasks.length === 1 && parsed.tags.length === 2 && parsed.bookmarks.length === 1 && parsed.summaries.length === 1;
+  logStep('parseMd() извлёк задачи/теги/закладки/конспект', parseOk ? 'ok' : 'bad',
+    `задачи:${parsed.tasks.length} теги:${parsed.tags.length} закладки:${parsed.bookmarks.length} конспекты:${parsed.summaries.length}`);
+
+  // 7) Открытие отчёта и рендер дайджеста без ошибок
+  let renderErr = null;
+  try { win.openReport(entry.id); } catch (e) { renderErr = e.message; }
+  await wait(100);
+  const digestVisible = !doc.getElementById('view-digest').hidden;
+  const digestHasContent = (doc.getElementById('digestCard').innerHTML || '').length > 100;
+  logStep('renderDigest() отрисовал отчёт без падения', (!renderErr && digestVisible && digestHasContent) ? 'ok' : 'bad', renderErr || '');
+
+  // 8) Закладка из отчёта появилась в общем хранилище закладок
+  const bmOk = win.bookmarks.some(b => b.url.includes('example.com/tool'));
+  logStep('Закладка из отчёта сохранена в bookmarks[]', bmOk ? 'ok' : 'bad');
+
+  // 9) Задача появилась в списке задач и корректно переключается
+  win.show(doc.getElementById('view-tasks'));
+  win.setSubTab('tasks');
+  await wait(50);
+  const taskRowsBefore = doc.querySelectorAll('#taskList .t-row').length;
+  logStep('Задача видна во вкладке «Задачи»', taskRowsBefore > 0 ? 'ok' : 'bad', `строк: ${taskRowsBefore}`);
+
+  if (taskRowsBefore > 0) {
+    const row = doc.querySelector('#taskList .t-row');
+    const taskId = row.dataset.ref;
+    row.click();
+    await wait(50);
+    const h = win.history.find(x => x.id === taskId);
+    const taskDone = h && h.tasks[0] && h.tasks[0].done === true;
+    logStep('Клик по задаче переключает done=true', taskDone ? 'ok' : 'bad');
+  }
+
+  // 10) Дедупликация закладок: повторное добавление той же ссылки не плодит дубль
+  const bmCountBefore = win.bookmarks.length;
+  const res = win.ingestBookmarks([{ url: 'https://example.com/tool/', title: 'dup', category: 'Прочее' }]);
+  const bmCountAfter = win.bookmarks.length;
+  const dedupOk = bmCountAfter === bmCountBefore && res.dupes === 1;
+  logStep('Дедупликация закладок (нормализация URL со слэшем)', dedupOk ? 'ok' : 'bad', `было:${bmCountBefore} стало:${bmCountAfter} dupes:${res.dupes}`);
+
+  // 11) Архивация отчёта
+  win.archiveReport(entry.id, true);
+  await wait(50);
+  const archivedEntry = win.history.find(x => x.id === entry.id);
+  logStep('Архивация отчёта устанавливает archived=true', archivedEntry && archivedEntry.archived === true ? 'ok' : 'bad');
+
+  // 12) Архивный отчёт не попадает в обычный список, но виден в архиве
+  win.show(doc.getElementById('view-history'));
+  win.showArchived = false;
+  win.renderHistory();
+  await wait(50);
+  const hiddenFromMain = !doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
+  win.showArchived = true;
+  win.renderHistory();
+  await wait(50);
+  const visibleInArchive = !!doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
+  logStep('Архивный отчёт скрыт из общего списка и виден в архиве', (hiddenFromMain && visibleInArchive) ? 'ok' : 'bad',
+    `скрыт из общего:${hiddenFromMain} виден в архиве:${visibleInArchive}`);
+
+  // 13) Разархивация возвращает в общий список
+  win.archiveReport(entry.id, false);
+  win.showArchived = false;
+  win.renderHistory();
+  await wait(50);
+  const backInMain = !!doc.querySelector(`#repList .rep[data-id="${entry.id}"]`);
+  logStep('Разархивация возвращает отчёт в общий список', backInMain ? 'ok' : 'bad');
+
+  // 14) Глобальный поиск находит созданный отчёт
+  win.show(doc.getElementById('view-search'));
+  await wait(30);
+  win.globalSearch('тестовая статья');
+  await wait(50);
+  const searchResults = doc.querySelectorAll('#searchResults .sr-item').length;
+  logStep('Глобальный поиск находит отчёт по тексту конспекта', searchResults > 0 ? 'ok' : 'bad', `результатов: ${searchResults}`);
+
+  // 15) Удаление отчёта (очистка за собой)
+  const countBeforeDel = win.history.length;
+  win.history = win.history.filter(x => x.id !== entry.id);
+  win.saveHistory();
+  const countAfterDel = win.history.length;
+  logStep('Удаление отчёта (очистка за тестом)', countAfterDel === countBeforeDel - 1 ? 'ok' : 'bad');
+
+  // 16) Никаких неперехваченных JS-ошибок за время прогона
+  const jsErrors = win.lastErrors || [];
+  logStep('Нет неперехваченных JS-ошибок за время теста', jsErrors.length === 0 ? 'ok' : 'bad',
+    jsErrors.length ? jsErrors.map(e => e.msg).join('; ') : '');
+
+  finish();
+}
+
+function finish() {
+  document.getElementById('runBtn').disabled = false;
+  const summary = document.getElementById('summary');
+  summary.style.display = 'block';
+  summary.innerHTML = (fail === 0)
+    ? `<span class="ok">ВСЁ ЗЕЛЁНОЕ</span> · пройдено ${pass}, провалено ${fail}`
+    : `<span class="bad">ЕСТЬ ОШИБКИ</span> · пройдено ${pass}, провалено ${fail}`;
+}
+
+document.getElementById('runBtn').addEventListener('click', runE2E);
+</script>
+</body>
+</html>

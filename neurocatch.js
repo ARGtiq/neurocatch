@@ -2,9 +2,10 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null, bookmarks=[];
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true,archiveDays:90};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
+let showArchived=false;
 let lastRitualDebug=null;
 let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
 let habits=[], curSubTab='tasks';
@@ -12,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v36';
+const APP_VERSION='2025.7-06';const SW_VER='v37';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -45,7 +46,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90)};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -71,7 +72,7 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;updateProviderUI();try{applyBg();}catch(e){}
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);updateProviderUI();try{applyBg();}catch(e){}
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -539,7 +540,7 @@ function globalSearch(q){
   const nm=[];try{buildNotes().forEach(n=>{if(((n.title||'')+' '+(n.body||'')).toLowerCase().includes(q))nm.push({t:n.title,sub:n.kind==='ins'?'инсайт':'конспект',act:()=>{noteSearch=q;const ns=$('#noteSearch');if(ns)ns.value=q;renderNotes();show($('#view-notes'));}});});}catch(e){}
   push('Заметки',nm.slice(0,15));
   push('Закладки',bookmarks.filter(b=>((b.title||'')+' '+(b.desc||'')+' '+b.url).toLowerCase().includes(q)).slice(0,15).map(b=>({t:b.title||b.url,sub:b.category,act:()=>{renderBookmarks();show($('#view-bookmarks'));}})));
-  push('Отчёты',history.filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор'),act:()=>openReport(h.id)})));
+  push('Отчёты',history.filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор')+(h.archived?' 📦':''),act:()=>openReport(h.id)})));
   push('Привычки',habits.filter(hb=>hb.name.toLowerCase().includes(q)).slice(0,10).map(hb=>({t:hb.name,act:()=>{show($('#view-tasks'));setSubTab('habits');}})));
   const total=groups.reduce((n,g)=>n+g[1].length,0);
   if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';return;}
@@ -657,11 +658,12 @@ async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Не�
 function allTasksFlat(){const a=[];history.forEach(h=>{ensureEntry(h);h.tasks.forEach(t=>a.push({text:t.text,done:t.done,ts:h.ts}));});return a.sort((x,y)=>(x.done-y.done)||(y.ts-x.ts));}
 
 /* ---------- history / calendar ---------- */
-$('#openHistory')&&$('#openHistory').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();show($('#view-history'));});
+$('#openHistory')&&$('#openHistory').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;showArchived=false;$('#searchInput').value='';renderHistory();show($('#view-history'));});
 $('#histBack')&&$('#histBack').addEventListener('click',()=>show($('#view-input')));
 $('#calPrev')&&$('#calPrev').addEventListener('click',()=>{calCursor.setMonth(calCursor.getMonth()-1);renderCalendar();});
 $('#calNext')&&$('#calNext').addEventListener('click',()=>{calCursor.setMonth(calCursor.getMonth()+1);renderCalendar();});
 $('#clearFilter')&&$('#clearFilter').addEventListener('click',()=>{filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();});
+$('#toggleArchive')&&$('#toggleArchive').addEventListener('click',()=>{showArchived=!showArchived;filterDate=null;searchQuery='';tagFilter=null;$('#searchInput').value='';renderHistory();});
 $('#searchInput')&&$('#searchInput').addEventListener('input',e=>{searchQuery=e.target.value.trim().toLowerCase();renderRepList();});
 function renderHistory(){renderCalendar();renderTagFilter();renderRepList();}
 function renderCalendar(){
@@ -682,20 +684,37 @@ function renderTagFilter(){
   box.innerHTML=all.map(t=>`<span class="tf${tagFilter===t?' on':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
   box.querySelectorAll('.tf').forEach(el=>el.addEventListener('click',()=>{tagFilter=tagFilter===el.dataset.tag?null:el.dataset.tag;renderHistory();}));
 }
+function autoArchiveOldReports(){
+  const days=settings.archiveDays;if(!days)return;
+  const lastRun=localStorage.getItem('neurocatch_last_autoarchive');const todayK=dateKey(Date.now());
+  if(lastRun===todayK)return;
+  const cutoff=Date.now()-days*86400000;let changed=false;
+  history.forEach(h=>{if(!h.archived&&h.ts<cutoff){h.archived=true;changed=true;}});
+  localStorage.setItem('neurocatch_last_autoarchive',todayK);
+  if(changed)saveHistory();
+}
+function archiveReport(id,val){const h=history.find(x=>x.id===id);if(!h)return;h.archived=val;saveHistory();renderHistory();toast(val?'Отчёт архивирован':'Отчёт возвращён из архива');}
 function renderRepList(){
   let items=history.slice().sort((a,b)=>b.ts-a.ts);
+  const hasIntentFilter=!!(filterDate||tagFilter||searchQuery);
+  if(!hasIntentFilter&&!showArchived)items=items.filter(h=>!h.archived);
+  if(!hasIntentFilter&&showArchived)items=items.filter(h=>h.archived);
   if(filterDate)items=items.filter(h=>h.date===filterDate);
   if(tagFilter)items=items.filter(h=>(h.tags||[]).includes(tagFilter));
   if(searchQuery)items=items.filter(h=>h.markdown.toLowerCase().includes(searchQuery));
   const parts=[];if(searchQuery)parts.push(`«${$('#searchInput').value.trim()}»`);if(filterDate)parts.push(fmtDate(new Date(filterDate+'T00:00:00')));if(tagFilter)parts.push(tagFilter);
-  $('#listLabel').textContent=parts.length?parts.join(' · '):'Все отчёты';
+  $('#listLabel').textContent=parts.length?parts.join(' · '):(showArchived?'Архив':'Все отчёты');
   $('#clearFilter').hidden=!(filterDate||searchQuery||tagFilter);
-  if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».'}</div>`;lucide.createIcons();return;}
+  const archN=history.filter(h=>h.archived).length;
+  const acEl=$('#archCount');if(acEl)acEl.textContent=archN?('('+archN+')'):'';
+  const tb=$('#toggleArchive');if(tb)tb.classList.toggle('on',showArchived);
+  if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${showArchived?'В архиве пусто.':(history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».')}</div>`;lucide.createIcons();return;}
   $('#repList').innerHTML=items.map(h=>{const d=parseMd(h.markdown);const prev=(d.insights[0]||d.summaries[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
-    return `<div class="rep" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}</div><div class="p">${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
+    return `<div class="rep${h.archived?' archived':''}" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}${h.archived?' <span class="arch-badge">архив</span>':''}</div><div class="p">${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="arch" data-arch="${h.id}" data-val="${h.archived?'0':'1'}" aria-label="${h.archived?'Вернуть из архива':'В архив'}" title="${h.archived?'Вернуть из архива':'В архив'}"><i data-lucide="${h.archived?'archive-restore':'archive'}"></i></button><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   $('#repList').querySelectorAll('.rep').forEach(r=>r.addEventListener('click',()=>openReport(r.dataset.id)));
   $('#repList').querySelectorAll('.del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteReport(b.dataset.del);}));
+  $('#repList').querySelectorAll('.arch').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();archiveReport(b.dataset.arch,b.dataset.val==='1');}));
 }
 function deleteReport(id){if(!confirm('Удалить этот отчёт? Действие необратимо.'))return;history=history.filter(x=>x.id!==id);saveHistory();if(filterDate&&!history.some(h=>h.date===filterDate))filterDate=null;renderHistory();toast('Отчёт удалён');}
 function openReport(id){const h=history.find(x=>x.id===id);if(!h)return;ensureEntry(h);backTarget='#view-history';$('#digestTitle').textContent=fmtDate(h.ts);show($('#view-digest'));$('#loader').hidden=true;$('#streamWrap').hidden=true;renderDigest(h);renderActionBar('history');$('#result').hidden=false;}
@@ -832,7 +851,7 @@ const ov=$('#overlay');
 $('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt')&&$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
@@ -1446,6 +1465,7 @@ function checkSharedHash(){const hs=location.hash||'';
   return false;}
 
 loadAll();
+try{autoArchiveOldReports();}catch(e){}
 initNotify();
 try{startAutoSync();}catch(e){}
 lucide.createIcons();
