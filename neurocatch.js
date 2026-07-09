@@ -13,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v44';
+const APP_VERSION='2025.7-06';const SW_VER='v45';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -35,10 +35,12 @@ function findBookmarkByUrl(u){const n=normalizeUrl(u);return bookmarks.find(x=>n
 function ingestBookmarks(list){let added=0,dupes=0;const dupeTitles=[];(list||[]).forEach(b=>{if(!b||!b.url)return;const ex=findBookmarkByUrl(b.url);if(ex){dupes++;dupeTitles.push(ex.title||b.title||hostOf(b.url));if(!ex.title&&b.title)ex.title=b.title;if(!ex.desc&&b.desc)ex.desc=b.desc;if((!ex.category||ex.category==='Прочее')&&b.category)ex.category=b.category;}else{bookmarks.unshift({id:uid('b'),url:b.url,title:b.title||hostOf(b.url),desc:b.desc||'',category:b.category||'Прочее',ts:Date.now()});added++;}});if(added||dupes)saveBookmarks();return {added,dupes,dupeTitles};}
 function catList(){const set=new Set(['Инструменты','Библиотеки','ИИ','Дизайн','Обучение','Статьи','DevTools','Прочее']);bookmarks.forEach(b=>{if(b.category)set.add(b.category);});return [...set];}
 function ensureEntry(e){
-  if(!e.tags||!e.tasks||!e.links){const d=parseMd(e.markdown);
+  if(!e.tags||!e.tasks||!e.links||!e.insights||!e.summaries){const d=parseMd(e.markdown);
     if(!e.tags)e.tags=d.tags;
     if(!e.tasks)e.tasks=d.tasks.map((t,i)=>({id:e.id+'_t'+i,text:t,done:false}));
-    if(!e.links)e.links=assembleLinks(d,e.markdown);}
+    if(!e.links)e.links=assembleLinks(d,e.markdown);
+    if(!e.insights)e.insights=d.insights||[];
+    if(!e.summaries)e.summaries=d.summaries||[];}
   if(!e.bookmarks){try{e.bookmarks=parseMd(e.markdown).bookmarks||[];}catch(_){e.bookmarks=[];}}
   return e;
 }
@@ -176,6 +178,7 @@ const DEFAULT_PROMPT=`Ты — ассистент дневного brain-dump. �
 Если запись — это ссылка-ориентир (сайт сервиса, продукта, инструмента, приложения, репозиторий GitHub, библиотека, лендинг, магазин и т.п.) — НЕ делай по ней конспект и НЕ создавай по ней задачу в разделе «Задачи». Вместо этого добавь её сюда: придумай короткую подходящую категорию (например Инструменты, Библиотеки, ИИ, Дизайн, Обучение, DevTools, Сервисы, Покупки) и краткое описание ОДНИМ АБЗАЦЕМ (2–3 предложения: что это, зачем нужно, чем полезно). Формат:
 - [<Заголовок>](<URL>) | <Категория> | <описание одним абзацем, 2–3 предложения>
 ## ✅ Задачи
+Создавай задачу ТОЛЬКО если запись явно требует действия (например «напомни», «нужно», «сделать», «купить», «позвонить», дедлайн). Наличие ссылки или конспект по ней — это НЕ повод создавать задачу вроде «прочитать статью» или «посмотреть видео»: конспект уже сохранён отдельно, дублировать его в задачу не нужно.
 - [ ] конкретное действие
 ## 🏷 Теги
 #тег1 #тег2 #тег3
@@ -214,17 +217,18 @@ function mdBlock(src){const lines=(src||'').split('\n');let html='',para=[],inLi
   fp();fl();return html;}
 const attr=u=>String(u).replace(/"/g,'%22');
 function renderDigest(entry){
-  currentEntry=entry;const d=parseMd(entry.markdown);
-  const ins=(d.insights.length?d.insights.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span><button class="mini ins-extract" data-i="${i}" title="Извлечь в отдельную заметку"><i data-lucide="notebook-pen"></i></button></li>`):['<li><span class="ins-text">Ничего заметного.</span></li>']).join('');
-  const sum=d.summaries.length?d.summaries.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
-  const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label></li>`).join(''):'<p>Задач нет.</p>';
-  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map(l=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a></div>`).join('')}</div></div>`:'';
-  const covered=new Set(d.summaries.map(x=>x.source).filter(Boolean));
+  currentEntry=entry;
+  const eIns=entry.insights||[], eSum=entry.summaries||[];
+  const ins=eIns.length?eIns.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span><button class="mini ins-extract" data-i="${i}" title="Извлечь в отдельную заметку"><i data-lucide="notebook-pen"></i></button><button class="mini item-del" data-kind="ins" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<li><span class="ins-text">Ничего заметного.</span></li>';
+  const sum=eSum.length?eSum.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><div class="sec-actions"><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button><button class="mini item-del" data-kind="sum" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
+  const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label><button class="mini item-del" data-kind="task" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<p>Задач нет.</p>';
+  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map((l,i)=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a><button class="mini item-del" data-kind="link" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div>`).join('')}</div></div>`:'';
+  const covered=new Set(eSum.map(x=>x.source).filter(Boolean));
   const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
   const bms=entry.bookmarks||[];
-  const dupeN=entry.bmDupeCount||0;const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-summary">${bms.length} ссылк${bms.length===1?'а отправлена':(bms.length<5?'и отправлены':'ок отправлено')} в закладки без конспекта${dupeN?(' · из них уже было раньше: '+dupeN):''} — ниже видно, куда именно, и можно поправить.</div><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-rowacts"><button class="bm-cat" data-bi="${i}" title="Изменить категорию">📁 ${esc(b.category||'Прочее')}</button><button class="mini bm-toart" data-bi="${i}" title="Это статья — законспектировать"><i data-lucide="notebook-pen"></i></button></div></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
+  const dupeN=entry.bmDupeCount||0;const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-summary">${bms.length} ссылк${bms.length===1?'а отправлена':(bms.length<5?'и отправлены':'ок отправлено')} в закладки без конспекта${dupeN?(' · из них уже было раньше: '+dupeN):''} — ниже видно, куда именно, и можно поправить.</div><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-rowacts"><button class="bm-cat" data-bi="${i}" title="Изменить категорию">📁 ${esc(b.category||'Прочее')}</button><button class="mini bm-toart" data-bi="${i}" title="Это статья — законспектировать"><i data-lucide="notebook-pen"></i></button><button class="mini item-del" data-kind="bm" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
   const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
-  const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map(t=>`<button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`:'';
+  const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map((t,i)=>`<span class="tag-pill-del"><button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button><button class="tag-x" data-kind="tag" data-i="${i}" title="Убрать тег"><i data-lucide="x"></i></button></span>`).join('')}</div></div>`:'';
   $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
     <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
     ${links}
@@ -234,7 +238,7 @@ function renderDigest(entry){
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
   $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',()=>copyText(b.dataset.cpurl)));
-  $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=d.insights[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts);}));
+  $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=(entry.insights||[])[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts);}));
   $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
   $('#digestCard').querySelectorAll('.bm-cat[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;const g=bookmarks.find(x=>x.url===bm.url);if(g)g.category=cat;else ingestBookmarks([bm]);saveHistory();saveBookmarks();renderDigest(entry);});}));
   $('#digestCard').querySelectorAll('.bm-toart[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;
@@ -242,6 +246,12 @@ function renderDigest(entry){
     bookmarks=bookmarks.filter(x=>x.url!==bm.url);saveBookmarks();saveHistory();
     toast('Отправляю на конспектирование…');
     runRitual([{id:uid('c'),text:bm.url,at:Date.now()}],{title:'Разбор ссылки',back:backTarget});
+  }));
+  $('#digestCard').querySelectorAll('.item-del[data-kind]').forEach(b=>b.addEventListener('click',()=>{
+    const kind=b.dataset.kind,i=+b.dataset.i;const map={ins:'insights',sum:'summaries',task:'tasks',link:'links',bm:'bookmarks',tag:'tags'};
+    const field=map[kind];if(!field||!entry[field])return;
+    entry[field]=entry[field].filter((_,idx)=>idx!==i);
+    saveHistory();renderDigest(entry);toast('Удалено из отчёта');
   }));
   const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',()=>copyText(failed.map(l=>l.url).join('\n')));
   $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
@@ -337,8 +347,8 @@ function loadManualNotes(){try{return JSON.parse(localStorage.getItem('neurocatc
 function saveManualNotes(arr){localStorage.setItem('neurocatch_manual_notes',JSON.stringify(arr));touchLocal();}
 function loadExtracted(){try{return JSON.parse(localStorage.getItem('neurocatch_extracted')||'[]');}catch(e){return [];}}
 function saveExtracted(arr){localStorage.setItem('neurocatch_extracted',JSON.stringify(arr));touchLocal();}
-function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);let d;try{d=parseMd(h.markdown);}catch(e){return;}
-  (d.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));});
+function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);
+  (h.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));});
   loadExtracted().forEach(ex=>notes.push({id:ex.id,kind:'ins',title:ex.text,body:'',source:'',tags:ex.tags||[],ts:ex.ts,extracted:true}));
   loadManualNotes().forEach(mn=>notes.push({id:mn.id,kind:'man',title:mn.title,body:mn.body||'',source:'',tags:mn.tags||[],ts:mn.ts,manual:true}));
   return notes.sort((a,b)=>b.ts-a.ts);}
@@ -614,7 +624,7 @@ function renderActionBar(mode){
 }
 
 /* ---------- ritual ---------- */
-function saveToHistory(md,items){const d=parseMd(md);const src=(items||catches).map(c=>c.text).join('\n');const bmUrls=new Set((d.bookmarks||[]).map(b=>b.url));const entry={id:uid('d'),ts:Date.now(),date:dateKey(Date.now()),markdown:md,tags:d.tags,links:assembleLinks(d,src).filter(l=>!bmUrls.has(l.url)),tasks:d.tasks.map((t,i)=>({id:'d'+Date.now()+'_t'+i,text:t,done:false})),bookmarks:d.bookmarks||[]};history.unshift(entry);ingestBookmarks(entry.bookmarks);saveHistory();return entry;}
+function saveToHistory(md,items){const d=parseMd(md);const src=(items||catches).map(c=>c.text).join('\n');const bmUrls=new Set((d.bookmarks||[]).map(b=>b.url));const entry={id:uid('d'),ts:Date.now(),date:dateKey(Date.now()),markdown:md,tags:d.tags,links:assembleLinks(d,src).filter(l=>!bmUrls.has(l.url)),tasks:d.tasks.map((t,i)=>({id:'d'+Date.now()+'_t'+i,text:t,done:false})),bookmarks:d.bookmarks||[],insights:d.insights||[],summaries:d.summaries||[]};history.unshift(entry);ingestBookmarks(entry.bookmarks);saveHistory();return entry;}
 /* ---------- offline queue for ritual ---------- */
 function loadRitualQueue(){try{return JSON.parse(localStorage.getItem('neurocatch_ritual_queue')||'[]');}catch(e){return [];}}
 function saveRitualQueue(q){localStorage.setItem('neurocatch_ritual_queue',JSON.stringify(q));}
@@ -694,7 +704,7 @@ async function copyDigest(){if(!currentEntry)return;await copyText(currentEntry.
 function download(name,text,mime){const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
 function slug(t){return (String(t||'').trim().toLowerCase().replace(/[^\wа-яё]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,40))||'konspekt';}
 function exportMd(){if(!currentEntry)return;download('neurocatch_'+dateKey(currentEntry.ts)+'.md',currentEntry.markdown,'text/markdown');toast('Экспорт .md');}
-function downloadSummary(i){if(!currentEntry)return;const s=parseMd(currentEntry.markdown).summaries[i];if(!s)return;const md='### '+(s.title||'Конспект')+(s.source?'\n\n🔗 '+s.source:'')+'\n\n'+s.body+'\n';download('konspekt_'+slug(s.title)+'.md',md,'text/markdown');toast('Конспект сохранён .md');}
+function downloadSummary(i){if(!currentEntry)return;const s=(currentEntry.summaries||[])[i];if(!s)return;const md='### '+(s.title||'Конспект')+(s.source?'\n\n🔗 '+s.source:'')+'\n\n'+s.body+'\n';download('konspekt_'+slug(s.title)+'.md',md,'text/markdown');toast('Конспект сохранён .md');}
 function tasksToMd(list){return list.map(t=>'- ['+(t.done?'x':' ')+'] '+t.text).join('\n')+'\n';}
 function tasksForTick(list){return list.filter(t=>!t.done).map(t=>t.text).join('\n');}
 async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Нет открытых задач');return;}await copyText(txt);}
@@ -760,7 +770,7 @@ function renderRepList(){
   const acEl=$('#archCount');if(acEl)acEl.textContent=archN?('('+archN+')'):'';
   const tb=$('#toggleArchive');if(tb)tb.classList.toggle('on',showArchived);
   if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${showArchived?'В архиве пусто.':(history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».')}</div>`;lucide.createIcons();return;}
-  $('#repList').innerHTML=items.map(h=>{const d=parseMd(h.markdown);const prev=(d.insights[0]||d.summaries[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
+  $('#repList').innerHTML=items.map(h=>{ensureEntry(h);const prev=((h.insights||[])[0]||(h.summaries||[])[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
     return `<div class="rep${h.archived?' archived':''}" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}${h.archived?' <span class="arch-badge">архив</span>':''}</div><div class="p">${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="arch" data-arch="${h.id}" data-val="${h.archived?'0':'1'}" aria-label="${h.archived?'Вернуть из архива':'В архив'}" title="${h.archived?'Вернуть из архива':'В архив'}"><i data-lucide="${h.archived?'archive-restore':'archive'}"></i></button><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   $('#repList').querySelectorAll('.rep').forEach(r=>r.addEventListener('click',()=>openReport(r.dataset.id)));

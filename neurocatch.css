@@ -792,3 +792,19 @@ html[data-theme="light"] .stat-n,
 html[data-theme="light"] .note-title{
   letter-spacing:-.02em;font-weight:700;
 }
+
+/* delete buttons on report items */
+.item-del{color:var(--faint);opacity:.55}
+.item-del:hover{color:var(--red);opacity:1;border-color:rgba(255,107,107,.35);background:rgba(255,107,107,.08)}
+.item-del svg{width:14px;height:14px}
+.md-section ul li{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.md-section ul li .task{flex:1;min-width:0}
+.link-row .item-del{margin-left:2px}
+.bm-rowacts{flex-wrap:wrap;justify-content:flex-end}
+.sum-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sum-head h4{flex:1;min-width:0}
+.tag-pill-del{display:inline-flex;align-items:center;background:rgba(var(--seed-rgb),.12);border:1px solid rgba(var(--seed-rgb),.3);border-radius:999px;overflow:hidden}
+.tag-pill-del .tag-pill{border:none;background:none;border-radius:0;padding:5px 4px 5px 10px}
+.tag-x{background:none;border:none;color:var(--accent-2);opacity:.6;cursor:pointer;padding:5px 8px 5px 2px;display:flex;align-items:center}
+.tag-x:hover{opacity:1;color:var(--red)}
+.tag-x svg{width:12px;height:12px}
