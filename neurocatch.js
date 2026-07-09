@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null, bookmarks=[];
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 let lastRitualDebug=null;
@@ -12,7 +12,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v35';
+const APP_VERSION='2025.7-06';const SW_VER='v36';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -23,7 +23,15 @@ let localUpdatedAt=0, applyingRemote=false, booting=true;
 /* ---------- persistence ---------- */
 function loadBookmarks(){try{bookmarks=JSON.parse(localStorage.getItem('neurocatch_bookmarks')||'[]');}catch(e){bookmarks=[];}}
 function saveBookmarks(){localStorage.setItem('neurocatch_bookmarks',JSON.stringify(bookmarks));touchLocal();}
-function ingestBookmarks(list){let added=0;(list||[]).forEach(b=>{if(!b||!b.url)return;const ex=bookmarks.find(x=>x.url===b.url);if(ex){if(!ex.title&&b.title)ex.title=b.title;if(!ex.desc&&b.desc)ex.desc=b.desc;if((!ex.category||ex.category==='Прочее')&&b.category)ex.category=b.category;}else{bookmarks.unshift({id:uid('b'),url:b.url,title:b.title||hostOf(b.url),desc:b.desc||'',category:b.category||'Прочее',ts:Date.now()});added++;}});if(added)saveBookmarks();return added;}
+function normalizeUrl(u){
+  try{const url=new URL(u);let host=url.hostname.replace(/^www\./,'').toLowerCase();let path=url.pathname.replace(/\/+$/,'')||'/';
+    const params=[...url.searchParams.entries()].filter(([k])=>!/^(utm_|fbclid|gclid|yclid|ref|_ga)/i.test(k));
+    params.sort((a,b)=>a[0].localeCompare(b[0]));const qs=params.map(([k,v])=>k+'='+v).join('&');
+    return host+path+(qs?'?'+qs:'')+(url.hash&&!/^#(top|main)?$/i.test(url.hash)?url.hash:'');
+  }catch(e){return String(u||'').trim().replace(/\/+$/,'').toLowerCase();}
+}
+function findBookmarkByUrl(u){const n=normalizeUrl(u);return bookmarks.find(x=>normalizeUrl(x.url)===n);}
+function ingestBookmarks(list){let added=0,dupes=0;const dupeTitles=[];(list||[]).forEach(b=>{if(!b||!b.url)return;const ex=findBookmarkByUrl(b.url);if(ex){dupes++;dupeTitles.push(ex.title||b.title||hostOf(b.url));if(!ex.title&&b.title)ex.title=b.title;if(!ex.desc&&b.desc)ex.desc=b.desc;if((!ex.category||ex.category==='Прочее')&&b.category)ex.category=b.category;}else{bookmarks.unshift({id:uid('b'),url:b.url,title:b.title||hostOf(b.url),desc:b.desc||'',category:b.category||'Прочее',ts:Date.now()});added++;}});if(added||dupes)saveBookmarks();return {added,dupes,dupeTitles};}
 function catList(){const set=new Set(['Инструменты','Библиотеки','ИИ','Дизайн','Обучение','Статьи','DevTools','Прочее']);bookmarks.forEach(b=>{if(b.category)set.add(b.category);});return [...set];}
 function ensureEntry(e){
   if(!e.tags||!e.tasks||!e.links){const d=parseMd(e.markdown);
@@ -37,7 +45,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -63,7 +71,7 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;updateProviderUI();try{applyBg();}catch(e){}
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;updateProviderUI();try{applyBg();}catch(e){}
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -108,7 +116,15 @@ $('#submit')&&$('#submit').addEventListener('click',()=>{const v=ta.value.trim()
 /* ---------- voice ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let recog=null,recording=false;
-$('#mic')&&$('#mic').addEventListener('click',e=>{const b=e.currentTarget;if(!SR){toast('Голосовой ввод не поддерживается браузером',true);return;}if(!window.isSecureContext){toast('Микрофон работает только по https. Открой приложение с GitHub Pages, а не как файл.',true);return;}if(recording){recog&&recog.stop();return;}recog=new SR();recog.lang='ru-RU';recog.interimResults=true;recog.continuous=false;const base=ta.value?ta.value+' ':'';recog.onstart=()=>{recording=true;b.classList.add('rec');toast('Слушаю...');};recog.onresult=ev=>{let t='';for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;ta.value=base+t;grow();};recog.onerror=ev=>{const msg=ev.error==='not-allowed'?'Нет доступа к микрофону: разреши его в настройках сайта (нужен https)':ev.error==='no-speech'?'Речь не распознана, попробуй ещё раз':'Ошибка микрофона: '+ev.error;toast(msg,true);};recog.onend=()=>{recording=false;b.classList.remove('rec');};recog.start();});
+$('#mic')&&$('#mic').addEventListener('click',e=>{const b=e.currentTarget;if(!SR){toast('Голосовой ввод не поддерживается браузером',true);return;}if(!window.isSecureContext){toast('Микрофон работает только по https. Открой приложение с GitHub Pages, а не как файл.',true);return;}if(recording){recog&&recog.stop();return;}recog=new SR();recog.lang='ru-RU';recog.interimResults=true;recog.continuous=false;const base=ta.value?ta.value+' ':'';recog.onstart=()=>{recording=true;b.classList.add('rec');toast('Слушаю...');};recog.onresult=ev=>{let t='';for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;ta.value=base+t;grow();};recog.onerror=ev=>{const msg=ev.error==='not-allowed'?'Нет доступа к микрофону: разреши его в настройках сайта (нужен https)':ev.error==='no-speech'?'Речь не распознана, попробуй ещё раз':'Ошибка микрофона: '+ev.error;toast(msg,true);};recog.onend=()=>{
+    recording=false;b.classList.remove('rec');
+    if(settings.voiceAutoAdd===false)return;
+    const v=ta.value.trim();if(!v||v===base.trim())return;
+    const c={id:uid('c'),text:v,at:Date.now()};
+    try{const due=parseDateTime(v);if(due){c.due=due.ts;c.dueLabel=due.label;c.dueHasTime=due.hasTime;}}catch(e){}
+    catches.push(c);saveCatches();refreshCount();ta.value='';grow();
+    toast(c.dueLabel?('🎙 Добавлено • срок '+c.dueLabel):'🎙 Добавлено в улов');
+  };recog.start();});
 
 /* ---------- queue ---------- */
 $('#ritualCount')&&$('#ritualCount').addEventListener('click',e=>{e.stopPropagation();renderQueue();show($('#view-queue'));});
@@ -273,7 +289,7 @@ function renderDigest(entry){
   const covered=new Set(d.summaries.map(x=>x.source).filter(Boolean));
   const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
   const bms=entry.bookmarks||[];
-  const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-summary">${bms.length} ссылк${bms.length===1?'а отправлена':(bms.length<5?'и отправлены':'ок отправлено')} в закладки без конспекта — ниже видно, куда именно, и можно поправить.</div><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-rowacts"><button class="bm-cat" data-bi="${i}" title="Изменить категорию">📁 ${esc(b.category||'Прочее')}</button><button class="mini bm-toart" data-bi="${i}" title="Это статья — законспектировать"><i data-lucide="notebook-pen"></i></button></div></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
+  const dupeN=entry.bmDupeCount||0;const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-summary">${bms.length} ссылк${bms.length===1?'а отправлена':(bms.length<5?'и отправлены':'ок отправлено')} в закладки без конспекта${dupeN?(' · из них уже было раньше: '+dupeN):''} — ниже видно, куда именно, и можно поправить.</div><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-rowacts"><button class="bm-cat" data-bi="${i}" title="Изменить категорию">📁 ${esc(b.category||'Прочее')}</button><button class="mini bm-toart" data-bi="${i}" title="Это статья — законспектировать"><i data-lucide="notebook-pen"></i></button></div></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
   const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
   const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map(t=>`<button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>`:'';
   $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
@@ -284,7 +300,7 @@ function renderDigest(entry){
     <div class="md-section"><div class="sec-head"><h3>✅ Задачи</h3><div class="sec-actions"><button class="mini" id="tasksMdBtn" title="Скачать задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="tasksTickBtn" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button></div></div><ul>${tasks}</ul></div>${tags}`;
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
-  $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.cpurl);toast('Ссылка скопирована');}catch(e){toast('Не удалось',true);}}));
+  $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',()=>copyText(b.dataset.cpurl)));
   $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=d.insights[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts);}));
   $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
   $('#digestCard').querySelectorAll('.bm-cat[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;const g=bookmarks.find(x=>x.url===bm.url);if(g)g.category=cat;else ingestBookmarks([bm]);saveHistory();saveBookmarks();renderDigest(entry);});}));
@@ -294,7 +310,7 @@ function renderDigest(entry){
     toast('Отправляю на конспектирование…');
     runRitual([{id:uid('c'),text:bm.url,at:Date.now()}],{title:'Разбор ссылки',back:backTarget});
   }));
-  const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(failed.map(l=>l.url).join('\n'));toast('Скопированы все ссылки');}catch(e){toast('Не удалось',true);}});
+  const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',()=>copyText(failed.map(l=>l.url).join('\n')));
   $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
   const tmb=$('#tasksMdBtn');if(tmb)tmb.addEventListener('click',()=>{download('tasks_'+dateKey(entry.ts)+'.md',tasksToMd(entry.tasks),'text/markdown');toast('Задачи сохранены .md');});
   const ttb=$('#tasksTickBtn');if(ttb)ttb.addEventListener('click',()=>copyTick(entry.tasks));
@@ -390,6 +406,11 @@ function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);let d;tr
   (d.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));});
   loadExtracted().forEach(ex=>notes.push({id:ex.id,kind:'ins',title:ex.text,body:'',source:'',tags:ex.tags||[],ts:ex.ts,extracted:true}));
   return notes.sort((a,b)=>b.ts-a.ts);}
+function loadNoteLinks(){try{return JSON.parse(localStorage.getItem('neurocatch_note_links')||'{}');}catch(e){return {};}}
+function saveNoteLinks(o){localStorage.setItem('neurocatch_note_links',JSON.stringify(o));touchLocal();}
+function linkNotes(idA,idB){if(idA===idB)return;const L=loadNoteLinks();L[idA]=L[idA]||[];L[idB]=L[idB]||[];if(!L[idA].includes(idB))L[idA].push(idB);if(!L[idB].includes(idA))L[idB].push(idA);saveNoteLinks(L);}
+function unlinkNotes(idA,idB){const L=loadNoteLinks();if(L[idA])L[idA]=L[idA].filter(x=>x!==idB);if(L[idB])L[idB]=L[idB].filter(x=>x!==idA);saveNoteLinks(L);}
+function getLinkedNoteIds(id){const L=loadNoteLinks();return L[id]||[];}
 function extractInsight(text,tags,fromReportTs){
   const arr=loadExtracted();
   const ex={id:uid('ex'),text,tags:tags||[],ts:fromReportTs||Date.now()};
@@ -409,7 +430,7 @@ function renderNotes(){
   $('#notesCount').textContent=list.length;
   if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты и инсайты появятся здесь после разбора.</div>';return;}
   box.innerHTML=list.map(n=>{const cat=noteCat(n,cats);const bodyHtml=n.kind==='sum'&&n.body?mdBlock(n.body):'';
-    return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions"><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}</div></div>`;}).join('');
+    return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions"><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
   box.querySelectorAll('.note-open[data-nid]').forEach(el=>el.addEventListener('click',()=>{const n=notes.find(x=>x.id===el.dataset.nid);if(n)openNoteDetail(n);}));
@@ -425,21 +446,47 @@ async function openNoteDetail(n){
     preview='<div class="nd-preview" id="ndPreview"><div class="nd-preview-loading">Загружаю превью…</div></div>';
   }
   const body=n.body?mdBlock(n.body):(n.kind==='ins'?'':'');
+  const allNotes=buildNotes();
+  const linkedIds=getLinkedNoteIds(n.id);
+  const linked=linkedIds.map(id=>allNotes.find(x=>x.id===id)).filter(Boolean);
+  const relBlock=`<div class="nd-links"><div class="nd-links-h">🔗 Связанные заметки<button class="mini nd-link-add" id="ndLinkAdd" title="Добавить связь"><i data-lucide="plus"></i></button></div>${linked.length?linked.map(ln=>`<div class="nd-link-row"><button class="nd-link-open" data-lid="${attr(ln.id)}">${ln.kind==='ins'?'💡 ':'📄 '}${esc(ln.title)}</button><button class="mini nd-link-rm" data-lid="${attr(ln.id)}" title="Убрать связь"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:10px 0;font-size:13px">Пока нет связей — нажми «+», чтобы связать с другой заметкой.</div>'}</div>`;
   $('#ndBody').innerHTML=`
     <h1 class="nd-title">${n.kind==='ins'?'💡 ':''}${esc(n.title)}</h1>
     <div class="nd-meta"><i data-lucide="calendar"></i>${esc(dt)}</div>
     ${preview}
     ${body?`<div class="note-body" style="margin-top:16px">${body}</div>`:''}
     <div class="note-tags" style="margin-top:16px">${(n.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')||'<span class="empty" style="padding:0">Тегов нет</span>'}</div>
+    ${relBlock}
   `;
   lucide.createIcons();
   $('#noteDetailOverlay').classList.add('open');
+  $('#ndLinkAdd')&&$('#ndLinkAdd').addEventListener('click',()=>openNotePicker(n,allNotes));
+  $('#ndBody').querySelectorAll('.nd-link-open[data-lid]').forEach(b=>b.addEventListener('click',()=>{const ln=allNotes.find(x=>x.id===b.dataset.lid);if(ln)openNoteDetail(ln);}));
+  $('#ndBody').querySelectorAll('.nd-link-rm[data-lid]').forEach(b=>b.addEventListener('click',()=>{unlinkNotes(n.id,b.dataset.lid);openNoteDetail(n);}));
   if(n.source){
     try{const m=await fetchMeta(n.source);const box=$('#ndPreview');if(box){
       box.innerHTML=`<a href="${attr(n.source)}" target="_blank" rel="noopener" class="nd-preview-link">${m&&m.logo?`<img src="${attr(m.logo)}" class="nd-preview-img" alt="">`:'<div class="nd-preview-img nd-preview-ph"><i data-lucide="link"></i></div>'}<div class="nd-preview-txt"><div class="nd-preview-title">${esc((m&&m.title)||n.source)}</div><div class="nd-preview-host">${esc(hostOf(n.source))}</div></div><i data-lucide="external-link"></i></a>`;
       lucide.createIcons();
     }}catch(e){const box=$('#ndPreview');if(box)box.innerHTML=`<a href="${attr(n.source)}" target="_blank" rel="noopener" class="nd-preview-link"><div class="nd-preview-img nd-preview-ph"><i data-lucide="link"></i></div><div class="nd-preview-txt"><div class="nd-preview-title">${esc(n.source)}</div><div class="nd-preview-host">${esc(hostOf(n.source))}</div></div></a>`;lucide.createIcons();}
   }
+}
+function openNotePicker(n,allNotes){
+  const ex=$('#notePickerOverlay');if(ex)ex.remove();
+  const linkedIds=new Set(getLinkedNoteIds(n.id));
+  const candidates=allNotes.filter(x=>x.id!==n.id&&!linkedIds.has(x.id));
+  const ov=document.createElement('div');ov.className='overlay open';ov.id='notePickerOverlay';
+  ov.innerHTML=`<div class="modal" style="max-width:440px"><div class="modal-head"><h2>Связать с заметкой</h2><button class="icon-btn" id="npClose"><i data-lucide="x"></i></button></div>
+    <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="npSearch" placeholder="Поиск заметки по названию…" autocomplete="off"></div>
+    <div id="npList" class="np-list"></div></div>`;
+  document.body.appendChild(ov);lucide.createIcons();
+  const paint=q=>{q=(q||'').toLowerCase();const list=candidates.filter(c=>!q||(c.title||'').toLowerCase().includes(q));
+    $('#npList').innerHTML=list.length?list.slice(0,60).map(c=>`<button class="np-item" data-id="${attr(c.id)}">${c.kind==='ins'?'💡 ':'📄 '}${esc(c.title)}</button>`).join(''):'<div class="empty">Ничего не найдено</div>';
+    $('#npList').querySelectorAll('.np-item').forEach(b=>b.addEventListener('click',()=>{linkNotes(n.id,b.dataset.id);ov.remove();openNoteDetail(n);}));};
+  paint('');
+  ov.querySelector('#npSearch').addEventListener('input',e=>paint(e.target.value));
+  ov.querySelector('#npClose').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  setTimeout(()=>ov.querySelector('#npSearch').focus(),50);
 }
 $('#ndClose')&&$('#ndClose').addEventListener('click',()=>$('#noteDetailOverlay').classList.remove('open'));
 $('#noteDetailOverlay')&&$('#noteDetailOverlay').addEventListener('click',e=>{if(e.target===$('#noteDetailOverlay'))$('#noteDetailOverlay').classList.remove('open');});
@@ -599,14 +646,14 @@ $('#stopBtn')&&$('#stopBtn').addEventListener('click',()=>{if(streamAbort)stream
 
 /* ---------- digest shared actions ---------- */
 $('#backBtn')&&$('#backBtn').addEventListener('click',()=>show($(backTarget)));
-async function copyDigest(){if(!currentEntry)return;try{await navigator.clipboard.writeText(currentEntry.markdown);toast('Скопировано в Obsidian');}catch(e){toast('Не удалось скопировать',true);}}
+async function copyDigest(){if(!currentEntry)return;await copyText(currentEntry.markdown);}
 function download(name,text,mime){const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
 function slug(t){return (String(t||'').trim().toLowerCase().replace(/[^\wа-яё]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,40))||'konspekt';}
 function exportMd(){if(!currentEntry)return;download('neurocatch_'+dateKey(currentEntry.ts)+'.md',currentEntry.markdown,'text/markdown');toast('Экспорт .md');}
 function downloadSummary(i){if(!currentEntry)return;const s=parseMd(currentEntry.markdown).summaries[i];if(!s)return;const md='### '+(s.title||'Конспект')+(s.source?'\n\n🔗 '+s.source:'')+'\n\n'+s.body+'\n';download('konspekt_'+slug(s.title)+'.md',md,'text/markdown');toast('Конспект сохранён .md');}
 function tasksToMd(list){return list.map(t=>'- ['+(t.done?'x':' ')+'] '+t.text).join('\n')+'\n';}
 function tasksForTick(list){return list.filter(t=>!t.done).map(t=>t.text).join('\n');}
-async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Нет открытых задач');return;}try{await navigator.clipboard.writeText(txt);toast('Скопировано — вставь в TickTick как несколько задач');}catch(e){toast('Не удалось скопировать',true);}}
+async function copyTick(list){const txt=tasksForTick(list);if(!txt){toast('Нет открытых задач');return;}await copyText(txt);}
 function allTasksFlat(){const a=[];history.forEach(h=>{ensureEntry(h);h.tasks.forEach(t=>a.push({text:t.text,done:t.done,ts:h.ts}));});return a.sort((x,y)=>(x.done-y.done)||(y.ts-x.ts));}
 
 /* ---------- history / calendar ---------- */
@@ -785,7 +832,7 @@ const ov=$('#overlay');
 $('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;settings.microlinkKey=$('#microKey').value.trim();settings.studyCustomName=$('#studyName').value.trim();settings.studyCustomUrl=$('#studyUrl').value.trim();settings.provider=$('#provider').value;settings.orKey=$('#orKey').value.trim();settings.orModel=$('#orModel').value.trim();settings.ollamaUrl=$('#ollamaUrl').value.trim();settings.ollamaModel=$('#ollamaModel').value.trim();settings.clearAfter=$('#clearAfter').checked;settings.autoClip=$('#autoClip').checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const pv=$('#promptInput').value.trim();settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt')&&$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ov.classList.remove('open');});
@@ -1069,7 +1116,7 @@ function showErrorModal(msg,opts){
 }
 $('#errClose')&&$('#errClose').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
 $('#errDismiss')&&$('#errDismiss').addEventListener('click',()=>$('#errOverlay').classList.remove('open'));
-$('#errCopy')&&$('#errCopy').addEventListener('click',async()=>{const raw=$('#errOverlay').dataset.rawmsg||($('#errMsg')&&$('#errMsg').textContent)||'';try{await navigator.clipboard.writeText(raw);toast('Текст ошибки скопирован');}catch(e){toast('Не удалось скопировать',true);}});
+$('#errCopy')&&$('#errCopy').addEventListener('click',()=>{const raw=$('#errOverlay').dataset.rawmsg||($('#errMsg')&&$('#errMsg').textContent)||'';copyText(raw);});
 $('#errReport')&&$('#errReport').addEventListener('click',()=>{$('#errOverlay').classList.remove('open');const raw=$('#errOverlay').dataset.rawmsg||'';openBug(raw?('Ошибка: '+raw):'');});
 /* setup guides */
 const SB_SQL_RAW=`create table if not exists public.states (
@@ -1127,7 +1174,7 @@ function openGuide(which){
   };
   const g=G[which]||G.gemini;
   $('#guideTitle').textContent=g.t;$('#guideBody').innerHTML=g.h;lucide.createIcons();
-  const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(SB_SQL_RAW);toast('SQL скопирован');}catch(e){toast('Не удалось',true);}});
+  const sc=$('#guideSqlCopy');if(sc)sc.addEventListener('click',()=>copyText(SB_SQL_RAW));
   const cb=$('#guideCheckBtn');if(cb)cb.addEventListener('click',()=>runGuideCheck(which,'guideCheck'));
   $('#guideOverlay').classList.add('open');
 }
@@ -1197,7 +1244,7 @@ $('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.close
 $('#bugBtn')&&$('#bugBtn').addEventListener('click',()=>openBug(''));
 $('#closeBug')&&$('#closeBug').addEventListener('click',()=>$('#bugOverlay').classList.remove('open'));
 $('#bugOverlay')&&$('#bugOverlay').addEventListener('click',e=>{if(e.target===$('#bugOverlay'))$('#bugOverlay').classList.remove('open');});
-$('#bugCopy')&&$('#bugCopy').addEventListener('click',async()=>{const rep='ПРОБЛЕМА:\n'+($('#bugNote').value||'(не описано)')+'\n\nДАННЫЕ:\n'+$('#bugData').value;try{await navigator.clipboard.writeText(rep);toast('Отчёт скопирован — вставь его мне');}catch(e){toast('Не удалось скопировать',true);}});
+$('#bugCopy')&&$('#bugCopy').addEventListener('click',()=>{const rep='ПРОБЛЕМА:\n'+($('#bugNote').value||'(не описано)')+'\n\nДАННЫЕ:\n'+$('#bugData').value;copyText(rep);});
 $('#bugDownload')&&$('#bugDownload').addEventListener('click',()=>{const rep={note:$('#bugNote').value,data:buildBugData()};const blob=new Blob([JSON.stringify(rep,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_bug_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Отчёт сохранён');});
 
 /* ---------- PWA ---------- */
@@ -1333,7 +1380,8 @@ function openShareMenu(anchor,note){
   let html='<div class="sm-h">Поделиться</div>';
   if(sbUser)html+='<button data-a="short">🔗 Короткая ссылка (Supabase)</button>';
   if(sbUser&&shared)html+='<button data-a="revoke" style="color:var(--red)">Отозвать доступ</button>';
-  html+='<button data-a="md">⬇ Экспорт .md (Obsidian)</button><button data-a="card">🖼 Карточка PNG</button><button data-a="self">Автономная ссылка</button><button data-a="file">Скачать .html</button>';
+  html+='<button data-a="md">⬇ Экспорт .md (Obsidian)</button><button data-a="card">🖼 Карточка PNG</button><button data-a="self">Скопировать ссылку</button><button data-a="file">Скачать .html</button>';
+  if(navigator.share)html+='<button data-a="system">📤 Поделиться через…</button>';
   m.innerHTML=html;document.body.appendChild(m);
   const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-230+window.scrollX;if(left<8)left=8;m.style.left=left+'px';
   const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
@@ -1342,17 +1390,34 @@ function openShareMenu(anchor,note){
     else if(a==='card'){noteToImage(note);}
     else if(a==='self'){shareNote(note);}
     else if(a==='file'){shareNoteFile(note);}
-    else if(a==='short'){try{toast('Создаю ссылку…');const url=await createShareLink(note);if(navigator.share){try{await navigator.share({title:note.title||'Заметка',url});return;}catch(_){}}await navigator.clipboard.writeText(url);toast('Короткая ссылка скопирована');}catch(e){toast('Ошибка: '+(e.message||e),true);}}
+    else if(a==='short'){try{toast('Создаю ссылку…');const url=await createShareLink(note);await copyText(url);}catch(e){toast('Ошибка: '+(e.message||e),true);}}
+    else if(a==='system'){shareViaSystem(note.title,noteShareUrl(note));}
     else if(a==='revoke'){try{await revokeShareToken(shared);const mp=loadShareMap();delete mp[note.id];saveShareMap(mp);toast('Доступ по ссылке отозван');}catch(e){toast('Не удалось отозвать',true);}}
   }));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
+async function copyText(text){
+  try{await navigator.clipboard.writeText(text);toast('Скопировано в буфер');return true;}
+  catch(e){showCopyFallback(text);return false;}
+}
+function showCopyFallback(text){
+  const ex=$('#copyFallbackOverlay');if(ex)ex.remove();
+  const ov=document.createElement('div');ov.className='overlay open';ov.id='copyFallbackOverlay';
+  ov.innerHTML=`<div class="modal" style="max-width:420px"><div class="modal-head"><h2>Скопируй вручную</h2><button class="icon-btn" id="cfClose"><i data-lucide="x"></i></button></div><p style="color:var(--muted);margin-bottom:10px;font-size:13px">Браузер заблокировал автокопирование. Текст ниже — выдели и скопируй (Ctrl/Cmd+C).</p><textarea id="cfText" readonly style="min-height:90px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea><button class="btn btn-primary" id="cfSelect" style="width:100%;margin-top:10px">Выделить всё</button></div>`;
+  document.body.appendChild(ov);lucide.createIcons();
+  const ta2=ov.querySelector('#cfText');ta2.value=text;
+  ov.querySelector('#cfSelect').addEventListener('click',()=>{ta2.focus();ta2.select();try{document.execCommand('copy');toast('Скопировано');}catch(e){}});
+  ov.querySelector('#cfClose').addEventListener('click',()=>ov.remove());
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  setTimeout(()=>{ta2.focus();ta2.select();},50);
+}
+async function shareViaSystem(title,url){
+  if(!navigator.share){toast('Системный шаринг не поддерживается — используй копирование',true);return;}
+  try{await navigator.share({title:title||'Заметка',url});}catch(e){if(e&&e.name!=='AbortError')toast('Не удалось поделиться',true);}
+}
 async function shareNote(n){
   const url=noteShareUrl(n);
-  try{
-    if(navigator.share){await navigator.share({title:n.title||'Заметка',text:(n.title||'Заметка')+' — читать по ссылке',url});return;}
-  }catch(e){if(e&&e.name==='AbortError')return;}
-  try{await navigator.clipboard.writeText(url);toast('Ссылка на заметку скопирована');}catch(e){toast('Не удалось скопировать',true);}
+  await copyText(url);
 }
 async function shareNoteFile(n){
   const html=noteHtml(n);const fname=(slug(n.title||'note'))+'.html';

@@ -700,3 +700,18 @@ body:not(.minimal) .ui-toggle-tab{bottom:calc(78px + env(safe-area-inset-bottom,
 /* show-tab appears only when bar is hidden (minimal mode) */
 .ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
 .ui-toggle-tab:hover{color:var(--accent-2)}
+
+/* note links (Obsidian-style) */
+.nd-links{margin-top:20px;padding-top:16px;border-top:1px solid var(--stroke)}
+.nd-links-h{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px}
+.nd-link-add{color:var(--accent-2)}
+.nd-link-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.nd-link-open{flex:1;text-align:left;background:var(--glass);border:1px solid var(--stroke);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
+.nd-link-open:hover{border-color:var(--stroke-strong)}
+.nd-link-rm{color:var(--faint)}
+.nd-link-rm:hover{color:var(--red)}
+.nd-link-badge{background:rgba(var(--seed-rgb),.14);color:var(--accent-2);font-weight:700}
+/* note picker overlay */
+.np-list{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}
+.np-item{text-align:left;background:var(--glass);border:1px solid var(--stroke);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
+.np-item:hover{border-color:var(--stroke-strong)}
