@@ -13,7 +13,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v39';
+const APP_VERSION='2025.7-06';const SW_VER='v40';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -912,8 +912,7 @@ function openDateMenu(anchor){
     close();}));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
-function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}
-try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}}
+function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}}
 
 /* ---------- export / import (merge) ---------- */
 $('#exportBtn')&&$('#exportBtn').addEventListener('click',()=>{const payload={app:'NeuroCatch',version:3,exportedAt:new Date().toISOString(),settings,catches,history};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Данные выгружены');});
@@ -933,7 +932,7 @@ $('#importFile')&&$('#importFile').addEventListener('change',e=>{const f=e.targe
 
 /* ---------- settings ---------- */
 const ov=$('#overlay');
-$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');});
+$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');renderBbCustomList();ov&&ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov&&ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
 $('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
@@ -1407,6 +1406,49 @@ function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=se
 /* ---------- background pattern ---------- */
 function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
 $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
+/* ---------- bottombar customization (order + visibility) ---------- */
+const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openDash:['bar-chart-3','Дашборд']};
+const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openDash'];
+function loadBbConfig(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('neurocatch_bb_config')||'null');
+    if(raw&&Array.isArray(raw)){
+      const ids=new Set(raw.map(x=>x.id));
+      BB_DEFAULT_ORDER.forEach(id=>{if(!ids.has(id))raw.push({id,visible:true});});
+      return raw.filter(x=>BB_DEFAULT_ORDER.includes(x.id));
+    }
+  }catch(e){}
+  return BB_DEFAULT_ORDER.map(id=>({id,visible:true}));
+}
+function saveBbConfig(cfg){localStorage.setItem('neurocatch_bb_config',JSON.stringify(cfg));touchLocal();}
+function applyBbConfig(){
+  const bar=$('#bottomBar');if(!bar)return;
+  const cfg=loadBbConfig();
+  const sep=bar.querySelector('.bb-sep');
+  cfg.forEach(item=>{
+    const btn=bar.querySelector('[data-bb="'+item.id+'"]');
+    if(!btn)return;
+    btn.hidden=!item.visible;
+    if(sep)bar.insertBefore(btn,sep);
+  });
+}
+function renderBbCustomList(){
+  const box=$('#bbCustomList');if(!box)return;
+  const cfg=loadBbConfig();
+  box.innerHTML=cfg.map((item,i)=>{
+    const meta=BB_LABELS[item.id];if(!meta)return '';
+    return `<div class="bb-row" data-id="${item.id}">
+      <i data-lucide="${meta[0]}"></i><span class="bb-row-label">${meta[1]}</span>
+      <button class="mini bb-up" data-i="${i}" title="Выше" ${i===0?'disabled':''}><i data-lucide="arrow-up"></i></button>
+      <button class="mini bb-down" data-i="${i}" title="Ниже" ${i===cfg.length-1?'disabled':''}><i data-lucide="arrow-down"></i></button>
+      <button class="mini bb-vis" data-i="${i}" title="${item.visible?'Скрыть':'Показать'}"><i data-lucide="${item.visible?'eye':'eye-off'}"></i></button>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.bb-up').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();if(i>0){[c[i-1],c[i]]=[c[i],c[i-1]];saveBbConfig(c);applyBbConfig();renderBbCustomList();}}));
+  box.querySelectorAll('.bb-down').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();if(i<c.length-1){[c[i+1],c[i]]=[c[i],c[i+1]];saveBbConfig(c);applyBbConfig();renderBbCustomList();}}));
+  box.querySelectorAll('.bb-vis').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();c[i].visible=!c[i].visible;saveBbConfig(c);applyBbConfig();renderBbCustomList();}));
+}
 /* ---------- minimal UI toggle ---------- */
 function applyMinimal(){
   const on=localStorage.getItem('neurocatch_minimal')==='1';
@@ -1560,6 +1602,6 @@ try{startAutoSync();}catch(e){}
 lucide.createIcons();
 booting=false;
 try{refreshTodayBtn();}catch(e){}
-try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
+try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();applyBbConfig();if($('#bottomBar'))document.body.classList.add('has-bottombar');if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
 setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
