@@ -1,0 +1,14 @@
+{
+  "name": "NeuroCatch — Задачи",
+  "short_name": "Задачи",
+  "description": "Задачи, привычки и матрица Эйзенхауэра из NeuroCatch",
+  "start_url": "./tasks.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05060a",
+  "theme_color": "#05060a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

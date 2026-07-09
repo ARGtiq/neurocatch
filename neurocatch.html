@@ -89,23 +89,24 @@
   <div class="shell">
     <div class="topbar">
       <div class="grp">
-        <button class="icon-btn ui-toggle" id="uiToggle" aria-label="Скрыть/показать кнопки"><i data-lucide="chevron-left"></i></button>
-        <button class="icon-btn" id="openSettings" aria-label="Настройки"><i data-lucide="settings"></i></button>
-        <button class="icon-btn" id="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
-        <button class="icon-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
-        <button class="icon-btn" id="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
-        <button class="icon-btn" id="openMore" aria-label="Ещё"><i data-lucide="more-horizontal"></i></button>
-        <button class="icon-btn in-more" id="openLink" aria-label="Разобрать ссылку"><i data-lucide="link"></i></button>
-        <button class="icon-btn in-more" id="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
-        <button class="icon-btn in-more" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
-        <button class="icon-btn in-more" id="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
+        <span id="syncDot" class="sync-dot" title="Синхронизация" hidden></span>
       </div>
       <div class="grp">
-        <span id="syncDot" class="sync-dot" title="Синхронизация" hidden></span>
         <button class="icon-btn" id="themeBtn" aria-label="Тема"><i data-lucide="moon"></i></button>
-        <button class="counter" id="counter"><span class="dot"></span>Улов: <b id="count">0</b></button>
       </div>
     </div>
+
+    <button class="ui-toggle-tab" id="uiToggle" aria-label="Показать/скрыть панель"><i data-lucide="chevron-up"></i></button>
+    <nav class="bottombar" id="bottomBar">
+      <button class="icon-btn" id="openSettings" aria-label="Настройки"><i data-lucide="settings"></i></button>
+      <button class="icon-btn" id="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
+      <button class="icon-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
+      <button class="icon-btn" id="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
+      <button class="icon-btn" id="openMore" aria-label="Ещё"><i data-lucide="more-horizontal"></i></button>
+      <button class="icon-btn in-more" id="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
+      <button class="icon-btn in-more" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
+      <button class="icon-btn in-more" id="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
+    </nav>
 
     <!-- STATE 1 -->
     <section class="view" id="view-input">
@@ -113,6 +114,7 @@
       <p class="hero-sub">Всё, что в голове — сюда. Разберём вечером.</p>
       <div class="glass-input"><textarea id="brain" placeholder="Скинь ссылку, мысль или задачу..."></textarea></div>
       <div class="actions">
+        <button class="icon-btn" id="openLink" aria-label="Разобрать ссылку"><i data-lucide="link"></i></button>
         <button class="btn btn-primary" id="submit"><i data-lucide="sparkle"></i>Закинуть</button>
         <button class="btn btn-mic" id="mic" aria-label="Голосовой ввод"><i data-lucide="mic"></i></button>
       </div>
@@ -120,7 +122,7 @@
       <div class="preset-row" id="presetRow"></div>
       <div class="ritual-wrap">
         <button class="btn btn-today" id="todayTasks"><i data-lucide="list-checks"></i>Задачи на сегодня<span id="todayCount" class="today-badge" hidden>0</span></button>
-        <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал</button>
+        <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span></button>
       </div>
     </section>
 
@@ -273,7 +275,8 @@
     </div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Захват и улов</div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="clearAfter"><span class="track"></span></span>Удалять улов после разбора</label><div class="hint">Если выключено — записи и ссылки остаются в улове после вечернего разбора.</div></div>
-    <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="autoClip"><span class="track"></span></span>Читать буфер обмена при входе</label><div class="hint">При открытии приложения предложит вставить ссылку/текст из буфера. Браузер может запросить разрешение.</div></div></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="autoClip"><span class="track"></span></span>Читать буфер обмена при входе</label><div class="hint">При открытии приложения предложит вставить ссылку/текст из буфера. Браузер может запросить разрешение.</div></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="swipesOn"><span class="track"></span></span>Свайп-жесты</label><div class="hint">Смахивание записи в улове удаляет её; смахивание задачи вправо отмечает выполненной. Выключи, если срабатывает случайно.</div></div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Уведомления</div>
     <div class="field">
       <label><i data-lucide="bell"></i>Напоминание о ритуале</label>
@@ -282,7 +285,11 @@
         <input type="time" id="notifyTime" value="21:00" style="flex:1">
         <button type="button" class="btn" id="notifyTest" style="padding:12px 14px">Тест</button>
       </div>
-      <div class="hint">Работает, пока приложение открыто или установлено как PWA. Фоновые уведомления при закрытом приложении браузеры не гарантируют.</div>
+      <div class="status-row"><span class="status" id="notifyPermStatus"><span class="sd"></span>—</span></div>
+      <div class="hint">Локальные уведомления работают, пока приложение открыто (вкладка или PWA) в фоне или на переднем плане.</div>
+      <label style="display:flex;align-items:center;gap:10px;margin:14px 0 4px"><span class="switch"><input type="checkbox" id="webPushOn"><span class="track"></span></span>Настоящий push (даже при закрытом приложении)</label>
+      <div class="status-row"><span class="status" id="webPushStatus"><span class="sd"></span>не включено</span></div>
+      <div class="hint">Требует настроенной облачной синхронизации (Supabase). Уведомление о вечернем ритуале приходит от сервера через браузер, даже если NeuroCatch полностью закрыт. Разово подтверди разрешение браузера.</div>
     </div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Данные</div>
     <div class="field">
@@ -316,15 +323,23 @@
   </div>
 </div>
 
+<div class="overlay" id="noteDetailOverlay">
+  <div class="modal note-detail-modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h2 id="ndKindLabel">Конспект</h2><button class="icon-btn" id="ndClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <div id="ndBody"></div>
+  </div>
+</div>
+
 <div class="overlay" id="errOverlay">
   <div class="modal" role="dialog" aria-modal="true" style="max-width:440px">
     <div class="modal-head"><h2><i data-lucide="alert-triangle"></i>Что-то пошло не так</h2><button class="icon-btn" id="errClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
     <p style="color:var(--muted);margin-bottom:10px">Произошла ошибка. Данные не потеряны. Можешь отправить отчёт — я починю.</p>
     <div class="err-msg" id="errMsg"></div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn btn-primary" id="errReport" style="flex:1"><i data-lucide="bug"></i>Сообщить о баге</button>
-      <button class="btn" id="errDismiss" style="flex:1">Закрыть</button>
+      <button class="btn" id="errCopy" style="flex:1"><i data-lucide="clipboard"></i>Скопировать</button>
+      <button class="btn btn-primary" id="errReport" style="flex:1"><i data-lucide="bug"></i>Баг-репорт</button>
     </div>
+    <button class="btn" id="errDismiss" style="width:100%;margin-top:10px">Закрыть</button>
   </div>
 </div>
 
