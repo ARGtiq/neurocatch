@@ -8,12 +8,13 @@ let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget=
 let showArchived=false;
 let lastRitualDebug=null;
 let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
+let taskGroupMode=(function(){try{return localStorage.getItem('neurocatch_task_group')||'none';}catch(e){return 'none';}})();
 let habits=[], curSubTab='tasks';
 const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1'},{n:'Важно, не срочно',s:'Запланировать',c:'q2'},{n:'Срочно, не важно',s:'Делегировать',c:'q3'},{n:'Не срочно, не важно',s:'Не делать',c:'q4'}];
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v45';
+const APP_VERSION='2025.7-06';const SW_VER='v46';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -892,19 +893,65 @@ function renderTaskCal(){
   $('#tcMode').onclick=()=>{taskCalMode=taskCalMode==='week'?'month':'week';renderTaskCal();};
   box.querySelectorAll('[data-d]').forEach(c=>c.addEventListener('click',()=>{selTaskDate=selTaskDate===c.dataset.d?null:c.dataset.d;renderTaskCal();renderTaskList();}));
 }
+function taskToggleDone(ref,idx){const h=history.find(x=>x.id===ref);if(!h)return;const t=h.tasks[idx];if(!t)return;t.done=!t.done;saveHistory();renderTasks();}
+function taskDelete(ref,idx){const h=history.find(x=>x.id===ref);if(!h)return;h.tasks=h.tasks.filter((_,i)=>i!==idx);saveHistory();renderTasks();toast('Задача удалена');}
+function taskSaveText(ref,idx,text){const h=history.find(x=>x.id===ref);if(!h)return;const t=h.tasks[idx];if(!t)return;const v=text.trim();if(!v){taskDelete(ref,idx);return;}if(v!==t.text){t.text=v;saveHistory();}}
+function renderTaskGroupRow(){
+  const box=$('#taskGroupRow');if(!box)return;
+  const modes=[['none','Список'],['due','По сроку'],['report','По разбору']];
+  box.innerHTML=modes.map(([k,l])=>`<button class="chip${taskGroupMode===k?' on':''}" data-g="${k}">${l}</button>`).join('');
+  box.querySelectorAll('[data-g]').forEach(b=>b.addEventListener('click',()=>{taskGroupMode=b.dataset.g;localStorage.setItem('neurocatch_task_group',taskGroupMode);renderTaskList();}));
+}
+function dueBucket(t,todayKey,weekEndKey){
+  if(!t.due)return 'Без срока';
+  const k=dateKey(t.due);
+  if(k<todayKey)return '⚠️ Просрочено';
+  if(k===todayKey)return 'Сегодня';
+  const tmr=new Date();tmr.setDate(tmr.getDate()+1);
+  if(k===dateKey(tmr.getTime()))return 'Завтра';
+  if(k<=weekEndKey)return 'На этой неделе';
+  return 'Позже';
+}
 function renderTaskList(){
-  const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts))}));});
+  renderTaskGroupRow();
+  const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts)),reportDate:h.date||dateKey(h.ts)}));});
   const scoped=selTaskDate?all.filter(t=>t.date===selTaskDate):all;
   const openL=scoped.filter(t=>!t.done).sort((a,b)=>b.ts-a.ts);
   const doneL=scoped.filter(t=>t.done).sort((a,b)=>b.ts-a.ts);
   $('#tasksLabel').textContent=(selTaskDate?('За '+selTaskDate+' · '):'')+'Открыто: '+openL.length+' из '+scoped.length;
-  const row=t=>`<div class="t-row${t.done?' done':''}" data-ref="${t.ref}" data-idx="${t.idx}"><span class="box"><i data-lucide="check"></i></span><div class="tt"><div class="tx">${safe(t.text)}</div><div class="src">${fmtDate(t.ts)}${t.due?` · <span class="due-badge">⏰ ${esc(fmtDueShort(t.due))}</span>`:''}</div></div><button class="mini t-date" data-ref="${t.ref}" data-idx="${t.idx}" title="Срок"><i data-lucide="calendar"></i></button></div>`;
-  $('#taskList').innerHTML=openL.length?openL.map(row).join(''):`<div class="empty"><i data-lucide="list-todo"></i>Открытых задач нет${selTaskDate?' в этот день':''}.</div>`;
+  const row=t=>`<div class="t-row${t.done?' done':''}" data-ref="${t.ref}" data-idx="${t.idx}"><button class="box" data-ref="${t.ref}" data-idx="${t.idx}" title="Отметить выполненной"><i data-lucide="check"></i></button><div class="tt"><div class="tx" data-ref="${t.ref}" data-idx="${t.idx}" title="Нажми, чтобы изменить">${safe(t.text)}</div><div class="src">${fmtDate(t.ts)}${t.due?` · <span class="due-badge">⏰ ${esc(fmtDueShort(t.due))}</span>`:''}</div></div><button class="mini t-date" data-ref="${t.ref}" data-idx="${t.idx}" title="Срок"><i data-lucide="calendar"></i></button><button class="mini t-del" data-ref="${t.ref}" data-idx="${t.idx}" title="Удалить"><i data-lucide="trash-2"></i></button></div>`;
+  let openHtml;
+  if(!openL.length){
+    openHtml=`<div class="empty"><i data-lucide="list-todo"></i>Открытых задач нет${selTaskDate?' в этот день':''}.</div>`;
+  }else if(taskGroupMode==='none'){
+    openHtml=openL.map(row).join('');
+  }else if(taskGroupMode==='due'){
+    const todayKey=dateKey(Date.now());const we=new Date();we.setDate(we.getDate()+(7-we.getDay()));const weekEndKey=dateKey(we.getTime());
+    const order=['⚠️ Просрочено','Сегодня','Завтра','На этой неделе','Позже','Без срока'];
+    const groups={};openL.forEach(t=>{const b=dueBucket(t,todayKey,weekEndKey);(groups[b]=groups[b]||[]).push(t);});
+    openHtml=order.filter(k=>groups[k]).map(k=>`<div class="t-group"><div class="t-group-h">${k}<span class="t-group-n">${groups[k].length}</span></div>${groups[k].map(row).join('')}</div>`).join('');
+  }else{
+    const groups={};openL.forEach(t=>{(groups[t.reportDate]=groups[t.reportDate]||[]).push(t);});
+    const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+    openHtml=keys.map(k=>`<div class="t-group"><div class="t-group-h">${fmtDate(new Date(k+'T00:00:00').getTime())}<span class="t-group-n">${groups[k].length}</span></div>${groups[k].map(row).join('')}</div>`).join('');
+  }
+  $('#taskList').innerHTML=openHtml;
   $('#doneWrap').innerHTML=doneL.length?`<details class="done-spoiler"${doneOpen?' open':''}><summary><i data-lucide="chevron-down"></i>Выполненные (${doneL.length})</summary><div class="rep-list" style="margin-top:10px">${doneL.map(row).join('')}</div></details>`:'';
   lucide.createIcons();
-  document.querySelectorAll('#taskList .t-row, #doneWrap .t-row').forEach(r=>r.addEventListener('click',()=>{const h=history.find(x=>x.id===r.dataset.ref);if(!h)return;const t=h.tasks[+r.dataset.idx];t.done=!t.done;saveHistory();renderTasks();}));
+  document.querySelectorAll('#view-tasks .box').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();taskToggleDone(b.dataset.ref,+b.dataset.idx);}));
+  document.querySelectorAll('#view-tasks .t-del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();taskDelete(b.dataset.ref,+b.dataset.idx);}));
   document.querySelectorAll('#view-tasks .t-date').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openDateMenu(b);}));
-  document.querySelectorAll('#view-tasks .t-row').forEach(r=>attachSwipe(r,{onRight:()=>{const h=history.find(x=>x.id===r.dataset.ref);if(h){const t=h.tasks[+r.dataset.idx];t.done=!t.done;saveHistory();renderTasks();}}}));
+  document.querySelectorAll('#view-tasks .tx').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(el.isContentEditable)return;
+    const ref=el.dataset.ref,idx=+el.dataset.idx;
+    el.contentEditable='true';el.classList.add('editing');el.focus();
+    const range=document.createRange();range.selectNodeContents(el);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+    const finish=()=>{el.contentEditable='false';el.classList.remove('editing');taskSaveText(ref,idx,el.textContent);};
+    el.addEventListener('blur',finish,{once:true});
+    el.addEventListener('keydown',function kd(ev){if(ev.key==='Enter'){ev.preventDefault();el.blur();}if(ev.key==='Escape'){el.textContent=el.dataset.orig||el.textContent;el.blur();}},{once:false});
+  }));
+  document.querySelectorAll('#view-tasks .t-row').forEach(r=>attachSwipe(r,{onRight:()=>taskToggleDone(r.dataset.ref,+r.dataset.idx),onLeft:()=>taskDelete(r.dataset.ref,+r.dataset.idx)}));
   const det=$('#doneWrap').querySelector('details');if(det)det.addEventListener('toggle',()=>{doneOpen=det.open;});
 }
 function openDateMenu(anchor){

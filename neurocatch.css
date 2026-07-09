@@ -808,3 +808,19 @@ html[data-theme="light"] .note-title{
 .tag-x{background:none;border:none;color:var(--accent-2);opacity:.6;cursor:pointer;padding:5px 8px 5px 2px;display:flex;align-items:center}
 .tag-x:hover{opacity:1;color:var(--red)}
 .tag-x svg{width:12px;height:12px}
+
+/* task list: checkbox-as-button reset, delete button, inline edit, grouping */
+.t-row .box{background:none;padding:0;font:inherit;cursor:pointer}
+.t-row .tx{cursor:text;border-radius:6px;outline:none;transition:background .15s}
+.t-row .tx:hover{background:var(--glass-2)}
+.t-row .tx.editing{background:var(--glass-2);box-shadow:0 0 0 2px rgba(var(--seed-rgb),.35);padding:2px 6px;margin:-2px -6px}
+.t-row .t-del{color:var(--faint);opacity:.6}
+.t-row .t-del:hover{color:var(--red);opacity:1;background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.3)}
+.task-group-row{display:flex;gap:8px;margin-bottom:14px}
+.task-group-row .chip{padding:7px 13px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);color:var(--muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.task-group-row .chip:hover{border-color:var(--stroke-strong);color:var(--text)}
+.task-group-row .chip.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+.t-group{margin-bottom:18px}
+.t-group-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--accent-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding:0 2px}
+.t-group-n{background:var(--glass);border:1px solid var(--stroke);border-radius:999px;padding:1px 8px;font-size:11px;color:var(--faint);text-transform:none;letter-spacing:0;font-weight:600}
+.t-group .t-row{margin-bottom:8px}
