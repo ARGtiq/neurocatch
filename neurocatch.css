@@ -742,8 +742,10 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .tag-collapse .tag-filter,.tag-collapse .tag-row{margin-top:10px;margin-bottom:0}
 .tc-badge{color:var(--faint);font-weight:600}
 /* manual note edit button in detail title */
-.nd-edit-btn{display:inline-flex;vertical-align:middle;margin-left:8px;color:var(--faint)}
+.nd-title{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px}
+.nd-edit-btn{display:inline-flex;vertical-align:middle;color:var(--faint);flex:0 0 auto;margin-top:2px}
 .nd-edit-btn:hover{color:var(--accent-2)}
+.nd-edit-btn#ndDelBtn:hover{color:var(--red)}
 .nd-edit-btn svg{width:16px;height:16px}
 
 /* offline ritual queue badge */
@@ -846,3 +848,10 @@ html[data-theme="light"] .note-title{
 .matrix-date-row input[type="date"]{flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font:inherit;font-size:13px}
 .matrix-date-row .chip{padding:8px 13px;border-radius:10px;border:1px solid rgba(var(--seed-rgb),.35);background:rgba(var(--seed-rgb),.10);color:var(--accent-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .matrix-date-row .chip:hover{background:rgba(var(--seed-rgb),.18)}
+
+/* simple note editor: toolbar + preview */
+.ne-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.ne-toolbar button{width:34px;height:34px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font:inherit;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ne-toolbar button:hover{border-color:var(--stroke-strong);background:var(--glass-2)}
+.ne-toolbar button svg{width:15px;height:15px}
+.ne-preview{min-height:160px;padding:12px 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);font-size:14px}

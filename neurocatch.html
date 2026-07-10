@@ -362,7 +362,20 @@
   <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
     <div class="modal-head"><h2 id="neTitle">Новая заметка</h2><button class="icon-btn" id="neClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
     <div class="field"><label for="neTitleInput">Название</label><input type="text" id="neTitleInput" placeholder="О чём заметка" autocomplete="off"></div>
-    <div class="field"><label for="neBodyInput">Текст</label><textarea id="neBodyInput" placeholder="Текст заметки…" style="min-height:160px"></textarea></div>
+    <div class="field">
+      <label for="neBodyInput" style="display:flex;align-items:center;justify-content:space-between">Текст<button type="button" class="link-btn" id="nePreviewToggle">Предпросмотр</button></label>
+      <div class="ne-toolbar" id="neToolbar">
+        <button type="button" data-md="bold" title="Жирный (Ctrl+B)"><b>Ж</b></button>
+        <button type="button" data-md="italic" title="Курсив (Ctrl+I)"><i>К</i></button>
+        <button type="button" data-md="h" title="Заголовок">H</button>
+        <button type="button" data-md="ul" title="Список">•—</button>
+        <button type="button" data-md="ol" title="Нумерованный список">1.—</button>
+        <button type="button" data-md="quote" title="Цитата">❝</button>
+        <button type="button" data-md="link" title="Ссылка"><i data-lucide="link"></i></button>
+      </div>
+      <textarea id="neBodyInput" placeholder="Текст заметки… Поддерживает markdown: **жирный**, *курсив*, списки, ссылки." style="min-height:160px"></textarea>
+      <div class="note-body ne-preview" id="nePreview" hidden></div>
+    </div>
     <div class="field"><label for="neTagsInput">Теги (через запятую)</label><input type="text" id="neTagsInput" placeholder="здоровье, идея" autocomplete="off"></div>
     <div style="display:flex;gap:10px;margin-top:6px">
       <button class="btn btn-primary" id="neSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
