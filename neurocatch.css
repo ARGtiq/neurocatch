@@ -855,3 +855,7 @@ html[data-theme="light"] .note-title{
 .ne-toolbar button:hover{border-color:var(--stroke-strong);background:var(--glass-2)}
 .ne-toolbar button svg{width:15px;height:15px}
 .ne-preview{min-height:160px;padding:12px 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);font-size:14px}
+
+/* live (not-yet-extracted) insight cards */
+.note-card.live{border-style:dashed;border-color:rgba(var(--seed-rgb),.35);background:rgba(var(--seed-rgb),.05)}
+.note-card.live .note-date{font-style:italic}

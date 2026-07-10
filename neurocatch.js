@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v49';
+const APP_VERSION='2025.7-06';const SW_VER='v50';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -243,7 +243,7 @@ function renderDigest(entry){
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
   $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',()=>copyText(b.dataset.cpurl)));
-  $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=(entry.insights||[])[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts);}));
+  $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=(entry.insights||[])[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts,{reportId:entry.id,idx:i});}));
   $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
   $('#digestCard').querySelectorAll('.bm-cat[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;const g=bookmarks.find(x=>x.url===bm.url);if(g)g.category=cat;else ingestBookmarks([bm]);saveHistory();saveBookmarks();renderDigest(entry);});}));
   $('#digestCard').querySelectorAll('.bm-toart[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;
@@ -353,7 +353,8 @@ function saveManualNotes(arr){localStorage.setItem('neurocatch_manual_notes',JSO
 function loadExtracted(){try{return JSON.parse(localStorage.getItem('neurocatch_extracted')||'[]');}catch(e){return [];}}
 function saveExtracted(arr){localStorage.setItem('neurocatch_extracted',JSON.stringify(arr));touchLocal();}
 function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);
-  (h.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));});
+  (h.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));
+  (h.insights||[]).forEach((text,i)=>notes.push({id:h.id+':i'+i,kind:'ins',title:text,body:'',source:'',tags:h.tags||[],ts:h.ts,reportId:h.id,idx:i,live:true}));});
   loadExtracted().forEach(ex=>notes.push({id:ex.id,kind:'ins',title:ex.text,body:'',source:'',tags:ex.tags||[],ts:ex.ts,extracted:true}));
   loadManualNotes().forEach(mn=>notes.push({id:mn.id,kind:'man',title:mn.title,body:mn.body||'',source:'',tags:mn.tags||[],ts:mn.ts,manual:true}));
   return notes.sort((a,b)=>b.ts-a.ts);}
@@ -362,21 +363,30 @@ function saveNoteLinks(o){localStorage.setItem('neurocatch_note_links',JSON.stri
 function linkNotes(idA,idB){if(idA===idB)return;const L=loadNoteLinks();L[idA]=L[idA]||[];L[idB]=L[idB]||[];if(!L[idA].includes(idB))L[idA].push(idB);if(!L[idB].includes(idA))L[idB].push(idA);saveNoteLinks(L);}
 function unlinkNotes(idA,idB){const L=loadNoteLinks();if(L[idA])L[idA]=L[idA].filter(x=>x!==idB);if(L[idB])L[idB]=L[idB].filter(x=>x!==idA);saveNoteLinks(L);}
 function getLinkedNoteIds(id){const L=loadNoteLinks();return L[id]||[];}
-function extractInsight(text,tags,fromReportTs){
+function extractInsight(text,tags,fromReportTs,source){
   const arr=loadExtracted();
   const ex={id:uid('ex'),text,tags:tags||[],ts:fromReportTs||Date.now()};
   arr.unshift(ex);saveExtracted(arr);
+  if(source&&source.reportId!=null&&source.idx!=null){
+    const h=history.find(x=>x.id===source.reportId);
+    if(h&&h.insights){h.insights=h.insights.filter((_,i)=>i!==source.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}
+  }
   toast('Инсайт сохранён отдельной заметкой');
   return ex;
 }
 function noteCat(n,cats){return cats[n.id]||(n.tags&&n.tags[0])||'Без тега';}
 function noteCardHtml(n,cats){
   const cat=noteCat(n,cats);const bodyHtml=(n.kind==='sum'||n.kind==='man')&&n.body?mdBlock(n.body):'';
-  return `<div class="note-card ${n.kind}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions"><button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button><span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':''}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;
+  const icon=n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':'';
+  const actions=n.live
+    ? `<button class="mini note-extract" data-nid="${attr(n.id)}" title="Сохранить отдельной заметкой"><i data-lucide="bookmark-plus"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Убрать из отчёта"><i data-lucide="trash-2"></i></button>`
+    : `<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button>`;
+  return `<div class="note-card ${n.kind}${n.live?' live':''}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions">${actions}<span class="note-date">${n.live?'из отчёта · ':''}${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${icon}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;
 }
 function wireNoteCards(box,notes){
   box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
   box.querySelectorAll('.note-open[data-nid]').forEach(el=>el.addEventListener('click',()=>{const n=notes.find(x=>x.id===el.dataset.nid);if(n)openNoteDetail(n);}));
+  box.querySelectorAll('.note-extract[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;extractInsight(n.title,n.tags||[],n.ts,{reportId:n.reportId,idx:n.idx});renderNotes();}));
   box.querySelectorAll('.note-tags .tag-pill[data-t]').forEach(p=>p.addEventListener('click',()=>{noteTagFilter=p.dataset.t;renderNotes();}));
   box.querySelectorAll('.note-share[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)openShareMenu(b,n);}));
   box.querySelectorAll('.note-file[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)shareNoteFile(n);}));
@@ -394,7 +404,7 @@ function renderNotes(){
   if(noteTagFilter)list=list.filter(n=>n.tags.includes(noteTagFilter));
   if(noteSearch)list=list.filter(n=>((n.title||'')+' '+(n.body||'')).toLowerCase().includes(noteSearch));
   $('#notesCount').textContent=list.length;
-  if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты появятся здесь после разбора, инсайты — если извлечь их из отчёта.</div>';return;}
+  if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты и инсайты появятся здесь после разбора.</div>';return;}
   const insightNotes=list.filter(n=>n.kind==='ins');
   const otherNotes=list.filter(n=>n.kind!=='ins');
   const insightsBlock=insightNotes.length?`<div class="insights-block"><div class="insights-block-h"><i data-lucide="lightbulb"></i>Инсайты<span class="t-group-n">${insightNotes.length}</span></div><div class="insights-grid">${insightNotes.map(n=>noteCardHtml(n,cats)).join('')}</div></div>`:'';
@@ -415,7 +425,7 @@ async function openNoteDetail(n){
   const linked=linkedIds.map(id=>allNotes.find(x=>x.id===id)).filter(Boolean);
   const relBlock=`<div class="nd-links"><div class="nd-links-h">🔗 Связанные заметки<button class="mini nd-link-add" id="ndLinkAdd" title="Добавить связь"><i data-lucide="plus"></i></button></div>${linked.length?linked.map(ln=>`<div class="nd-link-row"><button class="nd-link-open" data-lid="${attr(ln.id)}">${ln.kind==='ins'?'💡 ':'📄 '}${esc(ln.title)}</button><button class="mini nd-link-rm" data-lid="${attr(ln.id)}" title="Убрать связь"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:10px 0;font-size:13px">Пока нет связей — нажми «+», чтобы связать с другой заметкой.</div>'}</div>`;
   $('#ndBody').innerHTML=`
-    <h1 class="nd-title">${n.kind==='ins'?'💡 ':n.kind==='man'?'📝 ':''}${esc(n.title)}<button class="mini nd-edit-btn" id="ndEditBtn" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini nd-edit-btn" id="ndDelBtn" title="Удалить"><i data-lucide="trash-2"></i></button></h1>
+    <h1 class="nd-title">${n.kind==='ins'?'💡 ':n.kind==='man'?'📝 ':''}${esc(n.title)}${n.live?`<button class="mini nd-edit-btn" id="ndExtractBtn" title="Сохранить отдельной заметкой"><i data-lucide="bookmark-plus"></i></button>`:`<button class="mini nd-edit-btn" id="ndEditBtn" title="Изменить"><i data-lucide="pencil"></i></button>`}<button class="mini nd-edit-btn" id="ndDelBtn" title="${n.live?'Убрать из отчёта':'Удалить'}"><i data-lucide="trash-2"></i></button></h1>
     <div class="nd-meta"><i data-lucide="calendar"></i>${esc(dt)}</div>
     ${preview}
     ${body?`<div class="note-body" style="margin-top:16px">${body}</div>`:''}
@@ -425,7 +435,8 @@ async function openNoteDetail(n){
   lucide.createIcons();
   $('#noteDetailOverlay').classList.add('open');
   $('#ndEditBtn')&&$('#ndEditBtn').addEventListener('click',()=>{$('#noteDetailOverlay').classList.remove('open');openNoteEditor(n);});
-  $('#ndDelBtn')&&$('#ndDelBtn').addEventListener('click',()=>{if(!confirm('Удалить эту заметку?'))return;deleteNoteAny(n);$('#noteDetailOverlay').classList.remove('open');toast('Заметка удалена');renderNotes();});
+  $('#ndExtractBtn')&&$('#ndExtractBtn').addEventListener('click',()=>{extractInsight(n.title,n.tags||[],n.ts,{reportId:n.reportId,idx:n.idx});$('#noteDetailOverlay').classList.remove('open');renderNotes();});
+  $('#ndDelBtn')&&$('#ndDelBtn').addEventListener('click',()=>{if(!confirm(n.live?'Убрать этот инсайт из отчёта?':'Удалить эту заметку?'))return;deleteNoteAny(n);$('#noteDetailOverlay').classList.remove('open');toast(n.live?'Убрано из отчёта':'Заметка удалена');renderNotes();});
   $('#ndLinkAdd')&&$('#ndLinkAdd').addEventListener('click',()=>openNotePicker(n,allNotes));
   $('#ndBody').querySelectorAll('.nd-link-open[data-lid]').forEach(b=>b.addEventListener('click',()=>{const ln=allNotes.find(x=>x.id===b.dataset.lid);if(ln)openNoteDetail(ln);}));
   $('#ndBody').querySelectorAll('.nd-link-rm[data-lid]').forEach(b=>b.addEventListener('click',()=>{unlinkNotes(n.id,b.dataset.lid);openNoteDetail(n);}));
@@ -564,6 +575,9 @@ function deleteNoteAny(note){
   if(note.kind==='sum'){
     const parsed=parseSumId(note.id);const h=parsed&&history.find(x=>x.id===parsed.reportId);
     if(h&&h.summaries){h.summaries=h.summaries.filter((_,i)=>i!==parsed.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}
+  }else if(note.kind==='ins'&&note.live){
+    const h=history.find(x=>x.id===note.reportId);
+    if(h&&h.insights){h.insights=h.insights.filter((_,i)=>i!==note.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}
   }else if(note.kind==='ins'){
     saveExtracted(loadExtracted().filter(x=>x.id!==note.id));
   }else{
@@ -886,7 +900,7 @@ function renderRepList(){
   const tb=$('#toggleArchive');if(tb)tb.classList.toggle('on',showArchived);
   if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${showArchived?'В архиве пусто.':(history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».')}</div>`;lucide.createIcons();return;}
   $('#repList').innerHTML=items.map(h=>{ensureEntry(h);const prev=((h.insights||[])[0]||(h.summaries||[])[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
-    return `<div class="rep${h.archived?' archived':''}" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}${h.archived?' <span class="arch-badge">архив</span>':''}</div><div class="p">${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="arch" data-arch="${h.id}" data-val="${h.archived?'0':'1'}" aria-label="${h.archived?'Вернуть из архива':'В архив'}" title="${h.archived?'Вернуть из архива':'В архив'}"><i data-lucide="${h.archived?'archive-restore':'archive'}"></i></button><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
+    return `<div class="rep${h.archived?' archived':''}" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}${h.archived?' <span class="arch-badge">архив</span>':''}</div><div class="p">${isIns?'💡 ':''}${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="arch" data-arch="${h.id}" data-val="${h.archived?'0':'1'}" aria-label="${h.archived?'Вернуть из архива':'В архив'}" title="${h.archived?'Вернуть из архива':'В архив'}"><i data-lucide="${h.archived?'archive-restore':'archive'}"></i></button><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   $('#repList').querySelectorAll('.rep').forEach(r=>r.addEventListener('click',()=>openReport(r.dataset.id)));
   $('#repList').querySelectorAll('.del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteReport(b.dataset.del);}));
