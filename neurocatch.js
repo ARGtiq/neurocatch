@@ -9,13 +9,13 @@ let showArchived=false;
 let lastRitualDebug=null;
 let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
 let taskGroupMode=(function(){try{return localStorage.getItem('neurocatch_task_group')||'none';}catch(e){return 'none';}})();
-let matrixDate=dateKey(Date.now());
+let matrixDate=''; // инициализируется ниже, после объявления dateKey() — см. строку после const dateKey=
 let habits=[], curSubTab='tasks';
 const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1'},{n:'Важно, не срочно',s:'Запланировать',c:'q2'},{n:'Срочно, не важно',s:'Делегировать',c:'q3'},{n:'Не срочно, не важно',s:'Не делать',c:'q4'}];
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v48';
+const APP_VERSION='2025.7-06';const SW_VER='v49';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -108,6 +108,7 @@ function refreshCount(){const b=$('#ritualCount');if(!b)return;if(catches.length
 const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const safe=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
 const dateKey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+matrixDate=dateKey(Date.now());
 const fmtDate=ts=>new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
 const fmtTime=ts=>new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 
