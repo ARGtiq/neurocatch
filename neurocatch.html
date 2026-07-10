@@ -64,6 +64,8 @@
     "eye-off":'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
     "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
     "arrow-down":'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    "highlighter":'<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+    "layers":'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>',
     "bookmark-plus":'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M15 15h6"/><path d="M18 12v6"/>',
     "pencil":'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
     "sticky-note":'<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11l5-5V5a2 2 0 0 0-2-2Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/>',
@@ -108,18 +110,6 @@
         <button class="icon-btn" id="themeBtn" aria-label="Тема"><i data-lucide="moon"></i></button>
       </div>
     </div>
-
-    <nav class="bottombar" id="bottomBar">
-      <button class="icon-btn" id="openHistory" data-bb="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
-      <button class="icon-btn" id="openTasks" data-bb="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
-      <button class="icon-btn" id="openSearch" data-bb="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
-      <button class="icon-btn" id="openBookmarks" data-bb="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
-      <button class="icon-btn" id="openNotes" data-bb="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
-      <button class="icon-btn" id="openDash" data-bb="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
-      <span class="bb-sep"></span>
-      <button class="icon-btn" id="uiToggle" aria-label="Скрыть панель"><i data-lucide="chevron-down"></i></button>
-    </nav>
-    <button class="ui-toggle-tab" id="uiShowTab" aria-label="Показать панель" hidden><i data-lucide="chevron-up"></i></button>
 
     <!-- STATE 1 -->
     <section class="view" id="view-input">
@@ -195,6 +185,7 @@
         <button class="subtab active" data-st="tasks">Задачи</button>
         <button class="subtab" data-st="habits">Привычки</button>
         <button class="subtab" data-st="matrix">Матрица</button>
+        <button class="subtab" data-st="routine">Рутина</button>
       </div>
       <div class="st-panel" data-st="tasks">
         <div class="task-cal" id="taskCal"></div>
@@ -218,6 +209,11 @@
         <div id="matrixUnsorted" class="matrix-unsorted"></div>
         <div id="matrixWrap" class="matrix-grid"></div>
       </div>
+      <div class="st-panel" data-st="routine" hidden>
+        <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="routineSearch" placeholder="Найти рутинную задачу…" autocomplete="off"></div>
+        <div class="routine-hint">Тапни, чтобы добавить в основной список задач. Повторяющиеся дела — уборка, быт, здоровье, финансы, техника и другое.</div>
+        <div id="routineList"></div>
+      </div>
     </section>
 
     <section class="view" id="view-bookmarks" hidden>
@@ -229,7 +225,7 @@
 
     <section class="view" id="view-notes" hidden>
       <div class="head-row"><button class="back" id="notesBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Заметки</h2></div>
-      <div class="list-head"><span>Заметок: <b id="notesCount">0</b></span><button class="mini" id="noteAddBtn" title="Добавить заметку вручную"><i data-lucide="plus"></i></button></div>
+      <div class="list-head"><span>Заметок: <b id="notesCount">0</b></span><div class="sec-actions"><button class="chip" id="noteCatFilterChip" hidden></button><button class="mini" id="noteAddBtn" title="Добавить заметку вручную"><i data-lucide="plus"></i></button></div></div>
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="noteSearch" placeholder="Поиск по конспектам и инсайтам..."></div>
       <details class="tag-collapse" id="noteTagsWrap"><summary><i data-lucide="chevron-down"></i>Теги <span id="noteTagsCount" class="tc-badge"></span></summary><div class="tag-row" id="noteTags"></div></details>
       <div class="notes-list" id="notesList"></div>
@@ -241,6 +237,31 @@
       <div id="dashBody"></div>
     </section>
 
+    <section class="view" id="view-anki" hidden>
+      <div class="head-row"><button class="back" id="ankiBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki</h2><button class="mini" id="ankiNewCard" title="Новая карточка"><i data-lucide="plus"></i></button></div>
+      <div id="ankiDeckList" class="anki-deck-list"></div>
+    </section>
+
+    <div class="overlay" id="ankiStudyOverlay">
+      <div class="modal anki-study-modal" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2 id="ankiStudyDeckName">Колода</h2><button class="icon-btn" id="ankiStudyClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div id="ankiStudyBody"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="ankiCardOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
+        <div class="modal-head"><h2 id="ankiCardTitle">Новая карточка</h2><button class="icon-btn" id="ankiCardClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><label for="ankiDeckSelect">Колода</label><select id="ankiDeckSelect"></select></div>
+        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
+        <div class="field"><label for="ankiBackInput">Ответ (оборот карточки)</label><textarea id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="ankiCardSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn btn-clear" id="ankiCardDelete" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
     <section class="view" id="view-search" hidden>
       <div class="head-row"><button class="back" id="searchBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Поиск</h2></div>
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="globalSearch" placeholder="Искать во всём: записи, отчёты, задачи, заметки, закладки…" autocomplete="off"></div>
@@ -249,6 +270,20 @@
     </section>
   </div>
 </div>
+
+<nav class="bottombar" id="bottomBar">
+  <button class="icon-btn" id="openHistory" data-bb="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
+  <button class="icon-btn" id="openTasks" data-bb="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
+  <button class="icon-btn" id="openSearch" data-bb="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
+  <button class="icon-btn" id="openBookmarks" data-bb="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
+  <button class="icon-btn" id="openNotes" data-bb="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
+  <button class="icon-btn" id="openAnki" data-bb="openAnki" aria-label="Anki"><i data-lucide="layers"></i></button>
+  <button class="icon-btn" id="openDash" data-bb="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
+  <span class="bb-sep"></span>
+  <button class="icon-btn" id="uiToggle" aria-label="Скрыть панель"><i data-lucide="chevron-down"></i></button>
+</nav>
+<button class="ui-toggle-tab" id="uiShowTab" aria-label="Показать панель" hidden><i data-lucide="chevron-up"></i></button>
+
 
 <!-- SETTINGS -->
 <div class="overlay" id="overlay">

@@ -7,7 +7,7 @@ let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 let showArchived=false;
 let lastRitualDebug=null;
-let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='';
+let taskCalMode='week', taskCalCursor=new Date(), selTaskDate=null, doneOpen=false, noteTagFilter=null, noteSearch='', noteCatFilterVal=null;
 let taskGroupMode=(function(){try{return localStorage.getItem('neurocatch_task_group')||'none';}catch(e){return 'none';}})();
 let matrixDate=''; // инициализируется ниже, после объявления dateKey() — см. строку после const dateKey=
 let habits=[], curSubTab='tasks';
@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v50';
+const APP_VERSION='2025.7-06';const SW_VER='v52';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -224,7 +224,7 @@ const attr=u=>String(u).replace(/"/g,'%22');
 function renderDigest(entry){
   currentEntry=entry;
   const eIns=entry.insights||[], eSum=entry.summaries||[];
-  const ins=eIns.length?eIns.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span><button class="mini ins-extract" data-i="${i}" title="Извлечь в отдельную заметку"><i data-lucide="notebook-pen"></i></button><button class="mini item-del" data-kind="ins" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<li><span class="ins-text">Ничего заметного.</span></li>';
+  const ins=eIns.length?eIns.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span><button class="mini note-anki" data-i="${i}" title="Создать карточку Anki"><i data-lucide="layers"></i></button><button class="mini item-del" data-kind="ins" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<li><span class="ins-text">Ничего заметного.</span></li>';
   const sum=eSum.length?eSum.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><div class="sec-actions"><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button><button class="mini item-del" data-kind="sum" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
   const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label><button class="mini item-del" data-kind="task" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<p>Задач нет.</p>';
   const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map((l,i)=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a><button class="mini item-del" data-kind="link" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div>`).join('')}</div></div>`:'';
@@ -243,7 +243,7 @@ function renderDigest(entry){
   $('#digestCard').querySelectorAll('input[data-ti]').forEach(inp=>inp.addEventListener('change',()=>{const i=+inp.dataset.ti;entry.tasks[i].done=inp.checked;saveHistory();}));
   $('#digestCard').querySelectorAll('.tag-pill[data-tag]').forEach(b=>b.addEventListener('click',()=>openHistoryWithTag(b.dataset.tag)));
   $('#digestCard').querySelectorAll('[data-cpurl]').forEach(b=>b.addEventListener('click',()=>copyText(b.dataset.cpurl)));
-  $('#digestCard').querySelectorAll('.ins-extract[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=(entry.insights||[])[i];if(!text)return;extractInsight(text,entry.tags||[],entry.ts,{reportId:entry.id,idx:i});}));
+  $('#digestCard').querySelectorAll('.note-anki[data-i]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const text=(entry.insights||[])[i];if(!text)return;openAnkiCardEditor({back:text,front:''});}));
   $('#digestCard').querySelectorAll('.study[data-url]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openStudyMenu(b.dataset.url,b);}));
   $('#digestCard').querySelectorAll('.bm-cat[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;openCatMenu(b,bm.category,cat=>{bm.category=cat;const g=bookmarks.find(x=>x.url===bm.url);if(g)g.category=cat;else ingestBookmarks([bm]);saveHistory();saveBookmarks();renderDigest(entry);});}));
   $('#digestCard').querySelectorAll('.bm-toart[data-bi]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.bi;const bm=entry.bookmarks[i];if(!bm)return;
@@ -353,10 +353,9 @@ function saveManualNotes(arr){localStorage.setItem('neurocatch_manual_notes',JSO
 function loadExtracted(){try{return JSON.parse(localStorage.getItem('neurocatch_extracted')||'[]');}catch(e){return [];}}
 function saveExtracted(arr){localStorage.setItem('neurocatch_extracted',JSON.stringify(arr));touchLocal();}
 function buildNotes(){const notes=[];history.forEach(h=>{ensureEntry(h);
-  (h.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id}));
-  (h.insights||[]).forEach((text,i)=>notes.push({id:h.id+':i'+i,kind:'ins',title:text,body:'',source:'',tags:h.tags||[],ts:h.ts,reportId:h.id,idx:i,live:true}));});
-  loadExtracted().forEach(ex=>notes.push({id:ex.id,kind:'ins',title:ex.text,body:'',source:'',tags:ex.tags||[],ts:ex.ts,extracted:true}));
-  loadManualNotes().forEach(mn=>notes.push({id:mn.id,kind:'man',title:mn.title,body:mn.body||'',source:'',tags:mn.tags||[],ts:mn.ts,manual:true}));
+  (h.summaries||[]).forEach((sm,i)=>notes.push({id:h.id+':s'+i,kind:'sum',title:sm.title||'Конспект',body:sm.body||'',source:sm.source||'',tags:h.tags||[],ts:h.ts,reportId:h.id,
+    insights:(i===0)?(h.insights||[]):[]}));});
+  loadManualNotes().forEach(mn=>notes.push({id:mn.id,kind:'man',title:mn.title,body:mn.body||'',source:'',tags:mn.tags||[],ts:mn.ts,manual:true,insights:[]}));
   return notes.sort((a,b)=>b.ts-a.ts);}
 function loadNoteLinks(){try{return JSON.parse(localStorage.getItem('neurocatch_note_links')||'{}');}catch(e){return {};}}
 function saveNoteLinks(o){localStorage.setItem('neurocatch_note_links',JSON.stringify(o));touchLocal();}
@@ -375,18 +374,21 @@ function extractInsight(text,tags,fromReportTs,source){
   return ex;
 }
 function noteCat(n,cats){return cats[n.id]||(n.tags&&n.tags[0])||'Без тега';}
+function insightsSubBlock(n){
+  if(!n.insights||!n.insights.length)return '';
+  return `<div class="note-insights"><div class="note-insights-h"><i data-lucide="lightbulb"></i>Инсайты разбора</div>${n.insights.map((t,i)=>`<div class="note-ins-row"><span class="note-ins-text">${esc(t)}</span><button class="mini note-ins-anki" data-nid="${attr(n.id)}" data-i="${i}" title="Создать карточку Anki"><i data-lucide="layers"></i></button></div>`).join('')}</div>`;
+}
 function noteCardHtml(n,cats){
-  const cat=noteCat(n,cats);const bodyHtml=(n.kind==='sum'||n.kind==='man')&&n.body?mdBlock(n.body):'';
-  const icon=n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':'';
-  const actions=n.live
-    ? `<button class="mini note-extract" data-nid="${attr(n.id)}" title="Сохранить отдельной заметкой"><i data-lucide="bookmark-plus"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Убрать из отчёта"><i data-lucide="trash-2"></i></button>`
-    : `<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button>`;
-  return `<div class="note-card ${n.kind}${n.live?' live':''}"><div class="note-head"><button class="bm-cat note-cat" data-nid="${attr(n.id)}"><i data-lucide="folder"></i>${esc(cat)}</button><div class="note-actions">${actions}<span class="note-date">${n.live?'из отчёта · ':''}${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${icon}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;
+  const cat=noteCat(n,cats);const bodyHtml=n.body?mdBlock(n.body):'';
+  const icon=n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':'';
+  const actions=`<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button>`;
+  return `<div class="note-card ${n.kind}"><div class="note-head"><span class="note-cat-wrap"><button class="bm-cat note-cat" data-nid="${attr(n.id)}" title="Показать всё с этим тегом"><i data-lucide="folder"></i>${esc(cat)}</button><button class="mini note-cat-edit" data-nid="${attr(n.id)}" title="Изменить основной тег"><i data-lucide="pencil"></i></button></span><div class="note-actions">${actions}<span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${icon}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}${insightsSubBlock(n)}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;
 }
 function wireNoteCards(box,notes){
-  box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
+  box.querySelectorAll('.note-cat[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();noteCatFilterVal=noteCat(n,cc);renderNotes();}));
+  box.querySelectorAll('.note-cat-edit[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const cc=loadNoteCats();const opts=(n.tags&&n.tags.length)?n.tags.slice():catList();openCatMenu(b,noteCat(n,cc),cat=>{cc[n.id]=cat;saveNoteCats(cc);renderNotes();},opts);}));
   box.querySelectorAll('.note-open[data-nid]').forEach(el=>el.addEventListener('click',()=>{const n=notes.find(x=>x.id===el.dataset.nid);if(n)openNoteDetail(n);}));
-  box.querySelectorAll('.note-extract[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;extractInsight(n.title,n.tags||[],n.ts,{reportId:n.reportId,idx:n.idx});renderNotes();}));
+  box.querySelectorAll('.note-ins-anki[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const text=(n.insights||[])[+b.dataset.i];if(text)openAnkiCardEditor({back:text,front:''});}));
   box.querySelectorAll('.note-tags .tag-pill[data-t]').forEach(p=>p.addEventListener('click',()=>{noteTagFilter=p.dataset.t;renderNotes();}));
   box.querySelectorAll('.note-share[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)openShareMenu(b,n);}));
   box.querySelectorAll('.note-file[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)shareNoteFile(n);}));
@@ -400,46 +402,97 @@ function renderNotes(){
   $('#noteTags').querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=noteTagFilter===b.dataset.t?null:b.dataset.t;renderNotes();}));
   const ntCnt=$('#noteTagsCount');if(ntCnt)ntCnt.textContent=tags.length?('('+tags.length+')'):'';
   initTagCollapse('noteTagsWrap');
+  const cf=$('#noteCatFilterChip');
+  if(cf){cf.hidden=!noteCatFilterVal;cf.textContent='📁 '+(noteCatFilterVal||'')+'  ✕';}
   let list=notes;
+  if(noteCatFilterVal)list=list.filter(n=>noteCat(n,cats)===noteCatFilterVal);
   if(noteTagFilter)list=list.filter(n=>n.tags.includes(noteTagFilter));
   if(noteSearch)list=list.filter(n=>((n.title||'')+' '+(n.body||'')).toLowerCase().includes(noteSearch));
   $('#notesCount').textContent=list.length;
-  if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты и инсайты появятся здесь после разбора.</div>';return;}
-  const insightNotes=list.filter(n=>n.kind==='ins');
-  const otherNotes=list.filter(n=>n.kind!=='ins');
-  const insightsBlock=insightNotes.length?`<div class="insights-block"><div class="insights-block-h"><i data-lucide="lightbulb"></i>Инсайты<span class="t-group-n">${insightNotes.length}</span></div><div class="insights-grid">${insightNotes.map(n=>noteCardHtml(n,cats)).join('')}</div></div>`:'';
-  box.innerHTML=insightsBlock+otherNotes.map(n=>noteCardHtml(n,cats)).join('');
+  if(!list.length){box.innerHTML='<div class="empty">Заметок нет. Конспекты появятся здесь после разбора.</div>';return;}
+  box.innerHTML=list.map(n=>noteCardHtml(n,cats)).join('');
   lucide.createIcons();
   wireNoteCards(box,notes);
 }
+/* ---------- highlights ---------- */
+function loadHighlights(){try{return JSON.parse(localStorage.getItem('neurocatch_highlights')||'{}');}catch(e){return {};}}
+function saveHighlights(o){localStorage.setItem('neurocatch_highlights',JSON.stringify(o));touchLocal();}
+function getHighlights(noteId){return (loadHighlights()[noteId])||[];}
+function addHighlight(noteId,text){text=text.trim();if(!text)return;const H=loadHighlights();H[noteId]=H[noteId]||[];if(!H[noteId].includes(text))H[noteId].push(text);saveHighlights(H);}
+function removeHighlight(noteId,idx){const H=loadHighlights();if(H[noteId]){H[noteId]=H[noteId].filter((_,i)=>i!==idx);saveHighlights(H);}}
+function wireHighlightCapture(n){
+  document.querySelectorAll('.hl-popup').forEach(p=>p.remove());
+  const bodyEl=$('#ndBody')?$('#ndBody').querySelector('.note-body'):null;
+  if(!bodyEl)return;
+  const popup=document.createElement('div');popup.className='hl-popup';popup.hidden=true;
+  popup.innerHTML='<button id="hlConfirm"><i data-lucide="highlighter"></i>Выделить</button><button id="hlToAnki"><i data-lucide="layers"></i>+ Anki</button>';
+  document.body.appendChild(popup);lucide.createIcons();
+  let curText='';
+  function onUp(){
+    const sel=window.getSelection();
+    const text=sel?sel.toString().trim():'';
+    if(!text||sel.rangeCount===0||!bodyEl.contains(sel.getRangeAt(0).commonAncestorContainer)){popup.hidden=true;return;}
+    curText=text;
+    const r=sel.getRangeAt(0).getBoundingClientRect();
+    popup.style.top=Math.max(8,window.scrollY+r.top-46)+'px';
+    popup.style.left=Math.max(8,r.left+window.scrollX)+'px';
+    popup.hidden=false;
+  }
+  bodyEl.addEventListener('mouseup',onUp);
+  bodyEl.addEventListener('touchend',()=>setTimeout(onUp,50));
+  popup.querySelector('#hlConfirm').addEventListener('click',()=>{
+    if(curText){addHighlight(n.id,curText);toast('Сохранено в выделения');openNoteDetail(n);}
+    popup.hidden=true;window.getSelection().removeAllRanges();
+  });
+  popup.querySelector('#hlToAnki').addEventListener('click',()=>{
+    popup.hidden=true;window.getSelection().removeAllRanges();
+    openAnkiCardEditor({back:curText,front:'',sourceNoteId:n.id});
+  });
+}
+function similarNotesBlock(n,allNotes){
+  if(!n.tags||!n.tags.length)return '';
+  const scored=allNotes.filter(x=>x.id!==n.id).map(x=>({x,score:(x.tags||[]).filter(t=>n.tags.includes(t)).length})).filter(s=>s.score>0).sort((a,b)=>b.score-a.score).slice(0,6);
+  if(!scored.length)return '';
+  return `<div class="nd-links" style="margin-top:16px"><div class="nd-links-h">🏷 Похожие по тегам</div>${scored.map(s=>`<button class="nd-link-row nd-link-open-full" data-sid="${attr(s.x.id)}">${s.x.kind==='man'?'📝 ':'📄 '}${esc(s.x.title)}<span class="sim-score">${s.score}</span></button>`).join('')}</div>`;
+}
 async function openNoteDetail(n){
-  $('#ndKindLabel').textContent=n.kind==='ins'?'Инсайт':n.kind==='man'?'Заметка':'Конспект';
+  $('#ndKindLabel').textContent=n.kind==='man'?'Заметка':'Конспект';
   const dt=new Date(n.ts||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
   let preview='';
   if(n.source){
     preview='<div class="nd-preview" id="ndPreview"><div class="nd-preview-loading">Загружаю превью…</div></div>';
   }
-  const body=n.body?mdBlock(n.body):(n.kind==='ins'?'':'');
+  const body=n.body?mdBlock(n.body):'';
   const allNotes=buildNotes();
   const linkedIds=getLinkedNoteIds(n.id);
   const linked=linkedIds.map(id=>allNotes.find(x=>x.id===id)).filter(Boolean);
-  const relBlock=`<div class="nd-links"><div class="nd-links-h">🔗 Связанные заметки<button class="mini nd-link-add" id="ndLinkAdd" title="Добавить связь"><i data-lucide="plus"></i></button></div>${linked.length?linked.map(ln=>`<div class="nd-link-row"><button class="nd-link-open" data-lid="${attr(ln.id)}">${ln.kind==='ins'?'💡 ':'📄 '}${esc(ln.title)}</button><button class="mini nd-link-rm" data-lid="${attr(ln.id)}" title="Убрать связь"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:10px 0;font-size:13px">Пока нет связей — нажми «+», чтобы связать с другой заметкой.</div>'}</div>`;
+  const relBlock=`<div class="nd-links"><div class="nd-links-h">🔗 Связанные заметки<button class="mini nd-link-add" id="ndLinkAdd" title="Добавить связь"><i data-lucide="plus"></i></button></div>${linked.length?linked.map(ln=>`<div class="nd-link-row"><button class="nd-link-open" data-lid="${attr(ln.id)}">${ln.kind==='man'?'📝 ':'📄 '}${esc(ln.title)}</button><button class="mini nd-link-rm" data-lid="${attr(ln.id)}" title="Убрать связь"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:10px 0;font-size:13px">Пока нет связей — нажми «+», чтобы связать с другой заметкой.</div>'}</div>`;
+  const hl=getHighlights(n.id);
+  const hlBlock=`<details class="hl-spoiler" ${hl.length?'open':''}><summary><i data-lucide="highlighter"></i>Выделения<span class="t-group-n">${hl.length}</span></summary><div class="hl-list" id="hlList">${hl.length?hl.map((t,i)=>`<div class="hl-item"><span class="hl-text">${esc(t)}</span><button class="mini hl-del" data-i="${i}" title="Убрать"><i data-lucide="x"></i></button></div>`).join(''):'<div class="empty" style="padding:8px 0;font-size:13px">Выдели текст в тексте ниже — появится тут.</div>'}</div></details>`;
+  const simBlock=similarNotesBlock(n,allNotes);
+  const insBlock=insightsSubBlock(n);
   $('#ndBody').innerHTML=`
-    <h1 class="nd-title">${n.kind==='ins'?'💡 ':n.kind==='man'?'📝 ':''}${esc(n.title)}${n.live?`<button class="mini nd-edit-btn" id="ndExtractBtn" title="Сохранить отдельной заметкой"><i data-lucide="bookmark-plus"></i></button>`:`<button class="mini nd-edit-btn" id="ndEditBtn" title="Изменить"><i data-lucide="pencil"></i></button>`}<button class="mini nd-edit-btn" id="ndDelBtn" title="${n.live?'Убрать из отчёта':'Удалить'}"><i data-lucide="trash-2"></i></button></h1>
+    <h1 class="nd-title">${n.kind==='man'?'📝 ':''}${esc(n.title)}<button class="mini nd-edit-btn" id="ndEditBtn" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini nd-edit-btn" id="ndDelBtn" title="Удалить"><i data-lucide="trash-2"></i></button></h1>
     <div class="nd-meta"><i data-lucide="calendar"></i>${esc(dt)}</div>
+    ${hlBlock}
     ${preview}
     ${body?`<div class="note-body" style="margin-top:16px">${body}</div>`:''}
+    ${insBlock}
     <div class="note-tags" style="margin-top:16px">${(n.tags||[]).map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')||'<span class="empty" style="padding:0">Тегов нет</span>'}</div>
     ${relBlock}
+    ${simBlock}
   `;
   lucide.createIcons();
   $('#noteDetailOverlay').classList.add('open');
   $('#ndEditBtn')&&$('#ndEditBtn').addEventListener('click',()=>{$('#noteDetailOverlay').classList.remove('open');openNoteEditor(n);});
-  $('#ndExtractBtn')&&$('#ndExtractBtn').addEventListener('click',()=>{extractInsight(n.title,n.tags||[],n.ts,{reportId:n.reportId,idx:n.idx});$('#noteDetailOverlay').classList.remove('open');renderNotes();});
-  $('#ndDelBtn')&&$('#ndDelBtn').addEventListener('click',()=>{if(!confirm(n.live?'Убрать этот инсайт из отчёта?':'Удалить эту заметку?'))return;deleteNoteAny(n);$('#noteDetailOverlay').classList.remove('open');toast(n.live?'Убрано из отчёта':'Заметка удалена');renderNotes();});
+  $('#ndDelBtn')&&$('#ndDelBtn').addEventListener('click',()=>{if(!confirm('Удалить эту заметку?'))return;deleteNoteAny(n);$('#noteDetailOverlay').classList.remove('open');toast('Заметка удалена');renderNotes();});
+  $('#ndBody').querySelectorAll('.note-ins-anki[data-nid]').forEach(b=>b.addEventListener('click',()=>{const text=(n.insights||[])[+b.dataset.i];if(text)openAnkiCardEditor({back:text,front:''});}));
   $('#ndLinkAdd')&&$('#ndLinkAdd').addEventListener('click',()=>openNotePicker(n,allNotes));
   $('#ndBody').querySelectorAll('.nd-link-open[data-lid]').forEach(b=>b.addEventListener('click',()=>{const ln=allNotes.find(x=>x.id===b.dataset.lid);if(ln)openNoteDetail(ln);}));
   $('#ndBody').querySelectorAll('.nd-link-rm[data-lid]').forEach(b=>b.addEventListener('click',()=>{unlinkNotes(n.id,b.dataset.lid);openNoteDetail(n);}));
+  $('#ndBody').querySelectorAll('.nd-link-open-full[data-sid]').forEach(b=>b.addEventListener('click',()=>{const sn=allNotes.find(x=>x.id===b.dataset.sid);if(sn)openNoteDetail(sn);}));
+  $('#ndBody').querySelectorAll('.hl-del[data-i]').forEach(b=>b.addEventListener('click',()=>{removeHighlight(n.id,+b.dataset.i);openNoteDetail(n);}));
+  wireHighlightCapture(n);
   if(n.source){
     try{const m=await fetchMeta(n.source);const box=$('#ndPreview');if(box){
       box.innerHTML=`<a href="${attr(n.source)}" target="_blank" rel="noopener" class="nd-preview-link">${m&&m.logo?`<img src="${attr(m.logo)}" class="nd-preview-img" alt="">`:'<div class="nd-preview-img nd-preview-ph"><i data-lucide="link"></i></div>'}<div class="nd-preview-txt"><div class="nd-preview-title">${esc((m&&m.title)||n.source)}</div><div class="nd-preview-host">${esc(hostOf(n.source))}</div></div><i data-lucide="external-link"></i></a>`;
@@ -536,6 +589,7 @@ $('#neBodyInput')&&$('#neBodyInput').addEventListener('keydown',e=>{
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='i'){e.preventDefault();neApplyMd('italic');}
 });
 $('#noteAddBtn')&&$('#noteAddBtn').addEventListener('click',()=>openNoteEditor(null));
+$('#noteCatFilterChip')&&$('#noteCatFilterChip').addEventListener('click',()=>{noteCatFilterVal=null;renderNotes();});
 $('#neClose')&&$('#neClose').addEventListener('click',()=>$('#noteEditOverlay').classList.remove('open'));
 $('#noteEditOverlay')&&$('#noteEditOverlay').addEventListener('click',e=>{if(e.target===$('#noteEditOverlay'))$('#noteEditOverlay').classList.remove('open');});
 $('#neSave')&&$('#neSave').addEventListener('click',()=>{
@@ -575,11 +629,6 @@ function deleteNoteAny(note){
   if(note.kind==='sum'){
     const parsed=parseSumId(note.id);const h=parsed&&history.find(x=>x.id===parsed.reportId);
     if(h&&h.summaries){h.summaries=h.summaries.filter((_,i)=>i!==parsed.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}
-  }else if(note.kind==='ins'&&note.live){
-    const h=history.find(x=>x.id===note.reportId);
-    if(h&&h.insights){h.insights=h.insights.filter((_,i)=>i!==note.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}
-  }else if(note.kind==='ins'){
-    saveExtracted(loadExtracted().filter(x=>x.id!==note.id));
   }else{
     saveManualNotes(loadManualNotes().filter(x=>x.id!==note.id));
   }
@@ -636,7 +685,7 @@ function globalSearch(q){
   const nm=[];try{buildNotes().forEach(n=>{if(((n.title||'')+' '+(n.body||'')).toLowerCase().includes(q))nm.push({t:n.title,sub:n.kind==='ins'?'инсайт':'конспект',act:()=>{noteSearch=q;const ns=$('#noteSearch');if(ns)ns.value=q;renderNotes();show($('#view-notes'));}});});}catch(e){}
   push('Заметки',nm.slice(0,15));
   push('Закладки',bookmarks.filter(b=>((b.title||'')+' '+(b.desc||'')+' '+b.url).toLowerCase().includes(q)).slice(0,15).map(b=>({t:b.title||b.url,sub:b.category,act:()=>{renderBookmarks();show($('#view-bookmarks'));}})));
-  push('Отчёты',history.filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор')+(h.archived?' 📦':''),act:()=>openReport(h.id)})));
+  push('Отчёты',realHistory().filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор')+(h.archived?' 📦':''),act:()=>openReport(h.id)})));
   push('Привычки',habits.filter(hb=>hb.name.toLowerCase().includes(q)).slice(0,10).map(hb=>({t:hb.name,act:()=>{show($('#view-tasks'));setSubTab('habits');}})));
   const total=groups.reduce((n,g)=>n+g[1].length,0);
   if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';return;}
@@ -649,7 +698,7 @@ $('#globalSearch')&&$('#globalSearch').addEventListener('input',e=>globalSearch(
 async function generatePeriodReport(kind){
   const now=Date.now();const spanMs=kind==='week'?7*86400000:30*86400000;
   const cutoff=now-spanMs;
-  const items=history.filter(h=>h.ts>=cutoff).sort((a,b)=>a.ts-b.ts);
+  const items=realHistory().filter(h=>h.ts>=cutoff).sort((a,b)=>a.ts-b.ts);
   if(!items.length){toast('За этот период разборов нет',true);return;}
   if(!hasLLM()){toast('Сначала настрой провайдера ИИ в настройках',true);return;}
   const label=kind==='week'?'неделю':'месяц';
@@ -684,20 +733,134 @@ async function generatePeriodReport(kind){
 }
 $('#periodWeekBtn')&&$('#periodWeekBtn').addEventListener('click',()=>generatePeriodReport('week'));
 $('#periodMonthBtn')&&$('#periodMonthBtn').addEventListener('click',()=>generatePeriodReport('month'));
+/* ---------- Anki (spaced repetition) ---------- */
+function loadAnkiDecks(){try{const d=JSON.parse(localStorage.getItem('neurocatch_anki_decks')||'[]');if(!d.length){const def={id:uid('dk'),name:'Общая',ts:Date.now()};localStorage.setItem('neurocatch_anki_decks',JSON.stringify([def]));return [def];}return d;}catch(e){return [];}}
+function saveAnkiDecks(a){localStorage.setItem('neurocatch_anki_decks',JSON.stringify(a));touchLocal();}
+function loadAnkiCards(){try{return JSON.parse(localStorage.getItem('neurocatch_anki_cards')||'[]');}catch(e){return [];}}
+function saveAnkiCards(a){localStorage.setItem('neurocatch_anki_cards',JSON.stringify(a));touchLocal();}
+function ankiDueCount(deckId){const now=Date.now();return loadAnkiCards().filter(c=>c.deckId===deckId&&c.due<=now).length;}
+function ankiRate(card,rating){
+  card.reps=(card.reps||0)+1;card.ease=card.ease||2.5;
+  if(rating==='again'){card.interval=1;card.ease=Math.max(1.3,card.ease-0.2);card.reps=0;}
+  else if(rating==='hard'){card.interval=Math.max(1,Math.round((card.interval||1)*1.2));card.ease=Math.max(1.3,card.ease-0.15);}
+  else if(rating==='good'){card.interval=card.interval?Math.round(card.interval*card.ease):1;if(card.interval===0)card.interval=1;if(card.reps===1&&!card.interval)card.interval=1;}
+  else if(rating==='easy'){card.interval=card.interval?Math.round(card.interval*card.ease*1.3):4;card.ease=card.ease+0.15;}
+  if(!card.interval||card.interval<1)card.interval=1;
+  card.due=Date.now()+card.interval*86400000;
+  card.lastReview=Date.now();
+}
+let ankiStudyQueue=[],ankiStudyDeck=null,ankiCurCard=null,ankiEditingId=null;
+function renderAnkiDeckList(){
+  const box=$('#ankiDeckList');if(!box)return;
+  const decks=loadAnkiDecks();const cards=loadAnkiCards();
+  box.innerHTML=decks.map(d=>{
+    const total=cards.filter(c=>c.deckId===d.id).length;
+    const due=ankiDueCount(d.id);
+    return `<div class="anki-deck-card" data-id="${d.id}">
+      <div class="anki-deck-main"><div class="anki-deck-name">${esc(d.name)}</div><div class="anki-deck-meta">${total} карточ${total===1?'ка':(total>=2&&total<=4?'ки':'ек')}${due?(' · <b class="anki-due-n">'+due+' на повтор</b>'):''}</div></div>
+      <div class="anki-deck-acts"><button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button><button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button></div>
+    </div>`;
+  }).join('')||'<div class="empty">Колод нет.</div>';
+  box.innerHTML+='<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
+  lucide.createIcons();
+  box.querySelectorAll('.anki-deck-card').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('.anki-deck-acts'))return;openAnkiStudy(el.dataset.id);}));
+  box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){d.name=nm.trim();saveAnkiDecks(decks);renderAnkiDeckList();}}));
+  box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();if(decks.length<=1){toast('Нужна хотя бы одна колода',true);return;}if(!confirm('Удалить колоду и все её карточки?'))return;const id=b.dataset.id;saveAnkiDecks(decks.filter(x=>x.id!==id));saveAnkiCards(cards.filter(c=>c.deckId!==id));renderAnkiDeckList();}));
+  const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){const arr=loadAnkiDecks();arr.push({id:uid('dk'),name:nm.trim(),ts:Date.now()});saveAnkiDecks(arr);renderAnkiDeckList();}});
+}
+function openAnkiStudy(deckId){
+  const decks=loadAnkiDecks();const deck=decks.find(d=>d.id===deckId);if(!deck)return;
+  ankiStudyDeck=deck;
+  const now=Date.now();
+  ankiStudyQueue=loadAnkiCards().filter(c=>c.deckId===deckId&&c.due<=now).sort((a,b)=>a.due-b.due);
+  $('#ankiStudyDeckName').textContent=deck.name;
+  $('#ankiStudyOverlay').classList.add('open');
+  ankiNextCard();
+}
+function ankiNextCard(){
+  const body=$('#ankiStudyBody');if(!body)return;
+  if(!ankiStudyQueue.length){
+    body.innerHTML='<div class="empty" style="padding:40px 20px"><i data-lucide="check-circle"></i>Все карточки этой колоды повторены 👍</div>';
+    lucide.createIcons();ankiCurCard=null;return;
+  }
+  ankiCurCard=ankiStudyQueue[0];
+  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div></div>
+    <button class="btn btn-primary" id="ankiReveal" style="width:100%;margin-top:16px">Показать ответ</button>
+    <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
+  lucide.createIcons();
+  $('#ankiReveal')&&$('#ankiReveal').addEventListener('click',ankiRevealAnswer);
+}
+function ankiRevealAnswer(){
+  const body=$('#ankiStudyBody');if(!body||!ankiCurCard)return;
+  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(ankiCurCard.back)}</div></div>
+    <div class="anki-rate-row">
+      <button class="anki-rate again" data-r="again">Забыл</button>
+      <button class="anki-rate hard" data-r="hard">Трудно</button>
+      <button class="anki-rate good" data-r="good">Хорошо</button>
+      <button class="anki-rate easy" data-r="easy">Легко</button>
+    </div>
+    <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
+  body.querySelectorAll('.anki-rate').forEach(b=>b.addEventListener('click',()=>{
+    const cards=loadAnkiCards();const c=cards.find(x=>x.id===ankiCurCard.id);
+    if(c){ankiRate(c,b.dataset.r);saveAnkiCards(cards);}
+    ankiStudyQueue.shift();
+    ankiNextCard();
+    renderAnkiDeckList();
+  }));
+}
+function openAnkiCardEditor(opts){
+  opts=opts||{};ankiEditingId=opts.id||null;
+  const decks=loadAnkiDecks();
+  const sel=$('#ankiDeckSelect');if(sel)sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join('');
+  if(sel&&opts.deckId)sel.value=opts.deckId;
+  $('#ankiCardTitle').textContent=ankiEditingId?'Изменить карточку':'Новая карточка';
+  const fi=$('#ankiFrontInput');if(fi)fi.value=opts.front||'';
+  const bi=$('#ankiBackInput');if(bi)bi.value=opts.back||'';
+  const del=$('#ankiCardDelete');if(del)del.hidden=!ankiEditingId;
+  $('#ankiCardOverlay').classList.add('open');
+  setTimeout(()=>{if(bi)bi.focus();},50);
+}
+$('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',()=>$('#ankiCardOverlay').classList.remove('open'));
+$('#ankiCardOverlay')&&$('#ankiCardOverlay').addEventListener('click',e=>{if(e.target===$('#ankiCardOverlay'))$('#ankiCardOverlay').classList.remove('open');});
+$('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',()=>{
+  const back=$('#ankiBackInput').value.trim();
+  if(!back){toast('Заполни ответ/оборот карточки',true);return;}
+  const front=$('#ankiFrontInput').value.trim();
+  const deckId=$('#ankiDeckSelect').value;
+  const cards=loadAnkiCards();
+  if(ankiEditingId){const c=cards.find(x=>x.id===ankiEditingId);if(c){c.front=front;c.back=back;c.deckId=deckId;}}
+  else{cards.push({id:uid('ac'),deckId,front,back,ease:2.5,interval:0,due:Date.now(),reps:0,ts:Date.now()});}
+  saveAnkiCards(cards);
+  $('#ankiCardOverlay').classList.remove('open');
+  toast(ankiEditingId?'Карточка обновлена':'Карточка создана');
+  renderAnkiDeckList();
+});
+$('#ankiCardDelete')&&$('#ankiCardDelete').addEventListener('click',()=>{
+  if(!ankiEditingId)return;if(!confirm('Удалить карточку?'))return;
+  saveAnkiCards(loadAnkiCards().filter(x=>x.id!==ankiEditingId));
+  $('#ankiCardOverlay').classList.remove('open');
+  toast('Карточка удалена');renderAnkiDeckList();
+});
+$('#ankiStudyClose')&&$('#ankiStudyClose').addEventListener('click',()=>{$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();});
+$('#ankiStudyOverlay')&&$('#ankiStudyOverlay').addEventListener('click',e=>{if(e.target===$('#ankiStudyOverlay')){$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();}});
+$('#ankiNewCard')&&$('#ankiNewCard').addEventListener('click',()=>openAnkiCardEditor({}));
+$('#openAnki')&&$('#openAnki').addEventListener('click',()=>{renderAnkiDeckList();show($('#view-anki'));});
+$('#ankiBack')&&$('#ankiBack').addEventListener('click',()=>show($('#view-input')));
 function renderDashboard(){
   const box=$('#dashBody');if(!box)return;
   history.forEach(h=>{try{ensureEntry(h);}catch(e){}});
-  const reportsTotal=history.length;
-  const dayset=new Set(history.map(h=>h.date||dateKey(h.ts)));
+  const rh=realHistory();
+  const reportsTotal=rh.length;
+  const dayset=new Set(rh.map(h=>h.date||dateKey(h.ts)));
   let streak=0;{const d=new Date();d.setHours(0,0,0,0);if(!dayset.has(dateKey(d.getTime())))d.setDate(d.getDate()-1);while(dayset.has(dateKey(d.getTime()))){streak++;d.setDate(d.getDate()-1);}}
   let tTotal=0,tDone=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{tTotal++;if(t.done)tDone++;}));
   const tPct=tTotal?Math.round(tDone/tTotal*100):0;
   const weekKeys=[];{const d=new Date();for(let i=0;i<7;i++){weekKeys.push(dateKey(d.getTime()));d.setDate(d.getDate()-1);}}
   let habBest=0,habWeek=0;habits.forEach(hb=>{habBest=Math.max(habBest,habitStreak(hb));weekKeys.forEach(k=>{if(hb.checks&&hb.checks[k])habWeek++;});});
   let noteCount=0;try{noteCount=buildNotes().length;}catch(e){}
-  const days=[];{const d=new Date();d.setHours(0,0,0,0);for(let i=13;i>=0;i--){const dd=new Date(d);dd.setDate(d.getDate()-i);const k=dateKey(dd.getTime());days.push({k,d:dd,n:history.filter(h=>(h.date||dateKey(h.ts))===k).length});}}
+  const days=[];{const d=new Date();d.setHours(0,0,0,0);for(let i=13;i>=0;i--){const dd=new Date(d);dd.setDate(d.getDate()-i);const k=dateKey(dd.getTime());days.push({k,d:dd,n:rh.filter(h=>(h.date||dateKey(h.ts))===k).length});}}
   const maxN=Math.max(1,...days.map(x=>x.n));
-  const tagFreq={};history.forEach(h=>(h.tags||[]).forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1;}));
+  const tagFreq={};rh.forEach(h=>(h.tags||[]).forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1;}));
   const tags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,24);const maxT=Math.max(1,...tags.map(t=>t[1]));
   const card=(n,l,extra)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</div>`;
   box.innerHTML=`
@@ -851,7 +1014,7 @@ function renderHistory(){renderCalendar();renderTagFilter();renderRepList();}
 function renderCalendar(){
   const y=calCursor.getFullYear(),m=calCursor.getMonth();
   $('#calMonth').textContent=calCursor.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
-  const daysWith=new Set(history.map(h=>h.date));
+  const daysWith=new Set(realHistory().map(h=>h.date));
   const first=new Date(y,m,1);let start=first.getDay();start=start===0?6:start-1;
   const total=new Date(y,m+1,0).getDate();const todayKey=dateKey(Date.now());
   let html=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<div class="dow">${d}</div>`).join('');
@@ -867,7 +1030,7 @@ function initTagCollapse(id){
   det.addEventListener('toggle',()=>localStorage.setItem(key,det.open?'1':'0'));
 }
 function renderTagFilter(){
-  const all=[...new Set(history.flatMap(h=>h.tags||[]))];
+  const all=[...new Set(realHistory().flatMap(h=>h.tags||[]))];
   const box=$('#tagFilter');
   box.innerHTML=all.map(t=>`<span class="tf${tagFilter===t?' on':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
   box.querySelectorAll('.tf').forEach(el=>el.addEventListener('click',()=>{tagFilter=tagFilter===el.dataset.tag?null:el.dataset.tag;renderHistory();}));
@@ -885,7 +1048,7 @@ function autoArchiveOldReports(){
 }
 function archiveReport(id,val){const h=history.find(x=>x.id===id);if(!h)return;h.archived=val;saveHistory();renderHistory();toast(val?'Отчёт архивирован':'Отчёт возвращён из архива');}
 function renderRepList(){
-  let items=history.slice().sort((a,b)=>b.ts-a.ts);
+  let items=realHistory().slice().sort((a,b)=>b.ts-a.ts);
   const hasIntentFilter=!!(filterDate||tagFilter||searchQuery);
   if(!hasIntentFilter&&!showArchived)items=items.filter(h=>!h.archived);
   if(!hasIntentFilter&&showArchived)items=items.filter(h=>h.archived);
@@ -981,6 +1144,51 @@ function renderMatrixDateRow(){
   const inp=$('#matrixDateInput');if(inp)inp.value=matrixDate;
   const tb=$('#matrixDateToday');if(tb)tb.hidden=(matrixDate===dateKey(Date.now()));
 }
+/* ---------- routine tasks catalog ---------- */
+const ROUTINE_CATALOG={
+  'Уборка дома':['Пропылесосить полы','Помыть полы','Протереть пыль','Помыть окна','Постирать бельё','Погладить одежду','Разобрать шкаф','Вынести мусор','Помыть зеркала','Убрать в ванной','Почистить санузел','Сменить постельное бельё','Проветрить квартиру','Разобрать балкон/кладовку'],
+  'Кухня и посуда':['Помыть посуду','Разгрузить/загрузить посудомойку','Протереть столешницы','Почистить плиту','Разморозить холодильник','Выбросить просрочку из холодильника','Помыть холодильник изнутри','Почистить микроволновку','Помыть чайник от накипи','Составить список покупок','Сходить за продуктами','Приготовить еду на неделю (meal prep)'],
+  'Быт и хозяйство':['Полить цветы','Пересадить растение','Проверить батарейки в датчиках дыма','Проверить огнетушитель','Сменить фильтр для воды','Почистить пылесос','Заточить ножи','Проверить сроки годности аптечки','Разобрать почту/письма','Сдать вещи на переработку/благотворительность'],
+  'Здоровье и тело':['Записаться к стоматологу','Пройти диспансеризацию','Сдать анализы','Записаться к врачу на профосмотр','Проверить зрение','Пополнить аптечку','Постричься','Записаться на массаж','Обновить рецепт на очки/линзы','Проверить сроки годности лекарств','Сделать плановую прививку'],
+  'Финансы':['Оплатить коммуналку','Проверить баланс счетов','Оплатить подписки','Отменить ненужные подписки','Свести бюджет за месяц','Отложить в сбережения','Проверить кредитную историю','Оплатить налоги','Продлить страховку','Проверить автосписания'],
+  'Автомобиль':['Пройти ТО','Проверить давление в шинах','Поменять масло','Сменить сезонную резину','Помыть машину','Проверить омывающую жидкость','Проверить аптечку и огнетушитель в авто','Продлить страховку ОСАГО','Проверить тормозные колодки','Заправить кондиционер'],
+  'Техника и дом':['Обновить прошивки роутера/устройств','Почистить кулер компьютера от пыли','Сделать резервную копию данных','Проверить сроки гарантии техники','Почистить фильтр кондиционера/вытяжки','Заменить лампочки','Проверить работу сигнализации','Смазать скрипящие петли'],
+  'Работа и продуктивность':['Разобрать входящие письма','Обновить резюме/портфолио','Архивировать старые проекты','Почистить рабочий стол компьютера','Сделать бэкап важных документов','Обновить пароли','Провести ревизию задач/целей на месяц'],
+  'Цифровая гигиена':['Почистить кэш и загрузки','Разобрать фото в галерее','Удалить неиспользуемые приложения','Проверить настройки приватности соцсетей','Сменить пароли на важных аккаунтах','Включить двухфакторную аутентификацию','Разобрать подписки на рассылки'],
+  'Питомцы':['Показать питомца ветеринару','Обновить прививки питомца','Постричь когти','Обработать от паразитов','Помыть питомца','Купить корм','Почистить лоток/клетку/аквариум'],
+  'Растения и сад':['Полить растения','Подкормить растения','Пересадить растения','Обрезать сухие листья','Прополоть грядки','Собрать урожай','Подготовить сад к сезону'],
+  'Документы и администрирование':['Проверить срок действия паспорта','Продлить водительские права','Обновить страховой полис','Разобрать архив документов','Сделать копии важных документов','Проверить срок действия виз','Обновить контакты экстренной связи'],
+};
+function ensureRoutineEntry(){
+  let h=history.find(x=>x.id==='routine-tasks');
+  if(!h){h={id:'routine-tasks',ts:Date.now(),date:dateKey(Date.now()),markdown:'',tags:['#рутина'],links:[],bookmarks:[],insights:[],summaries:[],tasks:[],isRoutine:true};history.push(h);saveHistory();}
+  return h;
+}
+function realHistory(){return history.filter(h=>!h.isRoutine);}
+function routineActiveTexts(){const h=ensureRoutineEntry();return new Set((h.tasks||[]).filter(t=>!t.done).map(t=>t.text));}
+function addRoutineTask(text){
+  const h=ensureRoutineEntry();
+  h.tasks=h.tasks||[];
+  if(h.tasks.some(t=>t.text===text&&!t.done)){toast('Уже в списке задач');return;}
+  h.tasks.push({id:uid('rt'),text,done:false});
+  saveHistory();
+  toast('Добавлено в задачи: '+text);
+}
+function renderRoutine(){
+  const box=$('#routineList');if(!box)return;
+  const q=(($('#routineSearch')&&$('#routineSearch').value)||'').trim().toLowerCase();
+  const active=routineActiveTexts();
+  const cats=Object.keys(ROUTINE_CATALOG);
+  const html=cats.map(cat=>{
+    const items=ROUTINE_CATALOG[cat].filter(t=>!q||t.toLowerCase().includes(q));
+    if(!items.length)return '';
+    return `<details class="routine-cat" open><summary>${esc(cat)}<span class="t-group-n">${items.length}</span></summary><div class="routine-items">${items.map(t=>{const added=active.has(t);return `<button class="routine-item${added?' added':''}" data-t="${attr(t)}" ${added?'disabled':''}><span>${esc(t)}</span><i data-lucide="${added?'check':'plus'}"></i></button>`;}).join('')}</div></details>`;
+  }).join('');
+  box.innerHTML=html||'<div class="empty">Ничего не найдено.</div>';
+  lucide.createIcons();
+  box.querySelectorAll('.routine-item:not([disabled])').forEach(b=>b.addEventListener('click',()=>{addRoutineTask(b.dataset.t);renderRoutine();}));
+}
+$('#routineSearch')&&$('#routineSearch').addEventListener('input',()=>renderRoutine());
 function renderMatrix(){
   const un=$('#matrixUnsorted'),wrap=$('#matrixWrap');if(!wrap)return;
   renderMatrixDateRow();
@@ -1005,7 +1213,7 @@ function quadMenu(anchor){
   m.querySelectorAll('button[data-q]').forEach(b=>b.addEventListener('click',()=>{const h=history.find(x=>x.id===anchor.dataset.ref);if(h){const t=h.tasks[+anchor.dataset.idx];t.eis=+b.dataset.q||0;saveHistory();renderMatrix();}close();}));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
-function setSubTab(st){curSubTab=st;document.querySelectorAll('#view-tasks .subtab').forEach(b=>b.classList.toggle('active',b.dataset.st===st));document.querySelectorAll('#view-tasks .st-panel').forEach(p=>p.hidden=p.dataset.st!==st);if(st==='tasks')renderTasks();else if(st==='habits')renderHabits();else{matrixDate=dateKey(Date.now());renderMatrix();}}
+function setSubTab(st){curSubTab=st;document.querySelectorAll('#view-tasks .subtab').forEach(b=>b.classList.toggle('active',b.dataset.st===st));document.querySelectorAll('#view-tasks .st-panel').forEach(p=>p.hidden=p.dataset.st!==st);if(st==='tasks')renderTasks();else if(st==='habits')renderHabits();else if(st==='routine')renderRoutine();else{matrixDate=dateKey(Date.now());renderMatrix();}}
 function taskDayStats(){const map={};history.forEach(h=>{ensureEntry(h);const rk=h.date||dateKey(h.ts);(h.tasks||[]).forEach(t=>{const k=t.due?dateKey(t.due):rk;const s=map[k]||(map[k]={done:0,total:0});s.total++;if(t.done)s.done++;});});return map;}
 function shiftTaskCal(dir){if(taskCalMode==='week')taskCalCursor.setDate(taskCalCursor.getDate()+7*dir);else taskCalCursor.setMonth(taskCalCursor.getMonth()+dir);}
 function renderTaskCal(){
@@ -1604,8 +1812,8 @@ function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=se
 function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
 $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
 /* ---------- bottombar customization (order + visibility) ---------- */
-const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openDash:['bar-chart-3','Дашборд']};
-const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openDash'];
+const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openAnki:['layers','Anki'],openDash:['bar-chart-3','Дашборд']};
+const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openAnki','openDash'];
 function loadBbConfig(){
   try{
     const raw=JSON.parse(localStorage.getItem('neurocatch_bb_config')||'null');

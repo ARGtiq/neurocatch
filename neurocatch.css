@@ -859,3 +859,70 @@ html[data-theme="light"] .note-title{
 /* live (not-yet-extracted) insight cards */
 .note-card.live{border-style:dashed;border-color:rgba(var(--seed-rgb),.35);background:rgba(var(--seed-rgb),.05)}
 .note-card.live .note-date{font-style:italic}
+
+/* ===== highlights (text selection) ===== */
+.hl-spoiler{margin:16px 0;border:1px solid rgba(245,166,35,.25);background:rgba(245,166,35,.05);border-radius:14px;padding:12px 14px}
+.hl-spoiler summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#f5a623;user-select:none}
+.hl-spoiler summary::-webkit-details-marker{display:none}
+.hl-spoiler summary svg{width:15px;height:15px}
+.hl-spoiler summary .t-group-n{margin-left:auto;background:var(--glass);border:1px solid var(--stroke);color:var(--faint)}
+.hl-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.hl-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--glass);border:1px solid var(--stroke);border-radius:10px}
+.hl-text{flex:1;font-size:13px;line-height:1.5;color:var(--text);white-space:pre-wrap}
+.hl-item .hl-del{flex:0 0 auto;width:26px;height:26px}
+.hl-popup{position:absolute;z-index:90;display:flex;gap:6px;background:var(--panel);border:1px solid var(--stroke);border-radius:12px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.4);backdrop-filter:blur(18px)}
+.hl-popup button{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;border:none;background:var(--glass-2);color:var(--text);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.hl-popup button:hover{background:rgba(var(--seed-rgb),.18);color:var(--accent-2)}
+.hl-popup button svg{width:14px;height:14px}
+.note-body{user-select:text}
+
+/* similar notes by tag */
+.nd-link-open-full{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--glass);border:1px solid var(--stroke);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:6px}
+.nd-link-open-full:hover{border-color:var(--stroke-strong)}
+.nd-link-open-full .sim-score{margin-left:auto;background:var(--glass-2);border-radius:999px;padding:1px 8px;font-size:11px;color:var(--faint);font-weight:700}
+
+/* ===== Anki ===== */
+.anki-deck-list{display:flex;flex-direction:column;gap:10px}
+.anki-deck-card{display:flex;align-items:center;gap:12px;padding:15px 16px;border-radius:16px;background:var(--glass);border:1px solid var(--stroke);cursor:pointer;transition:.18s var(--ease)}
+.anki-deck-card:hover{border-color:var(--stroke-strong)}
+.anki-deck-main{flex:1;min-width:0}
+.anki-deck-name{font-weight:700;font-size:15px;color:var(--text)}
+.anki-deck-meta{font-size:12px;color:var(--faint);margin-top:3px}
+.anki-due-n{color:var(--accent-2)}
+.anki-deck-acts{display:flex;gap:6px;flex:0 0 auto}
+.anki-study-modal{max-width:480px}
+.anki-card-face{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:28px 22px;min-height:140px;display:flex;flex-direction:column;justify-content:center;gap:16px}
+.anki-card-text{font-size:17px;line-height:1.5;color:var(--text);text-align:center;white-space:pre-wrap}
+.anki-card-divider{height:1px;background:var(--stroke)}
+.anki-card-back{color:var(--accent-2);font-weight:600}
+.anki-progress{text-align:center;font-size:12px;color:var(--faint);margin-top:12px}
+.anki-rate-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.anki-rate{padding:12px 6px;border-radius:12px;border:none;font:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#fff;transition:.15s}
+.anki-rate.again{background:#ff6b6b}
+.anki-rate.hard{background:#f5a623}
+.anki-rate.good{background:#3ddc97}
+.anki-rate.easy{background:#4aa8ff}
+.anki-rate:hover{filter:brightness(1.1)}
+
+/* note card: category filter + edit split, embedded insights */
+.note-cat-wrap{display:flex;align-items:center;gap:6px}
+.note-cat-edit{width:26px;height:26px;color:var(--faint)}
+.note-cat-edit:hover{color:var(--accent-2)}
+.note-insights{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2)}
+.note-insights-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#f5a623;margin-bottom:8px}
+.note-insights-h svg{width:14px;height:14px}
+.note-ins-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0}
+.note-ins-text{flex:1;font-size:13px;line-height:1.5;color:var(--text)}
+.note-ins-row .note-ins-anki{width:26px;height:26px;flex:0 0 auto}
+
+/* routine tasks catalog */
+.routine-hint{font-size:13px;color:var(--muted);margin:12px 0 16px;line-height:1.5}
+.routine-cat{margin-bottom:14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);padding:12px 14px}
+.routine-cat summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);user-select:none}
+.routine-cat summary::-webkit-details-marker{display:none}
+.routine-items{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.routine-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:.15s}
+.routine-item:hover{border-color:rgba(var(--seed-rgb),.4);color:var(--accent-2)}
+.routine-item svg{width:15px;height:15px;flex:0 0 auto;color:var(--faint)}
+.routine-item.added{opacity:.55;cursor:default}
+.routine-item.added svg{color:var(--green)}
