@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v56';
+const APP_VERSION='2025.7-06';const SW_VER='v57';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -933,8 +933,10 @@ $('#toProjectSaveBtn')&&$('#toProjectSaveBtn').addEventListener('click',()=>{
   renderHighlightsLibrary();renderFragActionBar();
 });
 
+let hlSelectionChangeHandler=null;
 function wireHighlightCapture(n){
   document.querySelectorAll('.hl-popup').forEach(p=>p.remove());
+  if(hlSelectionChangeHandler){document.removeEventListener('selectionchange',hlSelectionChangeHandler);hlSelectionChangeHandler=null;}
   const bodyEl=$('#ndBody')?$('#ndBody').querySelector('.note-body'):null;
   if(!bodyEl)return;
   const popup=document.createElement('div');popup.className='hl-popup';popup.hidden=true;
@@ -953,6 +955,15 @@ function wireHighlightCapture(n){
   }
   bodyEl.addEventListener('mouseup',onUp);
   bodyEl.addEventListener('touchend',()=>setTimeout(onUp,50));
+  // окно должно исчезать, если выделение снято КАК УГОДНО (клик мимо текста,
+  // Esc, тап по пустому месту) — не только жестом внутри самого текста.
+  hlSelectionChangeHandler=()=>{
+    if(popup.hidden)return;
+    const sel=window.getSelection();
+    const text=sel?sel.toString().trim():'';
+    if(!text||sel.rangeCount===0||!bodyEl.contains(sel.getRangeAt(0).commonAncestorContainer)){popup.hidden=true;}
+  };
+  document.addEventListener('selectionchange',hlSelectionChangeHandler);
   popup.querySelector('#hlConfirm').addEventListener('click',()=>{
     if(curText){addHighlight(n.id,curText);toast('Сохранено в выделения');openNoteDetail(n);}
     popup.hidden=true;window.getSelection().removeAllRanges();
@@ -1575,7 +1586,7 @@ function renderRepList(){
   const acEl=$('#archCount');if(acEl)acEl.textContent=archN?('('+archN+')'):'';
   const tb=$('#toggleArchive');if(tb)tb.classList.toggle('on',showArchived);
   if(!items.length){$('#repList').innerHTML=`<div class="empty"><i data-lucide="inbox"></i>${showArchived?'В архиве пусто.':(history.length?'Ничего не найдено':'История пуста. Проведи «Вечерний ритуал».')}</div>`;lucide.createIcons();return;}
-  $('#repList').innerHTML=items.map(h=>{ensureEntry(h);const prev=((h.insights||[])[0]||(h.summaries||[])[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
+  $('#repList').innerHTML=items.map(h=>{ensureEntry(h);const isIns=!!(h.insights||[])[0];const prev=((h.insights||[])[0]||(h.summaries||[])[0]?.title||(h.tasks[0]&&h.tasks[0].text)||'Разбор').replace(/\*\*/g,'');const tg=(h.tags||[]).slice(0,3).map(t=>`<span>${esc(t)}</span>`).join('');
     return `<div class="rep${h.archived?' archived':''}" data-id="${h.id}"><div class="ic"><i data-lucide="clock"></i></div><div class="txt"><div class="d">${fmtDate(h.ts)}${h.archived?' <span class="arch-badge">архив</span>':''}</div><div class="p">${isIns?'💡 ':''}${esc(prev)}</div>${tg?`<div class="rt">${tg}</div>`:''}</div><div class="meta">${fmtTime(h.ts)}</div><button class="arch" data-arch="${h.id}" data-val="${h.archived?'0':'1'}" aria-label="${h.archived?'Вернуть из архива':'В архив'}" title="${h.archived?'Вернуть из архива':'В архив'}"><i data-lucide="${h.archived?'archive-restore':'archive'}"></i></button><button class="del" data-del="${h.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   $('#repList').querySelectorAll('.rep').forEach(r=>r.addEventListener('click',()=>openReport(r.dataset.id)));
