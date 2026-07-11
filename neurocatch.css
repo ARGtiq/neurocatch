@@ -921,8 +921,34 @@ html[data-theme="light"] .note-title{
 .routine-cat summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);user-select:none}
 .routine-cat summary::-webkit-details-marker{display:none}
 .routine-items{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-.routine-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:.15s}
+.routine-item{display:flex;align-items:stretch;gap:6px}
+.routine-item-add{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:.15s}
+.routine-repeat{flex:0 0 auto;color:var(--faint)}
+.routine-repeat:hover{color:var(--accent-2)}
 .routine-item:hover{border-color:rgba(var(--seed-rgb),.4);color:var(--accent-2)}
 .routine-item svg{width:15px;height:15px;flex:0 0 auto;color:var(--faint)}
 .routine-item.added{opacity:.55;cursor:default}
 .routine-item.added svg{color:var(--green)}
+
+/* recurrence engine UI */
+.routine-recur-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--accent-2)}
+.routine-recur-h svg{width:16px;height:16px}
+.recur-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2)}
+.recur-row.paused{opacity:.55}
+.recur-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.recur-text{font-size:13px;color:var(--text);font-weight:600}
+.recur-meta{font-size:11px;color:var(--faint)}
+.recur-acts{display:flex;gap:6px;flex:0 0 auto}
+.recur-acts .mini{width:28px;height:28px}
+
+/* attachments (photo/PDF) */
+.attach-chip{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:9px 12px;border-radius:12px;background:rgba(var(--seed-rgb),.10);border:1px solid rgba(var(--seed-rgb),.28);font-size:13px}
+.attach-chip .ac-ic{display:flex;color:var(--accent-2);flex:0 0 auto}
+.attach-chip .ac-ic svg{width:16px;height:16px}
+.attach-chip .ac-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.attach-chip .ac-x{flex:0 0 auto;background:none;border:none;color:var(--faint);cursor:pointer;display:flex;padding:2px}
+.attach-chip .ac-x:hover{color:var(--red)}
+.attach-chip .ac-x svg{width:15px;height:15px}
+.q-attach{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 11px;border-radius:9px;background:var(--glass-2);border:1px solid var(--stroke);color:var(--accent-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:100%}
+.q-attach svg{width:14px;height:14px;flex:0 0 auto}
+.q-attach span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

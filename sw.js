@@ -1,4 +1,4 @@
-const CACHE='neurocatch-v52';
+const CACHE='neurocatch-v53';
 const ASSETS=['./','./neurocatch.html','./neurocatch.css','./nc-parsers.js','./nc-ai.js','./neurocatch.js','./manifest.webmanifest','./tasks.html','./tasks.webmanifest','./icon.svg'];
 
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
