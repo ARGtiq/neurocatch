@@ -942,7 +942,9 @@ html[data-theme="light"] .note-title{
 .recur-acts .mini{width:28px;height:28px}
 
 /* attachments (photo/PDF) */
-.attach-chip{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:9px 12px;border-radius:12px;background:rgba(var(--seed-rgb),.10);border:1px solid rgba(var(--seed-rgb),.28);font-size:13px}
+.attach-chip{align-items:center;gap:10px;margin:10px 0 0;padding:9px 12px;border-radius:12px;background:rgba(var(--seed-rgb),.10);border:1px solid rgba(var(--seed-rgb),.28);font-size:13px}
+.attach-chip[hidden]{display:none}
+.attach-chip:not([hidden]){display:flex}
 .attach-chip .ac-ic{display:flex;color:var(--accent-2);flex:0 0 auto}
 .attach-chip .ac-ic svg{width:16px;height:16px}
 .attach-chip .ac-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
@@ -1047,3 +1049,11 @@ html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indica
 .version-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:10px;white-space:pre-wrap}
 .section-tab-add{flex:0 0 auto;color:var(--faint)}
 .section-tab-add:hover{color:var(--accent-2)}
+
+/* Универсальный фикс: атрибут hidden должен ПОБЕЖДАТЬ любые display-правила классов.
+   Без этого правила элементы с классом типа .btn/.chip/.attach-chip (у которых
+   задан безусловный display:flex/inline-flex и т.п.) остаются видимыми даже
+   с hidden — потому что авторский CSS того же уровня специфичности перекрывает
+   встроенное правило браузера [hidden]{display:none}. Закрывает весь класс
+   таких багов разом, а не по одному элементу. */
+[hidden]{display:none!important}
