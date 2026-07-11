@@ -41,12 +41,12 @@ html[data-theme="light"] body{
   mask-image:radial-gradient(125% 90% at 50% 0%, #000 0%, transparent 72%)}
 html[data-theme="light"] .bg-pattern{background-image:radial-gradient(circle at 1px 1px, rgba(103,80,164,.10) 1px, transparent 0)}
 .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.ambient span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.6;animation:drift 22s var(--ease) infinite alternate}
+.ambient span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.6;animation:drift 22s var(--ease) infinite alternate;transform:translateZ(0);will-change:transform;contain:paint}
 .ambient span:nth-child(1){width:380px;height:380px;background:rgba(var(--seed-rgb),.55);top:-90px;right:-70px}
 .ambient span:nth-child(2){width:320px;height:320px;background:rgba(70,168,255,.45);bottom:-110px;left:-70px;animation-delay:-8s}
 .ambient span:nth-child(3){width:300px;height:300px;background:rgba(61,220,151,.32);top:38%;left:-90px;animation-delay:-14s}
 .ambient span:nth-child(4){width:280px;height:280px;background:rgba(255,92,147,.30);top:20%;right:-80px;animation-delay:-4s}
-html[data-theme="light"] .ambient span{opacity:1;filter:blur(100px)}
+html[data-theme="light"] .ambient span{opacity:1;filter:blur(90px)}
 html[data-theme="light"] .ambient span:nth-child(1){background:rgba(var(--seed-rgb),.5);width:50vw;height:50vw;top:-15%;right:-15%}
 html[data-theme="light"] .ambient span:nth-child(2){background:var(--secondary-fixed);width:60vw;height:60vw;bottom:10%;left:-25%;opacity:.85}
 html[data-theme="light"] .ambient span:nth-child(3),html[data-theme="light"] .ambient span:nth-child(4){opacity:0}
@@ -554,7 +554,7 @@ body.minimal #todayTasks{display:none}
 .bgopt:hover{border-color:var(--stroke-strong);color:var(--text)}
 .bgopt.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
 /* background pattern layer */
-.bgfx{position:fixed;inset:-80px;z-index:0;pointer-events:none;opacity:.6}
+.bgfx{position:fixed;inset:-80px;z-index:0;pointer-events:none;opacity:.6;transform:translateZ(0);will-change:transform;contain:paint}
 html[data-theme="light"] .bgfx{opacity:.7}
 .bgfx.bg-none{display:none}
 .bgfx.bg-dots{background-image:radial-gradient(rgba(var(--seed-rgb),.28) 1.3px, transparent 1.3px);background-size:26px 26px;-webkit-mask-image:radial-gradient(120% 90% at 50% 0%,#000,transparent 80%);mask-image:radial-gradient(120% 90% at 50% 0%,#000,transparent 80%)}
@@ -648,8 +648,6 @@ body.minimal .hero-sub{display:none}
 .q-item,.t-row{touch-action:pan-y}
 
 /* bottom bar (moved from topbar) */
-.bottombar{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;display:flex;gap:4px;padding:7px;border-radius:20px;background:var(--panel);border:1px solid var(--stroke);backdrop-filter:blur(22px) saturate(175%);box-shadow:0 12px 34px rgba(0,0,0,.35);transition:transform .25s var(--ease),opacity .25s var(--ease)}
-body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;pointer-events:none}
 
 /* ritual button badge */
 .btn-ritual{position:relative}
@@ -698,7 +696,6 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .note-open{cursor:pointer}
 
 /* bottom bar separator + chevron button */
-.bb-sep{width:1px;align-self:stretch;background:var(--stroke);margin:2px 2px}
 #uiToggle{color:var(--faint)}
 #uiToggle:hover{color:var(--accent-2)}
 /* show-tab appears only when bar is hidden (minimal mode) */
@@ -720,10 +717,6 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .np-item:hover{border-color:var(--stroke-strong)}
 
 /* show-tab: appears only when bar is collapsed (JS toggles [hidden]) */
-.ui-toggle-tab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:41;width:40px;height:22px;border-radius:12px 12px 0 0;border:1px solid var(--stroke);border-bottom:none;background:var(--panel);color:var(--faint);align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(18px)}
-.ui-toggle-tab[hidden]{display:none}
-.ui-toggle-tab:not([hidden]){display:flex}
-.ui-toggle-tab:hover{color:var(--accent-2)}
 
 /* archive UI */
 #toggleArchive.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
@@ -756,14 +749,6 @@ body.minimal .bottombar{transform:translateX(-50%) translateY(140%);opacity:0;po
 .period-report-row .btn{flex:1}
 
 /* bottombar customizer in settings */
-.bb-custom-list{display:flex;flex-direction:column;gap:6px}
-.bb-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--glass);border:1px solid var(--stroke)}
-.bb-row svg{width:16px;height:16px;color:var(--accent-2);flex:0 0 auto}
-.bb-row-label{flex:1;font-size:13px;color:var(--text)}
-.bb-row button.mini{flex:0 0 auto;width:30px;height:30px}
-.bb-row button.mini svg{width:14px;height:14px}
-.bb-row button.mini:disabled{opacity:.3;cursor:default}
-.bb-row .bb-vis svg{color:var(--faint)}
 
 /* ===== "Воздушная Эстетика" — тёплый светлый режим в стиле Stitch/Material You =====
    Мягкие стеклянные поверхности со свечением цвета primary вместо плотных серых теней. */
