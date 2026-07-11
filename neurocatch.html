@@ -64,6 +64,10 @@
     "eye-off":'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
     "arrow-up":'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
     "arrow-down":'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    "combine":'<path d="M14 15v4a2 2 0 0 0 2 2h4"/><path d="M14 9V5a2 2 0 0 1 2-2h4"/><path d="M4 9V6a2 2 0 0 1 2-2h4"/><path d="M4 15v3a2 2 0 0 0 2 2h4"/><path d="M9 12h6"/>',
+    "square":'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+    "layout-grid":'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+    "check-square":'<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     "paperclip":'<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
     "image":'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
     "file-text":'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
@@ -273,6 +277,118 @@
       </div>
     </div>
 
+    <!-- ===== Библиотека выделений ===== -->
+    <section class="view" id="view-highlights" hidden>
+      <div class="head-row"><button class="back" id="hlLibBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Выделения</h2><button class="mini" id="hlSelectModeBtn" title="Выбрать несколько"><i data-lucide="check-square"></i></button></div>
+      <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="hlLibSearch" placeholder="Искать по выделениям…" autocomplete="off"></div>
+      <div id="hlLibList" class="hl-lib-list"></div>
+    </section>
+
+    <!-- ===== Проекты: список ===== -->
+    <section class="view" id="view-projects" hidden>
+      <div class="head-row"><button class="back" id="projectsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Проекты</h2><button class="mini" id="projectNewBtn" title="Новый проект"><i data-lucide="plus"></i></button></div>
+      <div id="projectsList" class="projects-list"></div>
+    </section>
+
+    <!-- ===== Проекты: карточка проекта ===== -->
+    <section class="view" id="view-project-detail" hidden>
+      <div class="head-row"><button class="back" id="projectDetailBack"><i data-lucide="arrow-left"></i>Назад</button><h2 id="projectDetailName">Проект</h2><button class="mini" id="projectEditBtn" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini" id="projectDelBtn" title="Удалить проект"><i data-lucide="trash-2"></i></button></div>
+      <div class="subtabs">
+        <button class="subtab active" data-pt="board">Доска</button>
+        <button class="subtab" data-pt="versions">Версии</button>
+      </div>
+      <div class="st-panel" data-pt="board">
+        <div class="section-tab-row" id="sectionTabRow"></div>
+        <div id="sectionCardList" class="section-card-list"></div>
+        <button class="btn" id="sectionAddBtn" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая секция</button>
+      </div>
+      <div class="st-panel" data-pt="versions" hidden>
+        <button class="btn btn-primary" id="versionAddBtn" style="width:100%;margin-bottom:16px"><i data-lucide="plus"></i>Новая версия</button>
+        <div id="versionList" class="version-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== Модалка: объединить фрагменты в заметку ===== -->
+    <div class="overlay" id="mergeOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:560px">
+        <div class="modal-head"><h2>Объединить в заметку</h2><button class="icon-btn" id="mergeClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><label for="mergeTitleInput">Название</label><input type="text" id="mergeTitleInput" placeholder="О чём заметка" autocomplete="off"></div>
+        <div class="field"><label for="mergeTagsInput">Теги (через запятую)</label><input type="text" id="mergeTagsInput" placeholder="здоровье, идея" autocomplete="off"></div>
+        <div class="field"><label>Фрагменты (можно править)</label><div id="mergeFragList" class="merge-frag-list"></div></div>
+        <button class="btn btn-primary" id="mergeSaveBtn" style="width:100%"><i data-lucide="check"></i>Сохранить как заметку</button>
+      </div>
+    </div>
+
+    <!-- ===== Модалка: выбрать/создать проект для отправки фрагментов ===== -->
+    <div class="overlay" id="toProjectOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
+        <div class="modal-head"><h2>Отправить в проект</h2><button class="icon-btn" id="toProjectClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><label for="toProjectSelect">Проект</label><select id="toProjectSelect"></select></div>
+        <div class="field"><label for="toProjectSection">Секция</label><select id="toProjectSection"></select></div>
+        <button class="btn btn-primary" id="toProjectSaveBtn" style="width:100%"><i data-lucide="check"></i>Добавить <span id="toProjectCount"></span></button>
+      </div>
+    </div>
+
+    <!-- ===== Модалка: создать/изменить проект ===== -->
+    <div class="overlay" id="projectEditOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
+        <div class="modal-head"><h2 id="projectEditTitle">Новый проект</h2><button class="icon-btn" id="projectEditClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><label for="projectNameInput">Название</label><input type="text" id="projectNameInput" placeholder="Название проекта" autocomplete="off"></div>
+        <div class="field"><label for="projectTypeSelect">Тип проекта</label><select id="projectTypeSelect">
+          <option value="web">Веб-сервис / приложение</option>
+          <option value="ai">ИИ / нейросети</option>
+          <option value="content">Контент / статья</option>
+          <option value="research">Исследование</option>
+          <option value="custom">Свой (без готовых секций)</option>
+        </select><div class="hint">Задаёт стартовый набор секций доски — их можно менять и дальше.</div></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="projectSaveBtn" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn btn-clear" id="projectDeleteInline" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Модалка: карточка секции (добавить/изменить) ===== -->
+    <div class="overlay" id="cardEditOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:480px">
+        <div class="modal-head"><h2 id="cardEditTitle">Новая карточка</h2><button class="icon-btn" id="cardEditClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><textarea id="cardTextInput" placeholder="Текст карточки…" style="min-height:100px"></textarea></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="cardSaveBtn" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn btn-clear" id="cardDeleteBtn" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Модалка: новая/изменить секция ===== -->
+    <div class="overlay" id="sectionEditOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+        <div class="modal-head"><h2 id="sectionEditTitle">Новая секция</h2><button class="icon-btn" id="sectionEditClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><input type="text" id="sectionNameInput" placeholder="Название секции" autocomplete="off"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="sectionSaveBtn" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn btn-clear" id="sectionDeleteBtn" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Модалка: версия проекта (менеджер версий / коммиты) ===== -->
+    <div class="overlay" id="versionEditOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:560px">
+        <div class="modal-head"><h2 id="versionEditTitle">Новая версия</h2><button class="icon-btn" id="versionEditClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field-row">
+          <div class="field"><label for="versionNumberInput">Версия</label><input type="text" id="versionNumberInput" placeholder="v1.2.0" autocomplete="off"></div>
+          <div class="field"><label for="versionDateInput">Дата</label><input type="date" id="versionDateInput"></div>
+        </div>
+        <div class="field"><label for="versionGithubInput">Ссылка на GitHub (коммит/тег/PR)</label><input type="text" id="versionGithubInput" placeholder="https://github.com/user/repo/commit/abcdef" autocomplete="off"></div>
+        <div class="field"><label style="display:flex;align-items:center;justify-content:space-between">Изменения<button type="button" class="link-btn" id="versionAddChange">+ строка</button></label><div id="versionChangesList" class="version-changes-edit"></div></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="versionSaveBtn" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn btn-clear" id="versionDeleteBtn" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
     <section class="view" id="view-search" hidden>
       <div class="head-row"><button class="back" id="searchBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Поиск</h2></div>
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="globalSearch" placeholder="Искать во всём: записи, отчёты, задачи, заметки, закладки…" autocomplete="off"></div>
@@ -289,6 +405,8 @@
   <button class="icon-btn" id="openBookmarks" data-bb="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
   <button class="icon-btn" id="openNotes" data-bb="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
   <button class="icon-btn" id="openAnki" data-bb="openAnki" aria-label="Anki"><i data-lucide="layers"></i></button>
+  <button class="icon-btn" id="openHighlights" data-bb="openHighlights" aria-label="Выделения"><i data-lucide="highlighter"></i></button>
+  <button class="icon-btn" id="openProjects" data-bb="openProjects" aria-label="Проекты"><i data-lucide="layout-grid"></i></button>
   <button class="icon-btn" id="openDash" data-bb="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
   <span class="bb-sep"></span>
   <button class="icon-btn" id="uiToggle" aria-label="Скрыть панель"><i data-lucide="chevron-down"></i></button>

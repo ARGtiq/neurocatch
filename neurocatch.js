@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v53';
+const APP_VERSION='2025.7-06';const SW_VER='v54';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -504,6 +504,404 @@ function saveHighlights(o){localStorage.setItem('neurocatch_highlights',JSON.str
 function getHighlights(noteId){return (loadHighlights()[noteId])||[];}
 function addHighlight(noteId,text){text=text.trim();if(!text)return;const H=loadHighlights();H[noteId]=H[noteId]||[];if(!H[noteId].includes(text))H[noteId].push(text);saveHighlights(H);}
 function removeHighlight(noteId,idx){const H=loadHighlights();if(H[noteId]){H[noteId]=H[noteId].filter((_,i)=>i!==idx);saveHighlights(H);}}
+/* ---------- fragments (unified highlights + live insights) for merge/project flow ---------- */
+let fragSelectMode=false, fragSelected=new Map(); // fragId -> fragment object
+function getAllFragments(){
+  const frags=[];
+  const H=loadHighlights();
+  const allNotes=buildNotes();
+  Object.keys(H).forEach(noteId=>{
+    const note=allNotes.find(n=>n.id===noteId);
+    (H[noteId]||[]).forEach((text,idx)=>frags.push({
+      id:'hl:'+noteId+':'+idx,kind:'highlight',text,noteId,idx,
+      sourceTitle:note?note.title:'Заметка',ts:note?note.ts:Date.now()
+    }));
+  });
+  history.forEach(h=>{try{ensureEntry(h);}catch(e){return;}
+    (h.insights||[]).forEach((text,idx)=>frags.push({
+      id:'ins:'+h.id+':'+idx,kind:'insight',text,reportId:h.id,idx,
+      sourceTitle:'Инсайт · '+fmtDate(h.ts),ts:h.ts
+    }));
+  });
+  return frags.sort((a,b)=>b.ts-a.ts);
+}
+function fragRemoveFromSource(frag){
+  if(frag.kind==='highlight')removeHighlight(frag.noteId,frag.idx);
+  else if(frag.kind==='insight'){const h=history.find(x=>x.id===frag.reportId);if(h&&h.insights){h.insights=h.insights.filter((_,i)=>i!==frag.idx);saveHistory();if(h===currentEntry)renderDigest(currentEntry);}}
+}
+function toggleFragSelectMode(on){
+  fragSelectMode=(on!=null)?on:!fragSelectMode;
+  if(!fragSelectMode)fragSelected.clear();
+  renderHighlightsLibrary();
+}
+function toggleFragSelected(frag){
+  if(fragSelected.has(frag.id))fragSelected.delete(frag.id);
+  else fragSelected.set(frag.id,frag);
+  renderFragActionBar();
+}
+function renderFragActionBar(){
+  let bar=document.getElementById('fragActionBar');
+  const n=fragSelected.size;
+  if(!n){if(bar)bar.remove();return;}
+  if(!bar){
+    bar=document.createElement('div');bar.id='fragActionBar';bar.className='frag-action-bar';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML=`<span class="frag-count">${n} выбрано</span><button class="btn" id="fragMergeBtn"><i data-lucide="combine"></i>Объединить</button><button class="btn" id="fragToProjectBtn"><i data-lucide="layout-grid"></i>В проект</button><button class="mini" id="fragClearBtn" title="Отменить выбор"><i data-lucide="x"></i></button>`;
+  lucide.createIcons();
+  $('#fragMergeBtn')&&$('#fragMergeBtn').addEventListener('click',openMergeModal);
+  $('#fragToProjectBtn')&&$('#fragToProjectBtn').addEventListener('click',openToProjectModal);
+  $('#fragClearBtn')&&$('#fragClearBtn').addEventListener('click',()=>{fragSelected.clear();renderFragActionBar();renderHighlightsLibrary();});
+}
+function renderHighlightsLibrary(){
+  const box=$('#hlLibList');if(!box)return;
+  const q=(($('#hlLibSearch')&&$('#hlLibSearch').value)||'').trim().toLowerCase();
+  let frags=getAllFragments();
+  if(q)frags=frags.filter(f=>f.text.toLowerCase().includes(q));
+  const btn=$('#hlSelectModeBtn');if(btn)btn.classList.toggle('on',fragSelectMode);
+  if(!frags.length){box.innerHTML='<div class="empty">Пока нет выделений. Выдели текст в любой заметке — оно появится здесь.</div>';renderFragActionBar();return;}
+  box.innerHTML=frags.map(f=>{
+    const sel=fragSelected.has(f.id);
+    return `<div class="hl-lib-item${sel?' sel':''}" data-fid="${attr(f.id)}">
+      ${fragSelectMode?`<span class="hl-lib-check"><i data-lucide="${sel?'check-square':'square'}"></i></span>`:''}
+      <div class="hl-lib-main"><div class="hl-lib-text">${esc(f.text)}</div><div class="hl-lib-src">${f.kind==='insight'?'💡 ':'✂️ '}${esc(f.sourceTitle)}</div></div>
+      ${!fragSelectMode?`<button class="mini hl-lib-del" data-fid="${attr(f.id)}" title="Удалить"><i data-lucide="trash-2"></i></button>`:''}
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+  if(fragSelectMode){
+    box.querySelectorAll('.hl-lib-item').forEach(el=>el.addEventListener('click',()=>{
+      const f=frags.find(x=>x.id===el.dataset.fid);if(f)toggleFragSelected(f);renderHighlightsLibrary();
+    }));
+  }else{
+    box.querySelectorAll('.hl-lib-del').forEach(b=>b.addEventListener('click',e=>{
+      e.stopPropagation();const f=frags.find(x=>x.id===b.dataset.fid);if(f){fragRemoveFromSource(f);renderHighlightsLibrary();}
+    }));
+  }
+}
+$('#hlSelectModeBtn')&&$('#hlSelectModeBtn').addEventListener('click',()=>toggleFragSelectMode());
+$('#hlLibSearch')&&$('#hlLibSearch').addEventListener('input',()=>renderHighlightsLibrary());
+$('#openHighlights')&&$('#openHighlights').addEventListener('click',()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));});
+$('#hlLibBack')&&$('#hlLibBack').addEventListener('click',()=>{fragSelected.clear();renderFragActionBar();show($('#view-input'));});
+/* ---------- merge fragments into one note ---------- */
+function openMergeModal(){
+  if(!fragSelected.size){toast('Выбери хотя бы один фрагмент',true);return;}
+  const box=$('#mergeFragList');if(!box)return;
+  const frags=[...fragSelected.values()];
+  box.innerHTML=frags.map(f=>`<div class="merge-frag" data-fid="${attr(f.id)}"><textarea class="merge-frag-text">${esc(f.text)}</textarea><div class="merge-frag-src">${f.kind==='insight'?'💡 ':'✂️ '}${esc(f.sourceTitle)}</div></div>`).join('');
+  $('#mergeTitleInput').value='';
+  $('#mergeTagsInput').value='';
+  $('#mergeOverlay').classList.add('open');
+  setTimeout(()=>$('#mergeTitleInput').focus(),50);
+}
+$('#mergeClose')&&$('#mergeClose').addEventListener('click',()=>$('#mergeOverlay').classList.remove('open'));
+$('#mergeOverlay')&&$('#mergeOverlay').addEventListener('click',e=>{if(e.target===$('#mergeOverlay'))$('#mergeOverlay').classList.remove('open');});
+$('#mergeSaveBtn')&&$('#mergeSaveBtn').addEventListener('click',()=>{
+  const title=$('#mergeTitleInput').value.trim();
+  if(!title){toast('Введи название заметки',true);return;}
+  const tags=$('#mergeTagsInput').value.split(',').map(t=>t.trim()).filter(Boolean).map(t=>t.startsWith('#')?t:'#'+t);
+  const frags=[...fragSelected.values()];
+  const texts=[...document.querySelectorAll('.merge-frag-text')].map(el=>el.value.trim()).filter(Boolean);
+  const body=texts.map(t=>t).join('\n\n');
+  const arr=loadManualNotes();
+  arr.unshift({id:uid('mn'),title,body,tags,ts:Date.now()});
+  saveManualNotes(arr);
+  frags.forEach(f=>fragRemoveFromSource(f));
+  fragSelected.clear();fragSelectMode=false;
+  $('#mergeOverlay').classList.remove('open');
+  toast('Заметка создана из '+frags.length+' фрагм.');
+  renderHighlightsLibrary();renderFragActionBar();
+});
+/* ===================== Проекты ===================== */
+const PROJECT_TYPES={
+  web:{label:'Веб-сервис / приложение',sections:['Функции','Технологии','Экраны','Задачи','Идеи']},
+  ai:{label:'ИИ / нейросети',sections:['Промпты','Модели','Эксперименты','Датасеты','Идеи']},
+  content:{label:'Контент / статья',sections:['Структура','Источники','Тезисы','Черновик']},
+  research:{label:'Исследование',sections:['Вопросы','Источники','Выводы']},
+  custom:{label:'Свой',sections:[]},
+};
+function loadProjects(){try{return JSON.parse(localStorage.getItem('neurocatch_projects')||'[]');}catch(e){return [];}}
+function saveProjects(a){localStorage.setItem('neurocatch_projects',JSON.stringify(a));touchLocal();}
+let curProjectId=null, curSectionId=null, projectEditingId=null, sectionEditingId=null, cardEditingId=null, versionEditingId=null;
+
+function createProject(name,type){
+  const arr=loadProjects();
+  const tpl=PROJECT_TYPES[type]||PROJECT_TYPES.custom;
+  const proj={id:uid('pr'),name,type,sections:tpl.sections.map(nm=>({id:uid('sec'),name:nm,cards:[]})),versions:[],createdAt:Date.now(),updatedAt:Date.now()};
+  arr.unshift(proj);saveProjects(arr);
+  return proj;
+}
+function touchProject(p){p.updatedAt=Date.now();saveProjects(loadProjects().map(x=>x.id===p.id?p:x));}
+function findProject(id){return loadProjects().find(p=>p.id===id);}
+
+function renderProjectsList(){
+  const box=$('#projectsList');if(!box)return;
+  const arr=loadProjects();
+  if(!arr.length){box.innerHTML='<div class="empty">Проектов пока нет. Нажми «+», чтобы создать первый.</div>';return;}
+  box.innerHTML=arr.map(p=>{
+    const cardsN=p.sections.reduce((n,s)=>n+s.cards.length,0);
+    const typeLabel=(PROJECT_TYPES[p.type]||PROJECT_TYPES.custom).label;
+    return `<div class="project-card" data-id="${p.id}">
+      <div class="project-card-main"><div class="project-card-name">${esc(p.name)}</div><div class="project-card-meta"><span class="project-type-badge">${esc(typeLabel)}</span>${p.sections.length} секц. · ${cardsN} карт.${p.versions.length?(' · '+p.versions.length+' версий'):''}</div></div>
+      <i data-lucide="chevron-right"></i>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.project-card').forEach(el=>el.addEventListener('click',()=>openProjectDetail(el.dataset.id)));
+}
+$('#openProjects')&&$('#openProjects').addEventListener('click',()=>{renderProjectsList();show($('#view-projects'));});
+$('#projectsBack')&&$('#projectsBack').addEventListener('click',()=>show($('#view-input')));
+$('#projectNewBtn')&&$('#projectNewBtn').addEventListener('click',()=>openProjectEditor(null));
+
+function openProjectEditor(existing){
+  projectEditingId=existing?existing.id:null;
+  $('#projectEditTitle').textContent=existing?'Изменить проект':'Новый проект';
+  $('#projectNameInput').value=existing?existing.name:'';
+  $('#projectTypeSelect').value=existing?existing.type:'web';
+  $('#projectTypeSelect').disabled=!!existing;
+  const del=$('#projectDeleteInline');if(del)del.hidden=!existing;
+  $('#projectEditOverlay').classList.add('open');
+  setTimeout(()=>$('#projectNameInput').focus(),50);
+}
+$('#projectEditClose')&&$('#projectEditClose').addEventListener('click',()=>$('#projectEditOverlay').classList.remove('open'));
+$('#projectEditOverlay')&&$('#projectEditOverlay').addEventListener('click',e=>{if(e.target===$('#projectEditOverlay'))$('#projectEditOverlay').classList.remove('open');});
+$('#projectSaveBtn')&&$('#projectSaveBtn').addEventListener('click',()=>{
+  const name=$('#projectNameInput').value.trim();
+  if(!name){toast('Введи название проекта',true);return;}
+  if(projectEditingId){
+    const arr=loadProjects();const p=arr.find(x=>x.id===projectEditingId);
+    if(p){p.name=name;p.updatedAt=Date.now();saveProjects(arr);}
+    $('#projectEditOverlay').classList.remove('open');
+    renderProjectsList();
+    if($('#view-project-detail').hidden===false)openProjectDetail(projectEditingId);
+  }else{
+    const type=$('#projectTypeSelect').value;
+    const p=createProject(name,type);
+    $('#projectEditOverlay').classList.remove('open');
+    toast('Проект создан');
+    openProjectDetail(p.id);
+  }
+});
+$('#projectDeleteInline')&&$('#projectDeleteInline').addEventListener('click',()=>{
+  if(!projectEditingId)return;if(!confirm('Удалить проект целиком со всеми секциями, карточками и версиями?'))return;
+  saveProjects(loadProjects().filter(x=>x.id!==projectEditingId));
+  $('#projectEditOverlay').classList.remove('open');
+  toast('Проект удалён');
+  show($('#view-projects'));renderProjectsList();
+});
+$('#projectEditBtn')&&$('#projectEditBtn').addEventListener('click',()=>{const p=findProject(curProjectId);if(p)openProjectEditor(p);});
+$('#projectDelBtn')&&$('#projectDelBtn').addEventListener('click',()=>{
+  if(!curProjectId)return;if(!confirm('Удалить проект целиком со всеми секциями, карточками и версиями?'))return;
+  saveProjects(loadProjects().filter(x=>x.id!==curProjectId));
+  toast('Проект удалён');show($('#view-projects'));renderProjectsList();
+});
+
+function openProjectDetail(id){
+  curProjectId=id;
+  const p=findProject(id);if(!p)return;
+  $('#projectDetailName').textContent=p.name;
+  curSectionId=p.sections.length?p.sections[0].id:null;
+  setProjectTab('board');
+  show($('#view-project-detail'));
+}
+$('#projectDetailBack')&&$('#projectDetailBack').addEventListener('click',()=>{show($('#view-projects'));renderProjectsList();});
+document.querySelectorAll('#view-project-detail .subtab').forEach(b=>b.addEventListener('click',()=>setProjectTab(b.dataset.pt)));
+function setProjectTab(pt){
+  document.querySelectorAll('#view-project-detail .subtab').forEach(b=>b.classList.toggle('active',b.dataset.pt===pt));
+  document.querySelectorAll('#view-project-detail .st-panel').forEach(el=>el.hidden=el.dataset.pt!==pt);
+  if(pt==='board')renderProjectBoard();else renderVersionList();
+}
+
+/* ---- Доска: секции + карточки ---- */
+function renderProjectBoard(){
+  const p=findProject(curProjectId);if(!p)return;
+  const tabRow=$('#sectionTabRow');
+  if(!p.sections.length){
+    tabRow.innerHTML='';
+    $('#sectionCardList').innerHTML='<div class="empty">Секций нет. Нажми «Новая секция» ниже.</div>';
+    return;
+  }
+  if(!p.sections.find(s=>s.id===curSectionId))curSectionId=p.sections[0].id;
+  tabRow.innerHTML=p.sections.map(s=>`<button class="section-tab${s.id===curSectionId?' active':''}" data-sid="${s.id}">${esc(s.name)}<span class="t-group-n">${s.cards.length}</span></button>`).join('')+`<button class="mini section-tab-edit" id="sectionRenameBtn" title="Переименовать/удалить секцию"><i data-lucide="pencil"></i></button>`;
+  lucide.createIcons();
+  tabRow.querySelectorAll('.section-tab').forEach(b=>b.addEventListener('click',()=>{curSectionId=b.dataset.sid;renderProjectBoard();}));
+  $('#sectionRenameBtn')&&$('#sectionRenameBtn').addEventListener('click',()=>{const sec=p.sections.find(s=>s.id===curSectionId);if(sec)openSectionEditor(sec);});
+  const sec=p.sections.find(s=>s.id===curSectionId);
+  const listBox=$('#sectionCardList');
+  if(!sec){listBox.innerHTML='';return;}
+  listBox.innerHTML=(sec.cards.length?sec.cards.map(c=>`<div class="proj-card" data-cid="${c.id}"><div class="proj-card-text">${esc(c.text)}</div><div class="proj-card-acts">${c.sourceNoteId?`<button class="mini pc-src" data-cid="${c.id}" title="Открыть источник"><i data-lucide="external-link"></i></button>`:''}<button class="mini pc-task" data-cid="${c.id}" title="Сделать задачей"><i data-lucide="square-check"></i></button><button class="mini pc-anki" data-cid="${c.id}" title="Карточка Anki"><i data-lucide="layers"></i></button><button class="mini pc-edit" data-cid="${c.id}" title="Изменить"><i data-lucide="pencil"></i></button></div></div>`).join(''):'<div class="empty">Пока пусто. Нажми «+», чтобы добавить карточку.</div>')
+    +'<button class="btn" id="cardAddBtn" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Добавить карточку</button>';
+  lucide.createIcons();
+  $('#cardAddBtn')&&$('#cardAddBtn').addEventListener('click',()=>openCardEditor(null));
+  listBox.querySelectorAll('.pc-edit').forEach(b=>b.addEventListener('click',()=>{const c=sec.cards.find(x=>x.id===b.dataset.cid);if(c)openCardEditor(c);}));
+  listBox.querySelectorAll('.pc-src').forEach(b=>b.addEventListener('click',()=>{const c=sec.cards.find(x=>x.id===b.dataset.cid);if(!c||!c.sourceNoteId)return;const n=buildNotes().find(x=>x.id===c.sourceNoteId);if(n)openNoteDetail(n);else toast('Источник не найден',true);}));
+  listBox.querySelectorAll('.pc-task').forEach(b=>b.addEventListener('click',()=>{const c=sec.cards.find(x=>x.id===b.dataset.cid);if(!c)return;const h=ensureRoutineEntry();h.tasks.push({id:uid('rt'),text:c.text,done:false});saveHistory();toast('Добавлено в задачи');}));
+  listBox.querySelectorAll('.pc-anki').forEach(b=>b.addEventListener('click',()=>{const c=sec.cards.find(x=>x.id===b.dataset.cid);if(c)openAnkiCardEditor({back:c.text,front:''});}));
+}
+function openCardEditor(existing){
+  cardEditingId=existing?existing.id:null;
+  $('#cardEditTitle').textContent=existing?'Изменить карточку':'Новая карточка';
+  $('#cardTextInput').value=existing?existing.text:'';
+  const del=$('#cardDeleteBtn');if(del)del.hidden=!existing;
+  $('#cardEditOverlay').classList.add('open');
+  setTimeout(()=>$('#cardTextInput').focus(),50);
+}
+$('#cardEditClose')&&$('#cardEditClose').addEventListener('click',()=>$('#cardEditOverlay').classList.remove('open'));
+$('#cardEditOverlay')&&$('#cardEditOverlay').addEventListener('click',e=>{if(e.target===$('#cardEditOverlay'))$('#cardEditOverlay').classList.remove('open');});
+$('#cardSaveBtn')&&$('#cardSaveBtn').addEventListener('click',()=>{
+  const text=$('#cardTextInput').value.trim();if(!text){toast('Введи текст карточки',true);return;}
+  const p=findProject(curProjectId);if(!p)return;const sec=p.sections.find(s=>s.id===curSectionId);if(!sec)return;
+  if(cardEditingId){const c=sec.cards.find(x=>x.id===cardEditingId);if(c)c.text=text;}
+  else sec.cards.push({id:uid('pc'),text,ts:Date.now()});
+  touchProject(p);
+  $('#cardEditOverlay').classList.remove('open');
+  renderProjectBoard();
+});
+$('#cardDeleteBtn')&&$('#cardDeleteBtn').addEventListener('click',()=>{
+  if(!cardEditingId)return;const p=findProject(curProjectId);if(!p)return;const sec=p.sections.find(s=>s.id===curSectionId);if(!sec)return;
+  sec.cards=sec.cards.filter(x=>x.id!==cardEditingId);touchProject(p);
+  $('#cardEditOverlay').classList.remove('open');
+  toast('Карточка удалена');renderProjectBoard();
+});
+function openSectionEditor(existing){
+  sectionEditingId=existing?existing.id:null;
+  $('#sectionEditTitle').textContent=existing?'Секция':'Новая секция';
+  $('#sectionNameInput').value=existing?existing.name:'';
+  const del=$('#sectionDeleteBtn');if(del)del.hidden=!existing;
+  $('#sectionEditOverlay').classList.add('open');
+  setTimeout(()=>$('#sectionNameInput').focus(),50);
+}
+$('#sectionAddBtn')&&$('#sectionAddBtn').addEventListener('click',()=>openSectionEditor(null));
+$('#sectionEditClose')&&$('#sectionEditClose').addEventListener('click',()=>$('#sectionEditOverlay').classList.remove('open'));
+$('#sectionEditOverlay')&&$('#sectionEditOverlay').addEventListener('click',e=>{if(e.target===$('#sectionEditOverlay'))$('#sectionEditOverlay').classList.remove('open');});
+$('#sectionSaveBtn')&&$('#sectionSaveBtn').addEventListener('click',()=>{
+  const name=$('#sectionNameInput').value.trim();if(!name){toast('Введи название секции',true);return;}
+  const p=findProject(curProjectId);if(!p)return;
+  if(sectionEditingId){const sec=p.sections.find(x=>x.id===sectionEditingId);if(sec)sec.name=name;}
+  else{const sec={id:uid('sec'),name,cards:[]};p.sections.push(sec);curSectionId=sec.id;}
+  touchProject(p);
+  $('#sectionEditOverlay').classList.remove('open');
+  renderProjectBoard();
+});
+$('#sectionDeleteBtn')&&$('#sectionDeleteBtn').addEventListener('click',()=>{
+  if(!sectionEditingId)return;const p=findProject(curProjectId);if(!p)return;
+  if(!confirm('Удалить секцию со всеми карточками?'))return;
+  p.sections=p.sections.filter(x=>x.id!==sectionEditingId);
+  if(curSectionId===sectionEditingId)curSectionId=p.sections.length?p.sections[0].id:null;
+  touchProject(p);
+  $('#sectionEditOverlay').classList.remove('open');
+  toast('Секция удалена');renderProjectBoard();
+});
+
+/* ---- Версии (менеджер версий / коммиты, в стиле GitHub) ---- */
+const CHANGE_TYPES={feat:['✨','Новое'],fix:['🐛','Исправление'],refactor:['♻️','Рефакторинг'],style:['💄','Стиль'],chore:['🔧','Прочее'],docs:['📝','Документация']};
+function renderVersionList(){
+  const p=findProject(curProjectId);if(!p)return;
+  const box=$('#versionList');if(!box)return;
+  const versions=(p.versions||[]).slice().sort((a,b)=>b.ts-a.ts);
+  if(!versions.length){box.innerHTML='<div class="empty">Версий пока нет. Веди историю релизов проекта с ссылками на коммиты GitHub.</div>';return;}
+  box.innerHTML=versions.map(v=>`<div class="version-card" data-vid="${v.id}">
+    <div class="version-head">
+      <span class="version-badge">${esc(v.version||'—')}</span>
+      <span class="version-date">${esc(v.date||'')}</span>
+      ${v.githubUrl?`<a href="${attr(v.githubUrl)}" target="_blank" rel="noopener" class="version-gh" title="Открыть на GitHub"><i data-lucide="external-link"></i>GitHub</a>`:''}
+      <button class="mini version-edit" data-vid="${v.id}" title="Изменить"><i data-lucide="pencil"></i></button>
+    </div>
+    <div class="version-changes">${(v.changes||[]).map(c=>{const meta=CHANGE_TYPES[c.type]||CHANGE_TYPES.chore;return `<div class="version-change ${c.type}"><span class="vc-badge">${meta[0]} ${esc(c.type)}</span><span class="vc-text">${esc(c.text)}</span></div>`;}).join('')||'<div class="empty" style="padding:6px 0;font-size:12px">Без описания изменений.</div>'}</div>
+  </div>`).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.version-edit').forEach(b=>b.addEventListener('click',()=>{const v=p.versions.find(x=>x.id===b.dataset.vid);if(v)openVersionEditor(v);}));
+}
+function versionChangeRowHtml(type,text){
+  return `<div class="vc-edit-row"><select class="vc-type-select">${Object.entries(CHANGE_TYPES).map(([k,m])=>`<option value="${k}"${k===type?' selected':''}>${m[0]} ${m[1]}</option>`).join('')}</select><input type="text" class="vc-text-input" value="${attr(text||'')}" placeholder="Что изменилось…"><button type="button" class="mini vc-row-del"><i data-lucide="x"></i></button></div>`;
+}
+function openVersionEditor(existing){
+  versionEditingId=existing?existing.id:null;
+  $('#versionEditTitle').textContent=existing?'Версия':'Новая версия';
+  $('#versionNumberInput').value=existing?existing.version:'';
+  $('#versionDateInput').value=existing?existing.date:dateKey(Date.now());
+  $('#versionGithubInput').value=existing?(existing.githubUrl||''):'';
+  const list=$('#versionChangesList');
+  const changes=existing&&existing.changes&&existing.changes.length?existing.changes:[{type:'feat',text:''}];
+  list.innerHTML=changes.map(c=>versionChangeRowHtml(c.type,c.text)).join('');
+  wireVersionChangeRows();
+  const del=$('#versionDeleteBtn');if(del)del.hidden=!existing;
+  $('#versionEditOverlay').classList.add('open');
+  setTimeout(()=>$('#versionNumberInput').focus(),50);
+}
+function wireVersionChangeRows(){
+  document.querySelectorAll('#versionChangesList .vc-row-del').forEach(b=>b.addEventListener('click',()=>{
+    const rows=document.querySelectorAll('#versionChangesList .vc-edit-row');
+    if(rows.length<=1){toast('Нужна хотя бы одна строка',true);return;}
+    b.closest('.vc-edit-row').remove();
+  }));
+}
+$('#versionAddBtn')&&$('#versionAddBtn').addEventListener('click',()=>openVersionEditor(null));
+$('#versionAddChange')&&$('#versionAddChange').addEventListener('click',()=>{
+  const list=$('#versionChangesList');if(!list)return;
+  const div=document.createElement('div');div.innerHTML=versionChangeRowHtml('feat','');
+  list.appendChild(div.firstChild);
+  lucide.createIcons();wireVersionChangeRows();
+});
+$('#versionEditClose')&&$('#versionEditClose').addEventListener('click',()=>$('#versionEditOverlay').classList.remove('open'));
+$('#versionEditOverlay')&&$('#versionEditOverlay').addEventListener('click',e=>{if(e.target===$('#versionEditOverlay'))$('#versionEditOverlay').classList.remove('open');});
+$('#versionSaveBtn')&&$('#versionSaveBtn').addEventListener('click',()=>{
+  const version=$('#versionNumberInput').value.trim();if(!version){toast('Введи номер версии',true);return;}
+  const date=$('#versionDateInput').value||dateKey(Date.now());
+  const githubUrl=$('#versionGithubInput').value.trim();
+  const changes=[...document.querySelectorAll('#versionChangesList .vc-edit-row')].map(row=>({
+    type:row.querySelector('.vc-type-select').value,
+    text:row.querySelector('.vc-text-input').value.trim()
+  })).filter(c=>c.text);
+  const p=findProject(curProjectId);if(!p)return;
+  p.versions=p.versions||[];
+  if(versionEditingId){const v=p.versions.find(x=>x.id===versionEditingId);if(v){v.version=version;v.date=date;v.githubUrl=githubUrl;v.changes=changes;}}
+  else{p.versions.unshift({id:uid('ver'),version,date,githubUrl,changes,ts:new Date(date+'T00:00:00').getTime()||Date.now()});}
+  touchProject(p);
+  $('#versionEditOverlay').classList.remove('open');
+  toast(versionEditingId?'Версия обновлена':'Версия добавлена');
+  renderVersionList();
+});
+$('#versionDeleteBtn')&&$('#versionDeleteBtn').addEventListener('click',()=>{
+  if(!versionEditingId)return;const p=findProject(curProjectId);if(!p)return;
+  if(!confirm('Удалить эту версию?'))return;
+  p.versions=p.versions.filter(x=>x.id!==versionEditingId);touchProject(p);
+  $('#versionEditOverlay').classList.remove('open');
+  toast('Версия удалена');renderVersionList();
+});
+
+/* ---- отправка выбранных фрагментов в проект ---- */
+function openToProjectModal(){
+  if(!fragSelected.size){toast('Выбери хотя бы один фрагмент',true);return;}
+  const projects=loadProjects();
+  if(!projects.length){toast('Сначала создай проект',true);return;}
+  const sel=$('#toProjectSelect');
+  sel.innerHTML=projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const fillSections=()=>{
+    const p=projects.find(x=>x.id===sel.value);
+    const secSel=$('#toProjectSection');
+    secSel.innerHTML=(p&&p.sections.length?p.sections:[{id:'',name:'(нет секций — добавь на доске)'}]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  };
+  sel.onchange=fillSections;fillSections();
+  const cnt=$('#toProjectCount');if(cnt)cnt.textContent='('+fragSelected.size+' фрагм.)';
+  $('#toProjectOverlay').classList.add('open');
+}
+$('#toProjectClose')&&$('#toProjectClose').addEventListener('click',()=>$('#toProjectOverlay').classList.remove('open'));
+$('#toProjectOverlay')&&$('#toProjectOverlay').addEventListener('click',e=>{if(e.target===$('#toProjectOverlay'))$('#toProjectOverlay').classList.remove('open');});
+$('#toProjectSaveBtn')&&$('#toProjectSaveBtn').addEventListener('click',()=>{
+  const pid=$('#toProjectSelect').value,sid=$('#toProjectSection').value;
+  const p=findProject(pid);if(!p){toast('Проект не найден',true);return;}
+  const sec=p.sections.find(s=>s.id===sid);
+  if(!sec){toast('Сначала добавь секцию в проект',true);return;}
+  const frags=[...fragSelected.values()];
+  frags.forEach(f=>{sec.cards.push({id:uid('pc'),text:f.text,ts:Date.now()});fragRemoveFromSource(f);});
+  touchProject(p);
+  fragSelected.clear();fragSelectMode=false;
+  $('#toProjectOverlay').classList.remove('open');
+  toast('Добавлено в проект «'+p.name+'»');
+  renderHighlightsLibrary();renderFragActionBar();
+});
+
 function wireHighlightCapture(n){
   document.querySelectorAll('.hl-popup').forEach(p=>p.remove());
   const bodyEl=$('#ndBody')?$('#ndBody').querySelector('.note-body'):null;
@@ -1960,8 +2358,8 @@ function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=se
 function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
 $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
 /* ---------- bottombar customization (order + visibility) ---------- */
-const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openAnki:['layers','Anki'],openDash:['bar-chart-3','Дашборд']};
-const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openAnki','openDash'];
+const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openAnki:['layers','Anki'],openHighlights:['highlighter','Выделения'],openProjects:['layout-grid','Проекты'],openDash:['bar-chart-3','Дашборд']};
+const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openAnki','openHighlights','openProjects','openDash'];
 function loadBbConfig(){
   try{
     const raw=JSON.parse(localStorage.getItem('neurocatch_bb_config')||'null');
