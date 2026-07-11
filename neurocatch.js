@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v57';
+const APP_VERSION='2025.7-06';const SW_VER='v58';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -98,9 +98,6 @@ setInterval(()=>{if(settings.themeMode==='auto')applyEffective();},600000);
 
 /* ---------- helpers ---------- */
 function show(view){crumb('view '+(view&&view.id));document.querySelectorAll('.view').forEach(v=>{if(v!==view)v.hidden=true;});view.hidden=false;view.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>view.classList.remove('enter')));
-  const isHome=!!(view&&view.id==='view-input');
-  const zt=$('#uiToggle');if(zt)zt.hidden=!isHome;
-  if(!isHome&&document.body.classList.contains('minimal')){localStorage.setItem('neurocatch_minimal','0');applyMinimal();}
 }
 let toastTimer;
 function toast(msg,err){const t=$('#toast'),tt=$('#toastText');if(!t||!tt){try{console.log('[toast]',msg);}catch(e){}return;}tt.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -838,7 +835,6 @@ function openVersionEditor(existing){
   $('#versionDateInput').value=existing?existing.date:dateKey(Date.now());
   $('#versionTimeInput').value=existing?(existing.time||''):'';
   $('#versionShortInput').value=existing?(existing.shortMsg||''):'';
-  $('#versionDescInput').value=existing?(existing.description||''):'';
   $('#versionGithubInput').value=existing?(existing.githubUrl||''):'';
   const list=$('#versionChangesList');
   const changes=existing&&existing.changes&&existing.changes.length?existing.changes:[{type:'feat',text:''}];
@@ -877,7 +873,7 @@ $('#versionSaveBtn')&&$('#versionSaveBtn').addEventListener('click',()=>{
   const date=$('#versionDateInput').value||dateKey(Date.now());
   const time=$('#versionTimeInput').value.trim();
   const shortMsg=$('#versionShortInput').value.trim();
-  const description=$('#versionDescInput').value.trim();
+  const description=(versionEditingId&&findProject(curProjectId)?.versions?.find(x=>x.id===versionEditingId)?.description)||'';
   const githubUrl=$('#versionGithubInput').value.trim();
   const changes=[...document.querySelectorAll('#versionChangesList .vc-edit-row')].map(row=>({
     type:row.querySelector('.vc-type-select').value,
@@ -1925,7 +1921,7 @@ $('#importFile')&&$('#importFile').addEventListener('change',e=>{const f=e.targe
 
 /* ---------- settings ---------- */
 const ov=$('#overlay');
-$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');renderBbCustomList();ov&&ov.classList.add('open');});
+$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov&&ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
 $('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
@@ -2399,57 +2395,35 @@ function renderPresetRow(){const row=$('#presetRow');if(!row)return;const cur=se
 /* ---------- background pattern ---------- */
 function applyBg(){const el=$('#bgfx');if(!el)return;el.className='bgfx bg-'+(settings.bg||'none');document.querySelectorAll('#bgPicker .bgopt').forEach(b=>b.classList.toggle('on',b.dataset.bg===(settings.bg||'none')));}
 $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.closest('.bgopt');if(!b)return;settings.bg=b.dataset.bg;saveSettings();applyBg();});
-/* ---------- bottombar customization (order + visibility) ---------- */
-const BB_LABELS={openHistory:['calendar','История'],openTasks:['square-check','Задачи'],openSearch:['search','Поиск'],openBookmarks:['bookmark','Закладки'],openNotes:['notebook-pen','Заметки'],openAnki:['layers','Anki'],openHighlights:['highlighter','Выделения'],openProjects:['layout-grid','Проекты'],openDash:['bar-chart-3','Дашборд']};
-const BB_DEFAULT_ORDER=['openHistory','openTasks','openSearch','openBookmarks','openNotes','openAnki','openHighlights','openProjects','openDash'];
-function loadBbConfig(){
-  try{
-    const raw=JSON.parse(localStorage.getItem('neurocatch_bb_config')||'null');
-    if(raw&&Array.isArray(raw)){
-      const ids=new Set(raw.map(x=>x.id));
-      BB_DEFAULT_ORDER.forEach(id=>{if(!ids.has(id))raw.push({id,visible:true});});
-      return raw.filter(x=>BB_DEFAULT_ORDER.includes(x.id));
-    }
-  }catch(e){}
-  return BB_DEFAULT_ORDER.map(id=>({id,visible:true}));
-}
-function saveBbConfig(cfg){localStorage.setItem('neurocatch_bb_config',JSON.stringify(cfg));touchLocal();}
-function applyBbConfig(){
-  const bar=$('#bottomBar');if(!bar)return;
-  const cfg=loadBbConfig();
-  const sep=bar.querySelector('.bb-sep');
-  cfg.forEach(item=>{
-    const btn=bar.querySelector('[data-bb="'+item.id+'"]');
-    if(!btn)return;
-    btn.hidden=!item.visible;
-    if(sep)bar.insertBefore(btn,sep);
-  });
-}
-function renderBbCustomList(){
-  const box=$('#bbCustomList');if(!box)return;
-  const cfg=loadBbConfig();
-  box.innerHTML=cfg.map((item,i)=>{
-    const meta=BB_LABELS[item.id];if(!meta)return '';
-    return `<div class="bb-row" data-id="${item.id}">
-      <i data-lucide="${meta[0]}"></i><span class="bb-row-label">${meta[1]}</span>
-      <button class="mini bb-up" data-i="${i}" title="Выше" ${i===0?'disabled':''}><i data-lucide="arrow-up"></i></button>
-      <button class="mini bb-down" data-i="${i}" title="Ниже" ${i===cfg.length-1?'disabled':''}><i data-lucide="arrow-down"></i></button>
-      <button class="mini bb-vis" data-i="${i}" title="${item.visible?'Скрыть':'Показать'}"><i data-lucide="${item.visible?'eye':'eye-off'}"></i></button>
-    </div>`;
+/* ---------- "Ещё" — хаб-экран с плитками для второстепенных разделов ----------
+   Кнопки-источники (openHistory/openBookmarks/...) раньше жили в нижнем баре;
+   после переноса навигации в шапку эти id больше не существуют в DOM, поэтому
+   плитки вызывают ту же навигационную логику НАПРЯМУЮ, а не через .click(). */
+const MORE_TILES=[
+  ['История','calendar',()=>realHistory().length,()=>{filterDate=null;searchQuery='';tagFilter=null;showArchived=false;const si=$('#searchInput');if(si)si.value='';renderHistory();show($('#view-history'));}],
+  ['Anki','layers',()=>{const decks=loadAnkiDecks();return decks.reduce((n,d)=>n+ankiDueCount(d.id),0);},()=>{renderAnkiDeckList();show($('#view-anki'));}],
+  ['Выделения','highlighter',()=>getAllFragments().length,()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}],
+  ['Проекты','layout-grid',()=>loadProjects().length,()=>{renderProjectsList();show($('#view-projects'));}],
+  ['Закладки','bookmark',()=>bookmarks.length,()=>{renderBookmarks();show($('#view-bookmarks'));}],
+  ['Дашборд','bar-chart-3',null,()=>{renderDashboard();show($('#view-dashboard'));}],
+];
+function renderMoreTiles(){
+  const box=$('#moreTiles');if(!box)return;
+  box.innerHTML=MORE_TILES.map(([label,icon,countFn],i)=>{
+    let n=0;try{n=countFn?countFn():0;}catch(e){n=0;}
+    return `<button class="more-tile" data-i="${i}"><i data-lucide="${icon}"></i><span class="more-tile-label">${esc(label)}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
   }).join('');
   lucide.createIcons();
-  box.querySelectorAll('.bb-up').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();if(i>0){[c[i-1],c[i]]=[c[i],c[i-1]];saveBbConfig(c);applyBbConfig();renderBbCustomList();}}));
-  box.querySelectorAll('.bb-down').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();if(i<c.length-1){[c[i+1],c[i]]=[c[i],c[i+1]];saveBbConfig(c);applyBbConfig();renderBbCustomList();}}));
-  box.querySelectorAll('.bb-vis').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;const c=loadBbConfig();c[i].visible=!c[i].visible;saveBbConfig(c);applyBbConfig();renderBbCustomList();}));
+  box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=MORE_TILES[+b.dataset.i];if(t&&t[3])t[3]();}));
 }
-/* ---------- minimal UI toggle ---------- */
-function applyMinimal(){
-  const on=localStorage.getItem('neurocatch_minimal')==='1';
-  document.body.classList.toggle('minimal',on);
-  const showTab=$('#uiShowTab');if(showTab)showTab.hidden=!on;
-}
-$('#uiToggle')&&$('#uiToggle').addEventListener('click',()=>{localStorage.setItem('neurocatch_minimal','1');applyMinimal();});
-$('#uiShowTab')&&$('#uiShowTab').addEventListener('click',()=>{localStorage.setItem('neurocatch_minimal','0');applyMinimal();});
+$('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();show($('#view-more'));});
+/* ---------- вкладки внутри «Заметки»: Заметки / Выделения / Проекты ---------- */
+document.querySelectorAll('#view-notes .subtab').forEach(b=>b.addEventListener('click',()=>{
+  const nt=b.dataset.nt;
+  if(nt==='highlights'){fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}
+  else if(nt==='projects'){renderProjectsList();show($('#view-projects'));}
+  // 'notes' — уже текущий экран, никуда переходить не нужно
+}));
 /* ---------- today's tasks button ---------- */
 function todayOpenCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done)n++;});});return n;}
 function refreshTodayBtn(){const b=$('#todayCount');if(!b)return;const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
@@ -2598,7 +2572,7 @@ try{startAutoSync();}catch(e){}
 lucide.createIcons();
 booting=false;
 try{refreshTodayBtn();}catch(e){}
-try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();applyBbConfig();if($('#bottomBar'))document.body.classList.add('has-bottombar');if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
+try{applyBg();renderPresetRow();refreshQueueBadge();if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
 setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
 

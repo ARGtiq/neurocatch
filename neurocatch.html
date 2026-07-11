@@ -113,6 +113,10 @@
   <div class="shell">
     <div class="topbar">
       <div class="grp">
+        <button class="icon-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
+        <button class="icon-btn" id="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
+        <button class="icon-btn" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
+        <button class="icon-btn" id="openMore" aria-label="Ещё"><i data-lucide="more-horizontal"></i></button>
         <span id="syncDot" class="sync-dot" title="Синхронизация" hidden></span>
       </div>
       <div class="grp">
@@ -240,10 +244,20 @@
 
     <section class="view" id="view-notes" hidden>
       <div class="head-row"><button class="back" id="notesBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Заметки</h2></div>
+      <div class="subtabs">
+        <button class="subtab active" data-nt="notes">Заметки</button>
+        <button class="subtab" data-nt="highlights">Выделения</button>
+        <button class="subtab" data-nt="projects">Проекты</button>
+      </div>
       <div class="list-head"><span>Заметок: <b id="notesCount">0</b></span><div class="sec-actions"><button class="chip" id="noteCatFilterChip" hidden></button><button class="mini" id="noteAddBtn" title="Добавить заметку вручную"><i data-lucide="plus"></i></button></div></div>
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="noteSearch" placeholder="Поиск по конспектам и инсайтам..."></div>
       <details class="tag-collapse" id="noteTagsWrap"><summary><i data-lucide="chevron-down"></i>Теги <span id="noteTagsCount" class="tc-badge"></span></summary><div class="tag-row" id="noteTags"></div></details>
       <div class="notes-list" id="notesList"></div>
+    </section>
+
+    <section class="view" id="view-more" hidden>
+      <div class="head-row"><h2>Ещё</h2></div>
+      <div id="moreTiles" class="more-tiles"></div>
     </section>
 
     <section class="view" id="view-dashboard" hidden>
@@ -380,9 +394,8 @@
           <div class="field" style="flex:1"><label for="versionDateInput">Дата</label><input type="date" id="versionDateInput" class="date-input"></div>
           <div class="field" style="flex:0 0 110px"><label for="versionTimeInput">Время</label><input type="time" id="versionTimeInput" class="date-input" placeholder="необязательно"></div>
         </div>
-        <div class="field"><label for="versionShortInput">Краткий коммит</label><input type="text" id="versionShortInput" placeholder="Одной строкой — суть версии" autocomplete="off"></div>
-        <div class="field"><label for="versionDescInput">Описание (необязательно)</label><textarea id="versionDescInput" placeholder="Подробности, контекст, зачем эти изменения…" style="min-height:70px"></textarea></div>
         <div class="field"><label for="versionGithubInput">Ссылка на GitHub (коммит/тег/PR)</label><input type="text" id="versionGithubInput" placeholder="https://github.com/user/repo/commit/abcdef" autocomplete="off"></div>
+        <div class="field"><label for="versionShortInput">Краткий коммит</label><input type="text" id="versionShortInput" placeholder="Одной строкой — суть версии" autocomplete="off"></div>
         <div class="field"><label style="display:flex;align-items:center;justify-content:space-between">Изменения<button type="button" class="link-btn" id="versionAddChange">+ строка</button></label><div id="versionChangesList" class="version-changes-edit"></div></div>
         <div style="display:flex;gap:10px">
           <button class="btn btn-primary" id="versionSaveBtn" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
@@ -400,20 +413,7 @@
   </div>
 </div>
 
-<nav class="bottombar" id="bottomBar">
-  <button class="icon-btn" id="openHistory" data-bb="openHistory" aria-label="История"><i data-lucide="calendar"></i></button>
-  <button class="icon-btn" id="openTasks" data-bb="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
-  <button class="icon-btn" id="openSearch" data-bb="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
-  <button class="icon-btn" id="openBookmarks" data-bb="openBookmarks" aria-label="Закладки"><i data-lucide="bookmark"></i></button>
-  <button class="icon-btn" id="openNotes" data-bb="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
-  <button class="icon-btn" id="openAnki" data-bb="openAnki" aria-label="Anki"><i data-lucide="layers"></i></button>
-  <button class="icon-btn" id="openHighlights" data-bb="openHighlights" aria-label="Выделения"><i data-lucide="highlighter"></i></button>
-  <button class="icon-btn" id="openProjects" data-bb="openProjects" aria-label="Проекты"><i data-lucide="layout-grid"></i></button>
-  <button class="icon-btn" id="openDash" data-bb="openDash" aria-label="Дашборд"><i data-lucide="bar-chart-3"></i></button>
-  <span class="bb-sep"></span>
-  <button class="icon-btn" id="uiToggle" aria-label="Скрыть панель"><i data-lucide="chevron-down"></i></button>
-</nav>
-<button class="ui-toggle-tab" id="uiShowTab" aria-label="Показать панель" hidden><i data-lucide="chevron-up"></i></button>
+
 
 
 <!-- SETTINGS -->
@@ -431,7 +431,7 @@
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
     <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div></div>
-    <div class="field"><label>Нижняя панель — порядок и видимость</label><div id="bbCustomList" class="bb-custom-list"></div><div class="hint">Стрелками меняешь порядок, глазом скрываешь/показываешь. Настройки всегда доступны сверху рядом с темой.</div></div>
+    
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
       <label for="promptInput" style="display:flex;align-items:center;justify-content:space-between">Промпт разбора<button type="button" id="resetPrompt" class="link-btn">Сбросить</button></label>
