@@ -300,7 +300,6 @@
       <div class="st-panel" data-pt="board">
         <div class="section-tab-row" id="sectionTabRow"></div>
         <div id="sectionCardList" class="section-card-list"></div>
-        <button class="btn" id="sectionAddBtn" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая секция</button>
       </div>
       <div class="st-panel" data-pt="versions" hidden>
         <button class="btn btn-primary" id="versionAddBtn" style="width:100%;margin-bottom:16px"><i data-lucide="plus"></i>Новая версия</button>
@@ -377,9 +376,12 @@
       <div class="modal" role="dialog" aria-modal="true" style="max-width:560px">
         <div class="modal-head"><h2 id="versionEditTitle">Новая версия</h2><button class="icon-btn" id="versionEditClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
         <div class="field-row">
-          <div class="field"><label for="versionNumberInput">Версия</label><input type="text" id="versionNumberInput" placeholder="v1.2.0" autocomplete="off"></div>
-          <div class="field"><label for="versionDateInput">Дата</label><input type="date" id="versionDateInput"></div>
+          <div class="field" style="flex:1"><label for="versionNumberInput">Версия</label><input type="text" id="versionNumberInput" placeholder="v1.2.0" autocomplete="off"></div>
+          <div class="field" style="flex:1"><label for="versionDateInput">Дата</label><input type="date" id="versionDateInput" class="date-input"></div>
+          <div class="field" style="flex:0 0 110px"><label for="versionTimeInput">Время</label><input type="time" id="versionTimeInput" class="date-input" placeholder="необязательно"></div>
         </div>
+        <div class="field"><label for="versionShortInput">Краткий коммит</label><input type="text" id="versionShortInput" placeholder="Одной строкой — суть версии" autocomplete="off"></div>
+        <div class="field"><label for="versionDescInput">Описание (необязательно)</label><textarea id="versionDescInput" placeholder="Подробности, контекст, зачем эти изменения…" style="min-height:70px"></textarea></div>
         <div class="field"><label for="versionGithubInput">Ссылка на GitHub (коммит/тег/PR)</label><input type="text" id="versionGithubInput" placeholder="https://github.com/user/repo/commit/abcdef" autocomplete="off"></div>
         <div class="field"><label style="display:flex;align-items:center;justify-content:space-between">Изменения<button type="button" class="link-btn" id="versionAddChange">+ строка</button></label><div id="versionChangesList" class="version-changes-edit"></div></div>
         <div style="display:flex;gap:10px">

@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v54';
+const APP_VERSION='2025.7-06';const SW_VER='v55';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -716,16 +716,20 @@ function setProjectTab(pt){
 function renderProjectBoard(){
   const p=findProject(curProjectId);if(!p)return;
   const tabRow=$('#sectionTabRow');
+  const addBtnHtml=`<button class="mini section-tab-add" id="sectionAddBtn" title="Новая секция"><i data-lucide="plus"></i></button>`;
   if(!p.sections.length){
-    tabRow.innerHTML='';
-    $('#sectionCardList').innerHTML='<div class="empty">Секций нет. Нажми «Новая секция» ниже.</div>';
+    tabRow.innerHTML=addBtnHtml;
+    lucide.createIcons();
+    $('#sectionAddBtn')&&$('#sectionAddBtn').addEventListener('click',()=>openSectionEditor(null));
+    $('#sectionCardList').innerHTML='<div class="empty">Секций нет. Нажми «+» выше, чтобы создать первую.</div>';
     return;
   }
   if(!p.sections.find(s=>s.id===curSectionId))curSectionId=p.sections[0].id;
-  tabRow.innerHTML=p.sections.map(s=>`<button class="section-tab${s.id===curSectionId?' active':''}" data-sid="${s.id}">${esc(s.name)}<span class="t-group-n">${s.cards.length}</span></button>`).join('')+`<button class="mini section-tab-edit" id="sectionRenameBtn" title="Переименовать/удалить секцию"><i data-lucide="pencil"></i></button>`;
+  tabRow.innerHTML=p.sections.map(s=>`<button class="section-tab${s.id===curSectionId?' active':''}" data-sid="${s.id}">${esc(s.name)}<span class="t-group-n">${s.cards.length}</span></button>`).join('')+`<button class="mini section-tab-edit" id="sectionRenameBtn" title="Переименовать/удалить секцию"><i data-lucide="pencil"></i></button>`+addBtnHtml;
   lucide.createIcons();
   tabRow.querySelectorAll('.section-tab').forEach(b=>b.addEventListener('click',()=>{curSectionId=b.dataset.sid;renderProjectBoard();}));
   $('#sectionRenameBtn')&&$('#sectionRenameBtn').addEventListener('click',()=>{const sec=p.sections.find(s=>s.id===curSectionId);if(sec)openSectionEditor(sec);});
+  $('#sectionAddBtn')&&$('#sectionAddBtn').addEventListener('click',()=>openSectionEditor(null));
   const sec=p.sections.find(s=>s.id===curSectionId);
   const listBox=$('#sectionCardList');
   if(!sec){listBox.innerHTML='';return;}
@@ -771,7 +775,6 @@ function openSectionEditor(existing){
   $('#sectionEditOverlay').classList.add('open');
   setTimeout(()=>$('#sectionNameInput').focus(),50);
 }
-$('#sectionAddBtn')&&$('#sectionAddBtn').addEventListener('click',()=>openSectionEditor(null));
 $('#sectionEditClose')&&$('#sectionEditClose').addEventListener('click',()=>$('#sectionEditOverlay').classList.remove('open'));
 $('#sectionEditOverlay')&&$('#sectionEditOverlay').addEventListener('click',e=>{if(e.target===$('#sectionEditOverlay'))$('#sectionEditOverlay').classList.remove('open');});
 $('#sectionSaveBtn')&&$('#sectionSaveBtn').addEventListener('click',()=>{
@@ -795,59 +798,86 @@ $('#sectionDeleteBtn')&&$('#sectionDeleteBtn').addEventListener('click',()=>{
 
 /* ---- Версии (менеджер версий / коммиты, в стиле GitHub) ---- */
 const CHANGE_TYPES={feat:['✨','Новое'],fix:['🐛','Исправление'],refactor:['♻️','Рефакторинг'],style:['💄','Стиль'],chore:['🔧','Прочее'],docs:['📝','Документация']};
+function parseVersionParts(v){
+  const m=/(\d+)\D*(\d+)?\D*(\d+)?/.exec(String(v||''));
+  if(!m)return [0,0,0];
+  return [+(m[1]||0),+(m[2]||0),+(m[3]||0)];
+}
+function compareVersions(a,b){
+  const pa=parseVersionParts(a),pb=parseVersionParts(b);
+  for(let i=0;i<3;i++){if(pa[i]!==pb[i])return pb[i]-pa[i];}
+  return 0;
+}
 function renderVersionList(){
   const p=findProject(curProjectId);if(!p)return;
   const box=$('#versionList');if(!box)return;
-  const versions=(p.versions||[]).slice().sort((a,b)=>b.ts-a.ts);
+  const versions=(p.versions||[]).slice().sort((a,b)=>compareVersions(a.version,b.version)||(b.ts-a.ts));
   if(!versions.length){box.innerHTML='<div class="empty">Версий пока нет. Веди историю релизов проекта с ссылками на коммиты GitHub.</div>';return;}
   box.innerHTML=versions.map(v=>`<div class="version-card" data-vid="${v.id}">
     <div class="version-head">
       <span class="version-badge">${esc(v.version||'—')}</span>
-      <span class="version-date">${esc(v.date||'')}</span>
+      <span class="version-date">${esc(v.date||'')}${v.time?(' · '+esc(v.time)):''}</span>
       ${v.githubUrl?`<a href="${attr(v.githubUrl)}" target="_blank" rel="noopener" class="version-gh" title="Открыть на GitHub"><i data-lucide="external-link"></i>GitHub</a>`:''}
       <button class="mini version-edit" data-vid="${v.id}" title="Изменить"><i data-lucide="pencil"></i></button>
     </div>
+    ${v.shortMsg?`<div class="version-short">${esc(v.shortMsg)}</div>`:''}
+    ${v.description?`<div class="version-desc">${esc(v.description)}</div>`:''}
     <div class="version-changes">${(v.changes||[]).map(c=>{const meta=CHANGE_TYPES[c.type]||CHANGE_TYPES.chore;return `<div class="version-change ${c.type}"><span class="vc-badge">${meta[0]} ${esc(c.type)}</span><span class="vc-text">${esc(c.text)}</span></div>`;}).join('')||'<div class="empty" style="padding:6px 0;font-size:12px">Без описания изменений.</div>'}</div>
   </div>`).join('');
   lucide.createIcons();
   box.querySelectorAll('.version-edit').forEach(b=>b.addEventListener('click',()=>{const v=p.versions.find(x=>x.id===b.dataset.vid);if(v)openVersionEditor(v);}));
 }
+function vcGrow(ta){if(!ta)return;ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,240)+'px';}
 function versionChangeRowHtml(type,text){
-  return `<div class="vc-edit-row"><select class="vc-type-select">${Object.entries(CHANGE_TYPES).map(([k,m])=>`<option value="${k}"${k===type?' selected':''}>${m[0]} ${m[1]}</option>`).join('')}</select><input type="text" class="vc-text-input" value="${attr(text||'')}" placeholder="Что изменилось…"><button type="button" class="mini vc-row-del"><i data-lucide="x"></i></button></div>`;
+  return `<div class="vc-edit-row"><div class="vc-row-top"><select class="vc-type-select">${Object.entries(CHANGE_TYPES).map(([k,m])=>`<option value="${k}"${k===type?' selected':''}>${m[0]} ${m[1]}</option>`).join('')}</select><button type="button" class="mini vc-row-del"><i data-lucide="x"></i></button></div><textarea class="vc-text-input" placeholder="Что изменилось… (можно в несколько строк)" rows="1">${esc(text||'')}</textarea></div>`;
 }
 function openVersionEditor(existing){
   versionEditingId=existing?existing.id:null;
   $('#versionEditTitle').textContent=existing?'Версия':'Новая версия';
   $('#versionNumberInput').value=existing?existing.version:'';
   $('#versionDateInput').value=existing?existing.date:dateKey(Date.now());
+  $('#versionTimeInput').value=existing?(existing.time||''):'';
+  $('#versionShortInput').value=existing?(existing.shortMsg||''):'';
+  $('#versionDescInput').value=existing?(existing.description||''):'';
   $('#versionGithubInput').value=existing?(existing.githubUrl||''):'';
   const list=$('#versionChangesList');
   const changes=existing&&existing.changes&&existing.changes.length?existing.changes:[{type:'feat',text:''}];
   list.innerHTML=changes.map(c=>versionChangeRowHtml(c.type,c.text)).join('');
+  lucide.createIcons();
   wireVersionChangeRows();
   const del=$('#versionDeleteBtn');if(del)del.hidden=!existing;
   $('#versionEditOverlay').classList.add('open');
-  setTimeout(()=>$('#versionNumberInput').focus(),50);
+  setTimeout(()=>{$('#versionNumberInput').focus();document.querySelectorAll('#versionChangesList .vc-text-input').forEach(vcGrow);},50);
 }
 function wireVersionChangeRows(){
-  document.querySelectorAll('#versionChangesList .vc-row-del').forEach(b=>b.addEventListener('click',()=>{
-    const rows=document.querySelectorAll('#versionChangesList .vc-edit-row');
-    if(rows.length<=1){toast('Нужна хотя бы одна строка',true);return;}
-    b.closest('.vc-edit-row').remove();
-  }));
+  document.querySelectorAll('#versionChangesList .vc-row-del').forEach(b=>{
+    b.onclick=()=>{
+      const rows=document.querySelectorAll('#versionChangesList .vc-edit-row');
+      if(rows.length<=1){toast('Нужна хотя бы одна строка',true);return;}
+      b.closest('.vc-edit-row').remove();
+    };
+  });
+  document.querySelectorAll('#versionChangesList .vc-text-input').forEach(ta=>{
+    if(ta.dataset.wired)return;ta.dataset.wired='1';
+    ta.addEventListener('input',()=>vcGrow(ta));
+  });
 }
 $('#versionAddBtn')&&$('#versionAddBtn').addEventListener('click',()=>openVersionEditor(null));
 $('#versionAddChange')&&$('#versionAddChange').addEventListener('click',()=>{
   const list=$('#versionChangesList');if(!list)return;
   const div=document.createElement('div');div.innerHTML=versionChangeRowHtml('feat','');
-  list.appendChild(div.firstChild);
+  const row=div.firstChild;list.appendChild(row);
   lucide.createIcons();wireVersionChangeRows();
+  const ta=row.querySelector('.vc-text-input');if(ta)ta.focus();
 });
 $('#versionEditClose')&&$('#versionEditClose').addEventListener('click',()=>$('#versionEditOverlay').classList.remove('open'));
 $('#versionEditOverlay')&&$('#versionEditOverlay').addEventListener('click',e=>{if(e.target===$('#versionEditOverlay'))$('#versionEditOverlay').classList.remove('open');});
 $('#versionSaveBtn')&&$('#versionSaveBtn').addEventListener('click',()=>{
   const version=$('#versionNumberInput').value.trim();if(!version){toast('Введи номер версии',true);return;}
   const date=$('#versionDateInput').value||dateKey(Date.now());
+  const time=$('#versionTimeInput').value.trim();
+  const shortMsg=$('#versionShortInput').value.trim();
+  const description=$('#versionDescInput').value.trim();
   const githubUrl=$('#versionGithubInput').value.trim();
   const changes=[...document.querySelectorAll('#versionChangesList .vc-edit-row')].map(row=>({
     type:row.querySelector('.vc-type-select').value,
@@ -855,8 +885,9 @@ $('#versionSaveBtn')&&$('#versionSaveBtn').addEventListener('click',()=>{
   })).filter(c=>c.text);
   const p=findProject(curProjectId);if(!p)return;
   p.versions=p.versions||[];
-  if(versionEditingId){const v=p.versions.find(x=>x.id===versionEditingId);if(v){v.version=version;v.date=date;v.githubUrl=githubUrl;v.changes=changes;}}
-  else{p.versions.unshift({id:uid('ver'),version,date,githubUrl,changes,ts:new Date(date+'T00:00:00').getTime()||Date.now()});}
+  const tsBase=new Date(date+'T'+(time||'00:00')+':00').getTime()||Date.now();
+  if(versionEditingId){const v=p.versions.find(x=>x.id===versionEditingId);if(v){v.version=version;v.date=date;v.time=time;v.shortMsg=shortMsg;v.description=description;v.githubUrl=githubUrl;v.changes=changes;v.ts=tsBase;}}
+  else{p.versions.unshift({id:uid('ver'),version,date,time,shortMsg,description,githubUrl,changes,ts:tsBase});}
   touchProject(p);
   $('#versionEditOverlay').classList.remove('open');
   toast(versionEditingId?'Версия обновлена':'Версия добавлена');

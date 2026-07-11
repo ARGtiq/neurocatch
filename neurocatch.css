@@ -1001,7 +1001,8 @@ html[data-theme="light"] .note-title{
 .proj-card-acts{display:flex;gap:6px;margin-top:10px}
 .proj-card-acts .mini{width:30px;height:30px}
 
-.field-row{display:flex;gap:10px}
+.field-row{display:flex;gap:10px;flex-wrap:wrap}
+.field-row .field{min-width:120px}
 .field-row .field{flex:1}
 
 /* ===================== Версии (менеджер версий / коммиты) ===================== */
@@ -1023,10 +1024,26 @@ html[data-theme="light"] .note-title{
 .version-change.style .vc-badge{background:rgba(255,92,147,.15);color:#ff5c93}
 .version-change.chore .vc-badge{background:var(--glass-2);color:var(--faint)}
 .version-change.docs .vc-badge{background:rgba(34,199,199,.15);color:#22c7c7}
-.vc-text{flex:1;color:var(--text)}
+.vc-text{flex:1;color:var(--text);white-space:pre-wrap;word-break:break-word}
 
-.vc-edit-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
-.vc-type-select{flex:0 0 auto;padding:9px 8px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font:inherit;font-size:12px}
-.vc-text-input{flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font:inherit;font-size:13px}
-.vc-row-del{flex:0 0 auto;width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass);color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.vc-edit-row{background:var(--glass);border:1px solid var(--stroke);border-radius:12px;padding:10px;margin-bottom:8px}
+.vc-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.vc-type-select{flex:0 0 auto;max-width:100%;padding:8px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:12px}
+.vc-text-input{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:9px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:13px;resize:none;overflow:hidden;min-height:38px;line-height:1.5}
+.vc-row-del{flex:0 0 auto;width:28px;height:28px;border-radius:8px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--faint);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .vc-row-del:hover{color:var(--red)}
+
+/* date/time inputs — match the look of regular text inputs */
+.field input[type=date],
+.field input[type=date].date-input{width:100%;padding:14px 15px;border-radius:14px;font:inherit;font-size:15px;background:var(--glass);border:1px solid var(--stroke);color:var(--text);outline:none;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+.field input[type=date]:focus{border-color:rgba(var(--seed-rgb),.55);box-shadow:0 0 0 3px rgba(var(--seed-rgb),.12)}
+.field input[type=date]::-webkit-calendar-picker-indicator,
+.field input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.6);cursor:pointer;opacity:.8}
+.field input[type=date]::-webkit-calendar-picker-indicator:hover,
+.field input[type=time]::-webkit-calendar-picker-indicator:hover{opacity:1}
+html[data-theme="light"] .field input[type=date]::-webkit-calendar-picker-indicator,
+html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.35)}
+.version-short{font-size:14px;font-weight:600;color:var(--text);margin:2px 0 8px}
+.version-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:10px;white-space:pre-wrap}
+.section-tab-add{flex:0 0 auto;color:var(--faint)}
+.section-tab-add:hover{color:var(--accent-2)}
