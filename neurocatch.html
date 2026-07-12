@@ -66,6 +66,7 @@
     "arrow-down":'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
     "combine":'<path d="M14 15v4a2 2 0 0 0 2 2h4"/><path d="M14 9V5a2 2 0 0 1 2-2h4"/><path d="M4 9V6a2 2 0 0 1 2-2h4"/><path d="M4 15v3a2 2 0 0 0 2 2h4"/><path d="M9 12h6"/>',
     "square":'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+    "list":'<path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/>',
     "layout-grid":'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
     "check-square":'<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     "paperclip":'<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
@@ -207,7 +208,7 @@
       <div class="st-panel" data-st="tasks">
         <div class="task-cal" id="taskCal"></div>
         <div class="task-group-row" id="taskGroupRow"></div>
-        <div class="list-head"><span id="tasksLabel">Открыто: 0</span><div class="sec-actions"><button class="mini" id="allTasksIcs" title="Экспорт в календарь .ics"><i data-lucide="calendar-plus"></i></button><button class="mini" id="allTasksSub" title="Подписка на календарь (авто-обновление)"><i data-lucide="rss"></i></button><button class="mini" id="allTasksMd" title="Скачать все задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="allTasksTick" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button></div></div>
+        <div class="list-head"><span id="tasksLabel">Открыто: 0</span><div class="sec-actions"><button class="mini" id="taskAddBtn" title="Добавить задачу"><i data-lucide="plus"></i></button><button class="mini" id="allTasksIcs" title="Экспорт в календарь .ics"><i data-lucide="calendar-plus"></i></button><button class="mini" id="allTasksSub" title="Подписка на календарь (авто-обновление)"><i data-lucide="rss"></i></button><button class="mini" id="allTasksMd" title="Скачать все задачи .md"><i data-lucide="file-down"></i></button><button class="mini" id="allTasksTick" title="Копировать для TickTick"><i data-lucide="clipboard"></i></button></div></div>
         <div class="rep-list" id="taskList"></div>
         <div id="doneWrap"></div>
       </div>
@@ -288,6 +289,13 @@
           <button class="btn btn-primary" id="ankiCardSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
           <button class="btn btn-clear" id="ankiCardDelete" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
         </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="ankiBrowseOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:560px">
+        <div class="modal-head"><h2 id="ankiBrowseTitle">Карточки колоды</h2><button class="icon-btn" id="ankiBrowseClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div id="ankiBrowseList" class="anki-browse-list"></div>
       </div>
     </div>
 
@@ -543,7 +551,7 @@
       <textarea id="neBodyInput" placeholder="Текст заметки… Поддерживает markdown: **жирный**, *курсив*, списки, ссылки." style="min-height:160px"></textarea>
       <div class="note-body ne-preview" id="nePreview" hidden></div>
     </div>
-    <div class="field"><label for="neTagsInput">Теги (через запятую)</label><input type="text" id="neTagsInput" placeholder="здоровье, идея" autocomplete="off"></div>
+    <div class="field"><label for="neTagsInput" style="display:flex;align-items:center;justify-content:space-between">Теги (через запятую)<button type="button" class="link-btn" id="neTagsBrowse">Список тегов</button></label><input type="text" id="neTagsInput" placeholder="здоровье, идея" autocomplete="off"></div>
     <div style="display:flex;gap:10px;margin-top:6px">
       <button class="btn btn-primary" id="neSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
       <button class="btn btn-clear" id="neDelete" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>

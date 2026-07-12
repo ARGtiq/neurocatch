@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v58';
+const APP_VERSION='2025.7-06';const SW_VER='v61';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -103,7 +103,14 @@ let toastTimer;
 function toast(msg,err){const t=$('#toast'),tt=$('#toastText');if(!t||!tt){try{console.log('[toast]',msg);}catch(e){}return;}tt.textContent=msg;t.classList.toggle('err',!!err);t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
 function refreshCount(){const b=$('#ritualCount');if(!b)return;if(catches.length>0){b.textContent=catches.length;b.hidden=false;}else b.hidden=true;const r=$('#ritual');if(r){r.classList.remove('pulse');void r.offsetWidth;r.classList.add('pulse');}}
 const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-const safe=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+function inlineMd(s){
+  let t=esc(s);
+  t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  t=t.replace(/\*\*([^*]+?)\*\*/g,'<strong>$1</strong>');
+  t=t.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g,'$1<em>$2</em>');
+  return t;
+}
+const safe=inlineMd;
 const dateKey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 matrixDate=dateKey(Date.now());
 const fmtDate=ts=>new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
@@ -290,15 +297,26 @@ function assembleLinks(d,text){const map=new Map();
   d.summaries.forEach(s=>{if(s.source)add(s.source,s.title);});
   (text.match(URL_RE)||[]).forEach(u=>add(u,''));
   return [...map].map(([url,title])=>({url,title:title||hostOf(url)}));}
-function mdBlock(src){const lines=(src||'').split('\n');let html='',para=[],inList=false;
-  const fp=()=>{if(para.length){html+='<p>'+safe(para.join(' '))+'</p>';para=[];}};
-  const fl=()=>{if(inList){html+='</ul>';inList=false;}};
-  lines.forEach(l=>{const t=l.trim();
+function mdBlock(src){
+  const lines=(src||'').split('\n');
+  let html='',para=[],listType=null;
+  const fp=()=>{if(para.length){html+='<p>'+inlineMd(para.join(' '))+'</p>';para=[];}};
+  const fl=()=>{if(listType){html+=(listType==='ul'?'</ul>':'</ol>');listType=null;}};
+  lines.forEach(l=>{
+    const t=l.trim();
     if(!t){fp();fl();return;}
-    if(/^[-*]\s+/.test(t)){fp();if(!inList){html+='<ul class="bullets">';inList=true;}html+='<li>'+safe(t.replace(/^[-*]\s+/,''))+'</li>';}
-    else if(/^#{1,6}\s+/.test(t)){fp();fl();html+='<h5>'+safe(t.replace(/^#{1,6}\s+/,''))+'</h5>';}
-    else para.push(t);});
-  fp();fl();return html;}
+    const mUl=/^[-*]\s+(.*)/.exec(t);
+    const mOl=/^\d+\.\s+(.*)/.exec(t);
+    const mH=/^(#{1,6})\s+(.*)/.exec(t);
+    const mQ=/^>\s?(.*)/.exec(t);
+    if(mUl){fp();if(listType!=='ul'){fl();html+='<ul class="bullets">';listType='ul';}html+='<li>'+inlineMd(mUl[1])+'</li>';}
+    else if(mOl){fp();if(listType!=='ol'){fl();html+='<ol class="bullets">';listType='ol';}html+='<li>'+inlineMd(mOl[1])+'</li>';}
+    else if(mH){fp();fl();const lvl=Math.min(6,mH[1].length+3);html+='<h'+lvl+'>'+inlineMd(mH[2])+'</h'+lvl+'>';}
+    else if(mQ){fp();fl();html+='<blockquote>'+inlineMd(mQ[1])+'</blockquote>';}
+    else{fl();para.push(t);}
+  });
+  fp();fl();return html;
+}
 const attr=u=>String(u).replace(/"/g,'%22');
 function renderDigest(entry){
   currentEntry=entry;
@@ -400,16 +418,20 @@ function openStudyMenu(url,anchor){
   }));
   setTimeout(()=>document.addEventListener('click',studyOutside),0);
 }
-function openCatMenu(anchor,current,onPick,options){
+function openCatMenu(anchor,current,onPick,options,cfg){
+  cfg=cfg||{};
+  const title=cfg.title||'Категория';
+  const allowNew=cfg.allowNew!==false;
+  const newPrompt=cfg.newPrompt||'Новая категория:';
   const ex=$('#catMenu');if(ex)ex.remove();
   const cats=(options&&options.length)?options:catList();
   const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
-  m.innerHTML='<div class="sm-h">Категория</div>'+cats.map(c=>`<button data-c="${attr(c)}"${c===current?' style="color:var(--accent-2)"':''}>${esc(c)}</button>`).join('')+'<button data-new="1">＋ Новая…</button>';
+  m.innerHTML='<div class="sm-h">'+esc(title)+'</div>'+cats.map(c=>`<button data-c="${attr(c)}"${c===current?' style="color:var(--accent-2)"':''}>${esc(c)}</button>`).join('')+(allowNew?'<button data-new="1">＋ Новая…</button>':'');
   document.body.appendChild(m);
   const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.right-200+window.scrollX;if(left<8+window.scrollX)left=8+window.scrollX;m.style.left=left+'px';
   const close=()=>{m.remove();document.removeEventListener('click',out);};
   function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
-  m.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.new){const nc=prompt('Новая категория:');close();if(nc&&nc.trim())onPick(nc.trim());return;}onPick(b.dataset.c);close();}));
+  m.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.new){const nc=prompt(newPrompt);close();if(nc&&nc.trim())onPick(nc.trim());return;}onPick(b.dataset.c);close();}));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
 function renderBookmarks(){
@@ -462,7 +484,7 @@ function insightsSubBlock(n){
 function noteCardHtml(n,cats){
   const cat=noteCat(n,cats);const bodyHtml=n.body?mdBlock(n.body):'';
   const icon=n.kind==='ins'?'<i data-lucide=\'lightbulb\'></i>':n.kind==='man'?'<i data-lucide=\'sticky-note\'></i>':'';
-  const actions=`<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться ссылкой"><i data-lucide="share"></i></button><button class="mini note-file" data-nid="${attr(n.id)}" title="Скачать файл"><i data-lucide="download"></i></button>`;
+  const actions=`<button class="mini note-edit" data-nid="${attr(n.id)}" title="Изменить"><i data-lucide="pencil"></i></button><button class="mini note-del" data-nid="${attr(n.id)}" title="Удалить"><i data-lucide="trash-2"></i></button><button class="mini note-share" data-nid="${attr(n.id)}" title="Поделиться"><i data-lucide="share"></i></button>`;
   return `<div class="note-card ${n.kind}"><div class="note-head"><span class="note-cat-wrap"><button class="bm-cat note-cat" data-nid="${attr(n.id)}" title="Показать всё с этим тегом"><i data-lucide="folder"></i>${esc(cat)}</button><button class="mini note-cat-edit" data-nid="${attr(n.id)}" title="Изменить основной тег"><i data-lucide="pencil"></i></button></span><div class="note-actions">${actions}<span class="note-date">${fmtDate(n.ts)}</span></div></div><div class="note-title note-open" data-nid="${attr(n.id)}">${icon}${esc(n.title)}</div>${n.source?`<a class="note-src" href="${attr(n.source)}" target="_blank" rel="noopener"><i data-lucide="link"></i>${esc(hostOf(n.source))}</a>`:''}${bodyHtml?`<div class="note-body clamp note-open" data-nid="${attr(n.id)}">${bodyHtml}</div>`:''}${insightsSubBlock(n)}<div class="note-tags">${n.tags.map(t=>`<span class="tag-pill" data-t="${attr(t)}">${esc(t)}</span>`).join('')}${getLinkedNoteIds(n.id).length?`<span class="tag-pill nd-link-badge">🔗 ${getLinkedNoteIds(n.id).length}</span>`:''}</div></div>`;
 }
 function wireNoteCards(box,notes){
@@ -472,7 +494,6 @@ function wireNoteCards(box,notes){
   box.querySelectorAll('.note-ins-anki[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;const text=(n.insights||[])[+b.dataset.i];if(text)openAnkiCardEditor({back:text,front:''});}));
   box.querySelectorAll('.note-tags .tag-pill[data-t]').forEach(p=>p.addEventListener('click',()=>{noteTagFilter=p.dataset.t;renderNotes();}));
   box.querySelectorAll('.note-share[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)openShareMenu(b,n);}));
-  box.querySelectorAll('.note-file[data-nid]').forEach(b=>b.addEventListener('click',()=>{const n=notes.find(x=>x.id===b.dataset.nid);if(n)shareNoteFile(n);}));
   box.querySelectorAll('.note-edit[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(n)openNoteEditor(n);}));
   box.querySelectorAll('.note-del[data-nid]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const n=notes.find(x=>x.id===b.dataset.nid);if(!n)return;if(!confirm('Удалить эту заметку?'))return;deleteNoteAny(n);toast('Заметка удалена');renderNotes();}));
 }
@@ -945,8 +966,8 @@ function wireHighlightCapture(n){
     if(!text||sel.rangeCount===0||!bodyEl.contains(sel.getRangeAt(0).commonAncestorContainer)){popup.hidden=true;return;}
     curText=text;
     const r=sel.getRangeAt(0).getBoundingClientRect();
-    popup.style.top=Math.max(8,window.scrollY+r.top-46)+'px';
-    popup.style.left=Math.max(8,r.left+window.scrollX)+'px';
+    popup.style.top=(window.scrollY+r.bottom+10)+'px'; // снизу от выделения — сверху конфликтует с системным меню Android (Копировать/Поделиться), которое всегда выше веб-контента
+    popup.style.left=Math.max(8,Math.min(r.left+window.scrollX,window.innerWidth-160))+'px';
     popup.hidden=false;
   }
   bodyEl.addEventListener('mouseup',onUp);
@@ -1107,10 +1128,53 @@ $('#nePreviewToggle')&&$('#nePreviewToggle').addEventListener('click',()=>{const
 $('#neBodyInput')&&$('#neBodyInput').addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='b'){e.preventDefault();neApplyMd('bold');}
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='i'){e.preventDefault();neApplyMd('italic');}
+  else if(e.key==='Enter'&&!e.shiftKey){
+    const ta=e.target;const val=ta.value;const pos=ta.selectionStart;
+    const lineStart=val.lastIndexOf('\n',pos-1)+1;
+    const line=val.slice(lineStart,pos);
+    const mUl=/^(\s*)([-*])\s+(.*)$/.exec(line);
+    const mOl=/^(\s*)(\d+)\.\s+(.*)$/.exec(line);
+    if(mUl){
+      e.preventDefault();
+      if(!mUl[3].trim()){ // пустой пункт — завершаем список, убираем маркер
+        ta.value=val.slice(0,lineStart)+val.slice(pos);
+        ta.selectionStart=ta.selectionEnd=lineStart;
+      }else{
+        const prefix='\n'+mUl[1]+mUl[2]+' ';
+        ta.value=val.slice(0,pos)+prefix+val.slice(pos);
+        ta.selectionStart=ta.selectionEnd=pos+prefix.length;
+      }
+      vcGrow(ta);ta.dispatchEvent(new Event('input',{bubbles:true}));
+    }else if(mOl){
+      e.preventDefault();
+      if(!mOl[3].trim()){
+        ta.value=val.slice(0,lineStart)+val.slice(pos);
+        ta.selectionStart=ta.selectionEnd=lineStart;
+      }else{
+        const next=(+mOl[2])+1;
+        const prefix='\n'+mOl[1]+next+'. ';
+        ta.value=val.slice(0,pos)+prefix+val.slice(pos);
+        ta.selectionStart=ta.selectionEnd=pos+prefix.length;
+      }
+      vcGrow(ta);ta.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  }
 });
 $('#noteAddBtn')&&$('#noteAddBtn').addEventListener('click',()=>openNoteEditor(null));
 $('#noteCatFilterChip')&&$('#noteCatFilterChip').addEventListener('click',()=>{noteCatFilterVal=null;renderNotes();});
 $('#neClose')&&$('#neClose').addEventListener('click',()=>$('#noteEditOverlay').classList.remove('open'));
+function allNoteTags(){const set=new Set();try{buildNotes().forEach(n=>(n.tags||[]).forEach(t=>set.add(t)));}catch(e){}return [...set].sort();}
+$('#neTagsBrowse')&&$('#neTagsBrowse').addEventListener('click',()=>{
+  const tags=allNoteTags();
+  if(!tags.length){toast('Пока нет ни одного тега — сначала добавь его вручную',true);return;}
+  openCatMenu($('#neTagsBrowse'),null,tag=>{
+    const inp=$('#neTagsInput');if(!inp)return;
+    const cur=inp.value.split(',').map(t=>t.trim()).filter(Boolean);
+    const clean=tag.replace(/^#/,'');
+    if(!cur.includes(clean))cur.push(clean);
+    inp.value=cur.join(', ');
+  },tags.map(t=>t.replace(/^#/,'')),{title:'Существующие теги',allowNew:false});
+});
 $('#noteEditOverlay')&&$('#noteEditOverlay').addEventListener('click',e=>{if(e.target===$('#noteEditOverlay'))$('#noteEditOverlay').classList.remove('open');});
 $('#neSave')&&$('#neSave').addEventListener('click',()=>{
   const title=$('#neTitleInput').value.trim();
@@ -1278,16 +1342,37 @@ function renderAnkiDeckList(){
     const due=ankiDueCount(d.id);
     return `<div class="anki-deck-card" data-id="${d.id}">
       <div class="anki-deck-main"><div class="anki-deck-name">${esc(d.name)}</div><div class="anki-deck-meta">${total} карточ${total===1?'ка':(total>=2&&total<=4?'ки':'ек')}${due?(' · <b class="anki-due-n">'+due+' на повтор</b>'):''}</div></div>
-      <div class="anki-deck-acts"><button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button><button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button></div>
+      <div class="anki-deck-acts"><button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button><button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button><button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button></div>
     </div>`;
   }).join('')||'<div class="empty">Колод нет.</div>';
   box.innerHTML+='<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
   lucide.createIcons();
   box.querySelectorAll('.anki-deck-card').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('.anki-deck-acts'))return;openAnkiStudy(el.dataset.id);}));
   box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){d.name=nm.trim();saveAnkiDecks(decks);renderAnkiDeckList();}}));
+  box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openAnkiBrowse(b.dataset.id);}));
   box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();if(decks.length<=1){toast('Нужна хотя бы одна колода',true);return;}if(!confirm('Удалить колоду и все её карточки?'))return;const id=b.dataset.id;saveAnkiDecks(decks.filter(x=>x.id!==id));saveAnkiCards(cards.filter(c=>c.deckId!==id));renderAnkiDeckList();}));
   const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){const arr=loadAnkiDecks();arr.push({id:uid('dk'),name:nm.trim(),ts:Date.now()});saveAnkiDecks(arr);renderAnkiDeckList();}});
 }
+function openAnkiBrowse(deckId){
+  const decks=loadAnkiDecks();const deck=decks.find(d=>d.id===deckId);if(!deck)return;
+  $('#ankiBrowseTitle').textContent=deck.name+' — карточки';
+  const box=$('#ankiBrowseList');
+  const cards=loadAnkiCards().filter(c=>c.deckId===deckId);
+  box.innerHTML=cards.length?cards.map(c=>`<div class="anki-browse-card" data-id="${c.id}">
+      <div class="anki-browse-front">${esc(c.front||'(без вопроса)')}</div>
+      <div class="anki-browse-back">${esc(c.back)}</div>
+      <div class="anki-browse-meta">Повтор: ${c.interval?c.interval+' дн.':'сегодня'} · Ответов: ${c.reps||0}</div>
+    </div>`).join(''):'<div class="empty">В этой колоде пока нет карточек.</div>';
+  lucide.createIcons();
+  box.querySelectorAll('.anki-browse-card').forEach(el=>el.addEventListener('click',()=>{
+    const c=cards.find(x=>x.id===el.dataset.id);if(!c)return;
+    $('#ankiBrowseOverlay').classList.remove('open');
+    openAnkiCardEditor({id:c.id,deckId:c.deckId,front:c.front,back:c.back});
+  }));
+  $('#ankiBrowseOverlay').classList.add('open');
+}
+$('#ankiBrowseClose')&&$('#ankiBrowseClose').addEventListener('click',()=>$('#ankiBrowseOverlay').classList.remove('open'));
+$('#ankiBrowseOverlay')&&$('#ankiBrowseOverlay').addEventListener('click',e=>{if(e.target===$('#ankiBrowseOverlay'))$('#ankiBrowseOverlay').classList.remove('open');});
 function openAnkiStudy(deckId){
   const decks=loadAnkiDecks();const deck=decks.find(d=>d.id===deckId);if(!deck)return;
   ankiStudyDeck=deck;
@@ -1621,7 +1706,7 @@ function renderHabits(){
   lucide.createIcons();
   box.querySelectorAll('.habit-day').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.hid);if(!hb)return;hb.checks=hb.checks||{};if(hb.checks[b.dataset.k])delete hb.checks[b.dataset.k];else hb.checks[b.dataset.k]=1;saveHabits();renderHabits();}));
   box.querySelectorAll('.habit-del').forEach(b=>b.addEventListener('click',()=>{habits=habits.filter(x=>x.id!==b.dataset.id);saveHabits();renderHabits();}));
-  box.querySelectorAll('.habit-goal').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.id);if(!hb)return;openCatMenu(b,String(hb.goal||7),cat=>{hb.goal=+cat||7;saveHabits();renderHabits();},['1','2','3','4','5','6','7']);}));
+  box.querySelectorAll('.habit-goal').forEach(b=>b.addEventListener('click',()=>{const hb=habits.find(x=>x.id===b.dataset.id);if(!hb)return;openCatMenu(b,String(hb.goal||7),cat=>{hb.goal=+cat||7;saveHabits();renderHabits();},['1','2','3','4','5','6','7'],{title:'Цель в неделю (дней)',allowNew:false});}));
 }
 function icsEscape(t){return String(t||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
 function icsDate(ts){const d=new Date(ts);const p=n=>String(n).padStart(2,'0');return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'T'+p(d.getUTCHours())+p(d.getUTCMinutes())+'00Z';}
@@ -1775,6 +1860,7 @@ $('#routineCustomAdd')&&$('#routineCustomAdd').addEventListener('click',()=>{
 });
 function renderMatrix(){
   const un=$('#matrixUnsorted'),wrap=$('#matrixWrap');if(!wrap)return;
+  initMatrixDrag();
   renderMatrixDateRow();
   const tasks=allOpenTasks().filter(t=>t.date===matrixDate);
   const unsorted=tasks.filter(t=>!t.eis);
@@ -1788,7 +1874,72 @@ $('#matrixDateInput')&&$('#matrixDateInput').addEventListener('change',e=>{if(e.
 $('#matrixDatePrev')&&$('#matrixDatePrev').addEventListener('click',()=>{const d=new Date(matrixDate+'T00:00:00');d.setDate(d.getDate()-1);matrixDate=dateKey(d.getTime());renderMatrix();});
 $('#matrixDateNext')&&$('#matrixDateNext').addEventListener('click',()=>{const d=new Date(matrixDate+'T00:00:00');d.setDate(d.getDate()+1);matrixDate=dateKey(d.getTime());renderMatrix();});
 $('#matrixDateToday')&&$('#matrixDateToday').addEventListener('click',()=>{matrixDate=dateKey(Date.now());renderMatrix();});
+/* ---------- drag-and-drop карточек по квадрантам матрицы ---------- */
+let mxDrag=null;
+function initMatrixDrag(){
+  if(mxDrag)return; // делегирование на document — вешаем один раз, работает после любого re-render
+  mxDrag={};
+  let dragEl=null,ghost=null,startX=0,startY=0,dragging=false,moved=false;
+  function cleanup(){
+    document.removeEventListener('pointermove',onMove);
+    document.querySelectorAll('.m-quad,.matrix-unsorted').forEach(z=>z.classList.remove('drop-hover'));
+    if(ghost){ghost.remove();ghost=null;}
+    if(dragEl)dragEl.classList.remove('m-chip-dragging');
+    dragEl=null;dragging=false;
+  }
+  function onDown(e){
+    const chip=e.target.closest('.m-chip');
+    if(!chip||!chip.closest('#view-tasks'))return;
+    dragEl=chip;moved=false;dragging=false;
+    startX=e.clientX;startY=e.clientY;
+    document.addEventListener('pointermove',onMove);
+    document.addEventListener('pointerup',onUp,{once:true});
+  }
+  function onMove(e){
+    if(!dragEl)return;
+    const x=e.clientX,y=e.clientY;
+    if(!dragging){
+      if(Math.abs(x-startX)>12||Math.abs(y-startY)>12){
+        dragging=true;moved=true;
+        ghost=dragEl.cloneNode(true);
+        ghost.classList.add('m-chip-ghost');
+        document.body.appendChild(ghost);
+        dragEl.classList.add('m-chip-dragging');
+      }else return;
+    }
+    e.preventDefault();
+    ghost.style.left=(x-ghost.offsetWidth/2)+'px';
+    ghost.style.top=(y-ghost.offsetHeight/2)+'px';
+    document.querySelectorAll('.m-quad,.matrix-unsorted').forEach(z=>z.classList.remove('drop-hover'));
+    const target=document.elementFromPoint(x,y);
+    const zone=target&&target.closest('.m-quad,.matrix-unsorted');
+    if(zone)zone.classList.add('drop-hover');
+  }
+  function onUp(e){
+    document.removeEventListener('pointermove',onMove);
+    if(dragging){
+      const x=e.clientX,y=e.clientY;
+      const target=document.elementFromPoint(x,y);
+      const zone=target&&target.closest('.m-quad,.matrix-unsorted');
+      if(zone){
+        let eis=0;
+        if(zone.classList.contains('m-quad')){
+          const wrap=$('#matrixWrap');
+          eis=[...wrap.children].indexOf(zone)+1;
+        }
+        const h=history.find(x2=>x2.id===dragEl.dataset.ref);
+        if(h&&h.tasks[+dragEl.dataset.idx]){h.tasks[+dragEl.dataset.idx].eis=eis;saveHistory();renderMatrix();}
+      }
+    }
+    cleanup();
+    setTimeout(()=>{moved=false;},0);
+  }
+  document.addEventListener('pointerdown',onDown);
+  mxDrag.wasMoved=()=>moved;
+}
 function quadMenu(anchor){
+  if(mxDrag&&mxDrag.wasMoved())return; // не открываем меню сразу после драга
+
   const ex=$('#catMenu');if(ex)ex.remove();
   const m=document.createElement('div');m.className='study-menu';m.id='catMenu';
   m.innerHTML='<div class="sm-h">Куда отнести</div>'+EIS.map((q,i)=>`<button data-q="${i+1}">${esc(q.n)}</button>`).join('')+'<button data-q="0">Убрать</button>';
@@ -1842,6 +1993,15 @@ function dueBucket(t,todayKey,weekEndKey){
   if(k<=weekEndKey)return 'На этой неделе';
   return 'Позже';
 }
+$('#taskAddBtn')&&$('#taskAddBtn').addEventListener('click',()=>{
+  const text=prompt('Текст задачи:');
+  if(!text||!text.trim())return;
+  const h=ensureRoutineEntry();h.tasks=h.tasks||[];
+  const t={id:uid('rt'),text:text.trim(),done:false};
+  try{const due=parseDateTime(text.trim());if(due){t.due=due.ts;}}catch(e){}
+  h.tasks.push(t);saveHistory();
+  toast('Задача добавлена');renderTasks();
+});
 function renderTaskList(){
   renderTaskGroupRow();
   const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts)),reportDate:h.date||dateKey(h.ts)}));});

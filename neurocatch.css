@@ -110,7 +110,7 @@ textarea::placeholder{color:var(--faint)}
 .btn-mic.rec{color:var(--red);border-color:rgba(255,107,107,.5);box-shadow:0 0 0 4px rgba(255,107,107,.12);animation:recPulse 1.2s ease-in-out infinite}
 @keyframes recPulse{50%{box-shadow:0 0 0 8px rgba(255,107,107,.06)}}
 
-.ritual-wrap{margin-top:auto;padding-top:26px}
+.ritual-wrap{margin-top:auto;padding-top:10px}
 .btn-ritual{width:100%;border:1px solid rgba(var(--seed-rgb),.35);
   background:linear-gradient(135deg, rgba(var(--seed-rgb),.14), rgba(var(--seed-rgb),.04));color:var(--accent-2);
   font-size:16px;padding:17px;box-shadow:0 0 30px rgba(var(--seed-rgb),.10);animation:glowPulse 3.5s ease-in-out infinite}
@@ -735,8 +735,8 @@ body.minimal .hero-sub{display:none}
 .tag-collapse .tag-filter,.tag-collapse .tag-row{margin-top:10px;margin-bottom:0}
 .tc-badge{color:var(--faint);font-weight:600}
 /* manual note edit button in detail title */
-.nd-title{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px}
-.nd-edit-btn{display:inline-flex;vertical-align:middle;color:var(--faint);flex:0 0 auto;margin-top:2px}
+.nd-title{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.nd-edit-btn{display:inline-flex;vertical-align:middle;color:var(--faint);flex:0 0 auto}
 .nd-edit-btn:hover{color:var(--accent-2)}
 .nd-edit-btn#ndDelBtn:hover{color:var(--red)}
 .nd-edit-btn svg{width:16px;height:16px}
@@ -1056,3 +1056,29 @@ html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indica
 .more-tile svg{width:26px;height:26px;color:var(--accent-2)}
 .more-tile-label{font-size:13px;font-weight:600}
 .more-tile-badge{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;min-width:20px;text-align:center}
+
+/* matrix drag-and-drop */
+.m-chip-ghost{position:fixed;z-index:200;pointer-events:none;opacity:.92;transform:scale(1.05) rotate(-2deg);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.m-chip-dragging{opacity:.35}
+.m-quad.drop-hover,.matrix-unsorted.drop-hover{outline:2px dashed var(--accent-2);outline-offset:-2px;background:rgba(var(--seed-rgb),.08)}
+
+/* rendered markdown content (mdBlock output) inside cards */
+.note-body h4,.summary-item h4,.md-section h4,
+.note-body h5,.summary-item h5,.md-section h5,
+.note-body h6,.summary-item h6,.md-section h6{color:var(--text);font-weight:700;margin:14px 0 8px;line-height:1.35}
+.note-body h4,.summary-item h4,.md-section h4{font-size:17px}
+.note-body h5,.summary-item h5,.md-section h5{font-size:15.5px}
+.note-body h6,.summary-item h6,.md-section h6{font-size:14px;color:var(--accent-2)}
+.note-body blockquote,.summary-item blockquote,.md-section blockquote{margin:10px 0;padding:8px 14px;border-left:3px solid rgba(var(--seed-rgb),.5);background:var(--glass);border-radius:0 10px 10px 0;color:var(--muted);font-style:italic}
+.note-body ol.bullets,.summary-item ol.bullets,.md-section ol.bullets{list-style:decimal;padding-left:22px;display:block;margin:8px 0}
+.note-body ol.bullets li,.summary-item ol.bullets li,.md-section ol.bullets li{display:list-item;padding:2px 0}
+.note-body a,.summary-item a,.md-section p a{color:var(--accent-2);text-decoration:underline;text-underline-offset:2px}
+.note-body em,.summary-item em,.md-section em{font-style:italic;color:var(--text)}
+
+/* Anki: просмотр карточек колоды */
+.anki-browse-list{display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto}
+.anki-browse-card{background:var(--glass);border:1px solid var(--stroke);border-radius:14px;padding:13px 14px;cursor:pointer;transition:.15s}
+.anki-browse-card:hover{border-color:var(--stroke-strong)}
+.anki-browse-front{font-size:14px;font-weight:600;color:var(--text)}
+.anki-browse-back{font-size:13px;color:var(--muted);margin-top:6px;white-space:pre-wrap}
+.anki-browse-meta{font-size:11px;color:var(--faint);margin-top:8px}
