@@ -59,7 +59,7 @@ html[data-theme="light"] .ambient span:nth-child(3),html[data-theme="light"] .am
 .topbar .grp{display:flex;align-items:center;gap:8px}
 .icon-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;
   background:var(--glass);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
-  transition:.25s var(--ease);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);position:relative}
+  transition:.25s var(--ease);position:relative}
 .icon-btn:hover{color:var(--text);border-color:var(--stroke-strong);transform:translateY(-1px)}
 .icon-btn svg{width:20px;height:20px}
 .icon-btn .badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;
@@ -274,8 +274,8 @@ textarea::placeholder{color:var(--faint)}
 .t-row .tt .src{font-size:11px;color:var(--faint);margin-top:4px}
 
 .overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;
-  background:rgba(5,6,10,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
-html[data-theme="light"] .overlay{background:rgba(40,44,90,.28)}
+  background:rgba(5,6,10,.72);opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
+html[data-theme="light"] .overlay{background:rgba(40,44,90,.42)}
 .overlay.open{opacity:1;pointer-events:auto}
 .modal{width:100%;max-width:420px;border-radius:24px;padding:24px;background:var(--panel);
   border:1px solid var(--stroke-strong);box-shadow:0 30px 80px rgba(0,0,0,.5);max-height:88vh;overflow-y:auto;
