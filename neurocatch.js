@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v61';
+const APP_VERSION='2025.7-06';const SW_VER='v62';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1484,8 +1484,6 @@ function renderDashboard(){
     <div class="dash-sec"><h3>Облако тегов</h3><div class="tag-cloud">${tags.length?tags.map(([t,n])=>`<button class="tag-cloud-item" data-t="${attr(t)}" style="font-size:${(0.85+n/maxT*0.85).toFixed(2)}rem;opacity:${(0.6+n/maxT*0.4).toFixed(2)}">${esc(t)}<span class="tcn">${n}</span></button>`).join(''):'<span class="empty">Тегов пока нет</span>'}</div></div>`;
   box.querySelectorAll('.tag-cloud-item').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=b.dataset.t;renderNotes();show($('#view-notes'));}));
 }
-$('#openDash')&&$('#openDash').addEventListener('click',()=>{renderDashboard();show($('#view-dashboard'));});
-$('#dashBack')&&$('#dashBack').addEventListener('click',()=>show($('#view-input')));
 function renderActionBar(mode){
   const bar=$('#actionBar');
   const btns=[`<button class="btn btn-copy" id="copyBtn"><i data-lucide="copy"></i>В Obsidian</button>`,
@@ -2565,7 +2563,6 @@ const MORE_TILES=[
   ['Выделения','highlighter',()=>getAllFragments().length,()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}],
   ['Проекты','layout-grid',()=>loadProjects().length,()=>{renderProjectsList();show($('#view-projects'));}],
   ['Закладки','bookmark',()=>bookmarks.length,()=>{renderBookmarks();show($('#view-bookmarks'));}],
-  ['Дашборд','bar-chart-3',null,()=>{renderDashboard();show($('#view-dashboard'));}],
 ];
 function renderMoreTiles(){
   const box=$('#moreTiles');if(!box)return;
@@ -2576,7 +2573,7 @@ function renderMoreTiles(){
   lucide.createIcons();
   box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=MORE_TILES[+b.dataset.i];if(t&&t[3])t[3]();}));
 }
-$('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();show($('#view-more'));});
+$('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();renderDashboard();show($('#view-more'));});
 /* ---------- вкладки внутри «Заметки»: Заметки / Выделения / Проекты ---------- */
 document.querySelectorAll('#view-notes .subtab').forEach(b=>b.addEventListener('click',()=>{
   const nt=b.dataset.nt;

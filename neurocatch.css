@@ -593,7 +593,7 @@ body.minimal .hero-sub{display:none}
   repeating-linear-gradient(65deg, transparent 0 9px, rgba(70,168,255,.35) 9px 10px);background-color:var(--glass-2)}
 
 /* dashboard */
-#view-dashboard #dashBody{padding-bottom:20px}
+#view-more #dashBody{padding-bottom:20px}
 .dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
 .stat{background:var(--glass);border:1px solid var(--stroke);border-radius:16px;padding:16px}
 .stat-n{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
@@ -1082,3 +1082,7 @@ html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indica
 .anki-browse-front{font-size:14px;font-weight:600;color:var(--text)}
 .anki-browse-back{font-size:13px;color:var(--muted);margin-top:6px;white-space:pre-wrap}
 .anki-browse-meta{font-size:11px;color:var(--faint);margin-top:8px}
+
+/* разделитель между плитками "Ещё" и встроенным дашбордом */
+.more-dash-sep{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--muted);margin:28px 0 14px;padding-top:20px;border-top:1px solid var(--stroke)}
+.more-dash-sep svg{width:16px;height:16px;color:var(--accent-2)}
