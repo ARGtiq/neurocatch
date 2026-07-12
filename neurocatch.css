@@ -52,10 +52,10 @@ html[data-theme="light"] .ambient span:nth-child(2){background:var(--secondary-f
 html[data-theme="light"] .ambient span:nth-child(3),html[data-theme="light"] .ambient span:nth-child(4){opacity:0}
 @keyframes drift{to{transform:translate3d(-40px,50px,0) scale(1.15)}}
 
-.app{position:relative;z-index:1;min-height:100dvh;display:flex;justify-content:center;padding:max(34px,env(safe-area-inset-top,34px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
+.app{position:relative;z-index:1;min-height:100dvh;display:flex;justify-content:center;padding:max(18px,env(safe-area-inset-top,18px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
 .shell{width:100%;max-width:520px;display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:8px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px}
 .topbar .grp{display:flex;align-items:center;gap:8px}
 .icon-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;
   background:var(--glass);border:1px solid var(--stroke);color:var(--muted);cursor:pointer;
@@ -64,13 +64,7 @@ html[data-theme="light"] .ambient span:nth-child(3),html[data-theme="light"] .am
 .icon-btn svg{width:20px;height:20px}
 .icon-btn .badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;
   background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center}
-.counter{display:flex;align-items:center;gap:8px;padding:0 14px;height:44px;border-radius:999px;
-  background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
-  font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer;font-family:inherit;transition:.25s var(--ease)}
-.counter:hover{border-color:var(--stroke-strong);color:var(--text)}
-.counter b{color:var(--accent-2);font-variant-numeric:tabular-nums;transition:.3s var(--ease)}
-.counter .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--glow)}
-.counter.pulse{animation:pop .4s var(--ease)}
+.pulse{animation:pop .4s var(--ease)}
 @keyframes pop{40%{transform:scale(1.06)}}
 
 .view{flex:1;display:flex;flex-direction:column;transition:opacity .45s var(--ease),transform .45s var(--ease)}
@@ -207,8 +201,6 @@ textarea::placeholder{color:var(--faint)}
 
 /* history */
 #view-history{gap:16px}
-.hist-tools{display:flex;gap:10px}
-.hist-tools .btn{flex:1;padding:12px 14px;font-size:14px}
 .search-wrap{position:relative}
 .search-wrap svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--faint)}
 .search-wrap input{width:100%;padding:14px 15px 14px 44px;border-radius:16px;font:inherit;font-size:15px;
@@ -479,7 +471,6 @@ pre.raw-md{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,M
 .note-body{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.55}
 .note-body.clamp{max-height:120px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
 .note-body p{margin:0 0 8px}
-.note-more{margin-top:6px;background:none;border:none;color:var(--accent-2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0}
 .note-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .note-tags .tag-pill{cursor:pointer}
 
@@ -653,9 +644,6 @@ body.minimal .hero-sub{display:none}
 .btn-ritual{position:relative}
 .ritual-badge{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:800;margin-left:9px}
 /* error section in digest */
-.err-section{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.28)}
-.err-section h3{display:flex;align-items:center;gap:8px;color:var(--red)}
-.err-section h3 svg{width:18px;height:18px}
 /* space for bottom bar so content isn't hidden behind it */
 .app{padding-bottom:24px}
 
@@ -754,7 +742,7 @@ body.minimal .hero-sub{display:none}
    Мягкие стеклянные поверхности со свечением цвета primary вместо плотных серых теней. */
 html[data-theme="light"] .glass-input,
 html[data-theme="light"] .topbar,
-html[data-theme="light"] .bottombar,
+
 html[data-theme="light"] .modal,
 html[data-theme="light"] .rep,
 html[data-theme="light"] .note-card,
@@ -772,7 +760,6 @@ html[data-theme="light"] .note-card:hover,
 html[data-theme="light"] .habit-card:hover{
   box-shadow:var(--card-shadow-hover);
 }
-html[data-theme="light"] .bottombar{box-shadow:var(--card-shadow-hover)}
 /* тёплые заголовки: чуть плотнее, с отрицательным трекингом — в духе Manrope Bold */
 html[data-theme="light"] .modal-head h2,
 html[data-theme="light"] .nd-title,
@@ -814,12 +801,6 @@ html[data-theme="light"] .note-title{
 .t-group .t-row{margin-bottom:8px}
 
 /* dedicated insights block in Notes */
-.insights-block{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--stroke)}
-.insights-block-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px}
-.insights-block-h svg{width:17px;height:17px;color:#f5a623}
-.insights-grid{display:grid;grid-template-columns:1fr;gap:12px}
-@media (min-width:560px){.insights-grid{grid-template-columns:1fr 1fr}}
-.insights-grid .note-card{margin-bottom:0}
 
 /* bookmark-mark button in ritual review screen */
 .q-btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
@@ -1086,3 +1067,6 @@ html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indica
 /* разделитель между плитками "Ещё" и встроенным дашбордом */
 .more-dash-sep{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--muted);margin:28px 0 14px;padding-top:20px;border-top:1px solid var(--stroke)}
 .more-dash-sep svg{width:16px;height:16px;color:var(--accent-2)}
+
+/* минимальный режим главного экрана: прячет навигацию, оставляет саму кнопку сворачивания */
+body.minimal .topbar .nav-btn{display:none}
