@@ -66,6 +66,8 @@
     "arrow-down":'<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
     "combine":'<path d="M14 15v4a2 2 0 0 0 2 2h4"/><path d="M14 9V5a2 2 0 0 1 2-2h4"/><path d="M4 9V6a2 2 0 0 1 2-2h4"/><path d="M4 15v3a2 2 0 0 0 2 2h4"/><path d="M9 12h6"/>',
     "square":'<rect width="18" height="18" x="3" y="3" rx="2"/>',
+    "shopping-cart":'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+    "corner-down-left":'<polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/>',
     "list":'<path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/>',
     "layout-grid":'<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
     "check-square":'<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
@@ -144,6 +146,7 @@
       <div class="preset-row" id="presetRow"></div>
       <div class="ritual-wrap">
         <button class="btn btn-today" id="todayTasks"><i data-lucide="list-checks"></i>Задачи на сегодня<span id="todayCount" class="today-badge" hidden>0</span></button>
+        <button class="btn btn-unsorted" id="sortTodayBtn" hidden><i data-lucide="layout-grid"></i>Разобрать по важности<span id="unsortedCount" class="today-badge" hidden>0</span></button>
         <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span><span id="ritualQueueBadge" class="ritual-badge queue-badge" title="В офлайн-очереди" hidden>0</span></button>
       </div>
     </section>
@@ -256,6 +259,43 @@
       <details class="tag-collapse" id="noteTagsWrap"><summary><i data-lucide="chevron-down"></i>Теги <span id="noteTagsCount" class="tc-badge"></span></summary><div class="tag-row" id="noteTags"></div></details>
       <div class="notes-list" id="notesList"></div>
     </section>
+
+    <section class="view" id="view-shopping" hidden>
+      <div class="head-row"><button class="back" id="shoppingBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Список покупок</h2></div>
+      <div id="shoppingActive"></div>
+      <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="shoppingSearch" placeholder="Найти товар в каталоге…" autocomplete="off"></div>
+      <div class="routine-hint">Тапни, чтобы добавить в список покупок.</div>
+      <div id="shoppingCatalog"></div>
+    </section>
+
+    <section class="view" id="view-stale" hidden>
+      <div class="head-row"><button class="back" id="staleBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Забытые заметки</h2></div>
+      <div class="routine-hint">Заметки, которые ты давно не открывал и не редактировал. Загляни — вдруг там всё ещё актуально.</div>
+      <div id="staleList" class="notes-list"></div>
+    </section>
+
+    <div class="overlay" id="unsortedReminderOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+        <div class="modal-head"><h2>📊 Задачи не разобраны</h2><button class="icon-btn" id="unsortedReminderClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <p id="unsortedReminderText" style="color:var(--muted);margin-bottom:18px;font-size:14px"></p>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="unsortedReminderGo" style="flex:1"><i data-lucide="layout-grid"></i>Разобрать сейчас</button>
+          <button class="btn" id="unsortedReminderLater" style="flex:1">Позже</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="staleReminderOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:420px">
+        <div class="modal-head"><h2>💭 Забытая заметка</h2><button class="icon-btn" id="staleReminderClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <p style="color:var(--muted);margin-bottom:6px;font-size:13px">Ты не открывал(а) эту заметку давно:</p>
+        <div id="staleReminderTitle" style="font-weight:700;font-size:16px;margin-bottom:18px"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="staleReminderView" style="flex:1"><i data-lucide="eye"></i>Посмотреть</button>
+          <button class="btn" id="staleReminderLater" style="flex:1">Позже</button>
+        </div>
+      </div>
+    </div>
 
     <section class="view" id="view-more" hidden>
       <div class="head-row"><h2>Ещё</h2></div>
@@ -472,7 +512,15 @@
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="autoClip"><span class="track"></span></span>Читать буфер обмена при входе</label><div class="hint">При открытии приложения предложит вставить ссылку/текст из буфера. Браузер может запросить разрешение.</div></div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="swipesOn"><span class="track"></span></span>Свайп-жесты</label><div class="hint">Смахивание записи в улове удаляет её; смахивание задачи вправо отмечает выполненной. Выключи, если срабатывает случайно.</div></div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="voiceAutoAdd"><span class="track"></span></span>Автодобавление после диктовки</label><div class="hint">Как только запись закончена (кнопка микрофона отпущена), фраза сразу уходит в улов — жать «Закинуть» не нужно. Дата/срок распознаются как обычно. Выключи, если хочешь сначала проверить текст.</div></div>
-    <div class="field"><label for="archiveDays">Автоархивация отчётов старше</label><select id="archiveDays"><option value="0">Никогда</option><option value="30">30 дней</option><option value="90">90 дней</option><option value="180">180 дней</option></select><div class="hint">Архивные отчёты не отображаются в общем списке истории, но не удаляются — доступны по кнопке «Архив», в поиске и в статистике.</div></div></div>
+    <div class="field"><label for="archiveDays">Автоархивация отчётов старше</label><select id="archiveDays"><option value="0">Никогда</option><option value="30">30 дней</option><option value="90">90 дней</option><option value="180">180 дней</option></select><div class="hint">Архивные отчёты не отображаются в общем списке истории, но не удаляются — доступны по кнопке «Архив», в поиске и в статистике.</div></div>
+    <div class="field"><label for="staleNoteDays">Считать заметку забытой, если не открывалась</label><select id="staleNoteDays">
+      <option value="3">2 раза в неделю (3 дня)</option>
+      <option value="7">Раз в неделю</option>
+      <option value="10">3 раза в месяц (10 дней)</option>
+      <option value="30">Раз в месяц</option>
+      <option value="60">Раз в 2 месяца</option>
+      <option value="90">Раз в 3 месяца</option>
+    </select><div class="hint">Раз в день, при открытии приложения, покажется напоминание об одной такой заметке — с возможностью посмотреть или отложить.</div></div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Уведомления</div>
     <div class="field">
       <label><i data-lucide="bell"></i>Напоминание о ритуале</label>

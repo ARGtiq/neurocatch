@@ -1070,3 +1070,27 @@ html[data-theme="light"] .field input[type=time]::-webkit-calendar-picker-indica
 
 /* минимальный режим главного экрана: прячет навигацию, оставляет саму кнопку сворачивания */
 body.minimal .topbar .nav-btn{display:none}
+
+/* кнопка "разобрать по важности" — выделяющийся цвет, отдельный от btn-today */
+.btn-unsorted{width:100%;background:linear-gradient(135deg,#f5a623,#ff8a3d);border:none;color:#1a1200;margin-bottom:10px;position:relative;font-weight:700}
+.btn-unsorted:hover{filter:brightness(1.05)}
+
+/* пометка обработанных ссылок в отчёте */
+.link-covered{border-color:rgba(61,220,151,.35)}
+.link-done-ic{width:14px;height:14px;color:var(--green);vertical-align:-2px;display:inline-block}
+
+/* попап "это задача" в улове */
+.taskify-body{padding:10px 14px 14px}
+.taskify-text{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4}
+.taskify-lbl{display:block;font-size:12px;color:var(--faint);margin-bottom:6px}
+.taskify-body input[type="date"]{width:100%}
+
+/* список покупок */
+.shop-list{display:flex;flex-direction:column;gap:6px}
+.shop-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2)}
+.shop-row.done{opacity:.5}
+.shop-row.done .shop-text{text-decoration:line-through}
+.shop-check{flex:0 0 auto;color:var(--accent-2);display:flex}
+.shop-check svg{width:18px;height:18px}
+.shop-text{flex:1;font-size:14px;color:var(--text)}
+.shop-row .shop-del{flex:0 0 auto;width:26px;height:26px}

@@ -50,7 +50,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90)};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90),staleNoteDays:(s.staleNoteDays!=null?+s.staleNoteDays:30)};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -76,7 +76,7 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);updateProviderUI();try{applyBg();}catch(e){}
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);const snd=$('#staleNoteDays');if(snd)snd.value=String(settings.staleNoteDays!=null?settings.staleNoteDays:30);updateProviderUI();try{applyBg();}catch(e){}
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -215,6 +215,58 @@ $('#mic')&&$('#mic').addEventListener('click',e=>{const b=e.currentTarget;if(!SR
 $('#ritualCount')&&$('#ritualCount').addEventListener('click',e=>{e.stopPropagation();renderQueue();show($('#view-queue'));});
 $('#queueBack')&&$('#queueBack').addEventListener('click',()=>show($('#view-input')));
 $('#queueRitual')&&$('#queueRitual').addEventListener('click',()=>runRitual());
+async function openProjectifyConfirm(anchor,catchId){
+  const c=catches.find(x=>x.id===catchId);if(!c)return;
+  if(!hasLLM()){toast('Сначала настрой провайдера ИИ в настройках',true);return;}
+  if(!confirm('ИИ разобьёт эту цель на подзадачи и создаст новый проект:\n\n«'+c.text.slice(0,120)+(c.text.length>120?'…':'')+'»\n\nПродолжить?'))return;
+  toast('Разбиваю на подзадачи…');
+  try{
+    const prompt='Разбей следующую цель на 3-8 конкретных, выполнимых подзадач для доски проекта. Каждая подзадача — короткая формулировка действия, с новой строки, БЕЗ нумерации, БЕЗ маркеров списка, БЕЗ вводных фраз и пояснений — только сами подзадачи, каждая на своей строке. Цель: '+c.text;
+    const raw=await llmComplete(prompt);
+    const items=raw.split('\n').map(l=>l.replace(/^[\s\-*•\d.)]+/,'').trim()).filter(Boolean);
+    if(!items.length){toast('ИИ не вернул подзадачи — попробуй ещё раз',true);return;}
+    const name=c.text.length>50?c.text.slice(0,50)+'…':c.text;
+    const p=createProject(name,'custom');
+    const sec={id:uid('sec'),name:'Задачи',cards:items.map(t=>({id:uid('pc'),text:t,ts:Date.now()}))};
+    p.sections=[sec];
+    touchProject(p);
+    if(c.attachment)await idbDelete(c.attachment.id);
+    catches=catches.filter(x=>x.id!==catchId);saveCatches();refreshCount();
+    renderQueue();
+    toast('Проект «'+name+'» создан, подзадач: '+items.length);
+    if(confirm('Открыть проект «'+name+'» сейчас?'))openProjectDetail(p.id);
+  }catch(e){toast('Ошибка: '+(e.message||e),true);}
+}
+function openTaskifyMenu(anchor,catchId){
+  const ex=$('#taskifyMenu');if(ex)ex.remove();
+  const c=catches.find(x=>x.id===catchId);if(!c)return;
+  const m=document.createElement('div');m.className='study-menu';m.id='taskifyMenu';
+  m.innerHTML=`<div class="sm-h">Сразу в задачи?</div>
+    <div class="taskify-body">
+      <div class="taskify-text">${esc(c.text.slice(0,80))}${c.text.length>80?'…':''}</div>
+      <label class="taskify-lbl">Срок (необязательно)</label>
+      <input type="date" id="taskifyDate" class="date-input">
+      <button class="btn btn-primary" id="taskifyGo" style="width:100%;margin-top:10px"><i data-lucide="check"></i>Добавить в задачи</button>
+      <button class="btn" id="taskifyCancel" style="width:100%;margin-top:8px">Отмена</button>
+    </div>`;
+  document.body.appendChild(m);lucide.createIcons();
+  const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.left+window.scrollX;if(left+260>window.innerWidth)left=window.innerWidth-268;m.style.left=Math.max(8,left)+'px';
+  const close=()=>{m.remove();document.removeEventListener('click',out);};
+  function out(e){if(!e.target.closest('#taskifyMenu')&&e.target!==anchor)close();}
+  m.querySelector('#taskifyCancel').addEventListener('click',close);
+  m.querySelector('#taskifyGo').addEventListener('click',async()=>{
+    const dateVal=m.querySelector('#taskifyDate').value;
+    const h=ensureRoutineEntry();h.tasks=h.tasks||[];
+    const t={id:uid('rt'),text:c.text,done:false};
+    if(dateVal){const d=new Date(dateVal+'T09:00:00');t.due=d.getTime();}
+    h.tasks.push(t);saveHistory();
+    if(c.attachment)await idbDelete(c.attachment.id);
+    catches=catches.filter(x=>x.id!==catchId);saveCatches();refreshCount();
+    close();renderQueue();
+    toast('Добавлено в задачи'+(dateVal?' · срок '+fmtDueShort(t.due):''));
+  });
+  setTimeout(()=>document.addEventListener('click',out),0);
+}
 async function deleteCatch(id){
   const c=catches.find(x=>x.id===id);
   if(c&&c.attachment)await idbDelete(c.attachment.id);
@@ -238,12 +290,16 @@ function renderQueue(){
     const mbtn=(settings.microPerLink&&urls.length)?`<button class="ql-btn${off?' off':''}" data-mic="${c.id}"><i data-lucide="link"></i>${off?'microlink выкл':'microlink вкл'}</button>`:'';
     const bmbtn=urls.length?`<button class="ql-btn${c.markBookmark?' bm-on':''}" data-bm="${c.id}" title="Не конспектировать — просто сохранить как закладку"><i data-lucide="bookmark"></i>${c.markBookmark?'это закладка ✓':'это закладка?'}</button>`:'';
     const att=c.attachment?`<button class="q-attach" data-att="${attr(c.attachment.id)}" data-atype="${attr(c.attachment.type)}"><i data-lucide="${c.attachment.type.startsWith('image/')?'image':'file-text'}"></i>${esc(c.attachment.name)}</button>`:'';
+    const taskBtn=`<button class="ql-btn" data-mktask="${c.id}" title="Сразу в задачи, минуя разбор"><i data-lucide="square-check"></i>это задача</button>`;
+    const projBtn=`<button class="ql-btn" data-mkproj="${c.id}" title="ИИ разобьёт на подзадачи и создаст проект"><i data-lucide="layout-grid"></i>это проект</button>`;
     return `<div class="q-item${c.markBookmark?' as-bookmark':''}" data-id="${c.id}">
-      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${att}<div class="q-btnrow">${mbtn}${bmbtn}</div></div>
+      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${att}<div class="q-btnrow">${mbtn}${bmbtn}${taskBtn}${projBtn}</div></div>
       <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
   box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',async()=>{await deleteCatch(b.dataset.del);renderQueue();}));
+  box.querySelectorAll('[data-mktask]').forEach(b=>b.addEventListener('click',()=>openTaskifyMenu(b,b.dataset.mktask)));
+  box.querySelectorAll('[data-mkproj]').forEach(b=>b.addEventListener('click',()=>openProjectifyConfirm(b,b.dataset.mkproj)));
   box.querySelectorAll('.q-item').forEach(it=>attachSwipe(it,{onLeft:async()=>{await deleteCatch(it.dataset.id);renderQueue();toast('Удалено');}}));
   box.querySelectorAll('.q-attach').forEach(b=>b.addEventListener('click',()=>openAttachment(b.dataset.att,b.dataset.atype)));
   box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
@@ -332,12 +388,12 @@ function renderDigest(entry){
   const ins=eIns.length?eIns.map((x,i)=>`<li><span class="ins-text">${safe(x)}</span><button class="mini ins-extract" data-i="${i}" title="Извлечь в отдельную заметку"><i data-lucide="notebook-pen"></i></button><button class="mini note-anki" data-i="${i}" title="Создать карточку Anki"><i data-lucide="layers"></i></button><button class="mini item-del" data-kind="ins" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<li><span class="ins-text">Ничего заметного.</span></li>';
   const sum=eSum.length?eSum.map((s,i)=>{const badge=s.source?` <a class="src-link" href="${attr(s.source)}" target="_blank" rel="noopener" title="${esc(hostOf(s.source))}"><i data-lucide="link"></i></a>`:'';return `<div class="summary-item"><div class="sum-head"><h4>${s.title?safe(s.title):'Конспект'}${badge}</h4><div class="sec-actions"><button class="mini sum-exp" data-si="${i}" title="Скачать этот конспект .md"><i data-lucide="file-down"></i></button><button class="mini item-del" data-kind="sum" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div></div>${mdBlock(s.body)}</div>`;}).join(''):'<p>Конспектировать нечего.</p>';
   const tasks=entry.tasks.length?entry.tasks.map((t,i)=>`<li><label class="task"><input type="checkbox" data-ti="${i}" ${t.done?'checked':''}><span class="check"><i data-lucide="check"></i></span><span class="task-label">${safe(t.text)}</span></label><button class="mini item-del" data-kind="task" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></li>`).join(''):'<p>Задач нет.</p>';
-  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map((l,i)=>`<div class="link-row"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a><button class="mini item-del" data-kind="link" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div>`).join('')}</div></div>`:'';
   const covered=new Set(eSum.map(x=>x.source).filter(Boolean));
+  const links=entry.links&&entry.links.length?`<div class="md-section"><h3>🔗 Ссылки</h3><div class="link-list">${entry.links.map((l,i)=>{const done=covered.has(l.url);return `<div class="link-row${done?' link-covered':''}"><a class="lmain" href="${attr(l.url)}" target="_blank" rel="noopener"><span class="lic">${l.logo?`<img class="lg" src="${attr(l.logo)}" alt="" loading="lazy">`:`<i data-lucide="link"></i>`}</span><span class="lt"><span class="ltt">${done?'<i data-lucide=\'check-circle\' class=\'link-done-ic\'></i> ':''}${esc(l.title)}</span><span class="lth">${esc(l.publisher||hostOf(l.url))}</span></span></a><button class="mini study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><a class="mini" href="${attr(l.url)}" target="_blank" rel="noopener" title="Открыть"><i data-lucide="external-link"></i></a><button class="mini item-del" data-kind="link" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div>`;}).join('')}</div></div>`:'';
   const failed=(entry.links||[]).filter(l=>!covered.has(l.url));
   const bms=entry.bookmarks||[];
   const dupeN=entry.bmDupeCount||0;const bmBlock=bms.length?`<div class="md-section"><h3>🔖 Закладки</h3><div class="bm-summary">${bms.length} ссылк${bms.length===1?'а отправлена':(bms.length<5?'и отправлены':'ок отправлено')} в закладки без конспекта${dupeN?(' · из них уже было раньше: '+dupeN):''} — ниже видно, куда именно, и можно поправить.</div><div class="bm-list">${bms.map((b,i)=>`<div class="bm-row"><div class="bm-main"><a href="${attr(b.url)}" target="_blank" rel="noopener" class="bm-title">${esc(b.title||hostOf(b.url))}</a>${b.desc?`<div class="bm-desc">${esc(b.desc)}</div>`:''}<div class="bm-host">${esc(hostOf(b.url))}</div></div><div class="bm-rowacts"><button class="bm-cat" data-bi="${i}" title="Изменить категорию">📁 ${esc(b.category||'Прочее')}</button><button class="mini bm-toart" data-bi="${i}" title="Это статья — законспектировать"><i data-lucide="notebook-pen"></i></button><button class="mini item-del" data-kind="bm" data-i="${i}" title="Удалить"><i data-lucide="x"></i></button></div></div>`).join('')}</div><div class="hint" style="margin-top:8px">Все закладки и категории — в разделе «Закладки» (иконка-флажок в шапке).</div></div>`:'';
-  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — скопируй и разбери отдельно:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
+  const failBlock=failed.length?`<div class="md-section fail-box"><h3>⚠️ Без конспекта</h3><p style="margin-bottom:12px">По этим ссылкам конспект не сделан или неполон — верни в улов и разбери заново вечером, или изучи прямо сейчас:</p>${failed.map(l=>`<div class="fail-row"><span class="u">${esc(l.url)}</span><button class="cp" data-recatch="${attr(l.url)}" title="Вернуть в улов"><i data-lucide="corner-down-left"></i></button><button class="cp study" data-url="${attr(l.url)}" title="Изучить в ИИ"><i data-lucide="sparkle"></i></button><button class="cp" data-cpurl="${attr(l.url)}" title="Скопировать"><i data-lucide="clipboard"></i></button></div>`).join('')}<button class="btn fail-all" id="copyAllFailed"><i data-lucide="clipboard"></i>Скопировать все (${failed.length})</button></div>`:'';
   const tags=entry.tags&&entry.tags.length?`<div class="md-section"><h3>🏷 Теги</h3><div class="tags">${entry.tags.map((t,i)=>`<span class="tag-pill-del"><button class="tag-pill" data-tag="${esc(t)}">${esc(t)}</button><button class="tag-x" data-kind="tag" data-i="${i}" title="Убрать тег"><i data-lucide="x"></i></button></span>`).join('')}</div></div>`:'';
   $('#digestCard').innerHTML=`<div class="md-section"><h3>🧠 Инсайты</h3><ul class="bullets">${ins}</ul></div>
     <div class="md-section"><h3>📚 Конспекты</h3>${sum}</div>
@@ -365,6 +421,13 @@ function renderDigest(entry){
     saveHistory();renderDigest(entry);toast('Удалено из отчёта');
   }));
   const cpAll=$('#copyAllFailed');if(cpAll)cpAll.addEventListener('click',()=>copyText(failed.map(l=>l.url).join('\n')));
+  $('#digestCard').querySelectorAll('[data-recatch]').forEach(b=>b.addEventListener('click',()=>{
+    const url=b.dataset.recatch;
+    catches.push({id:uid('c'),text:url,at:Date.now()});
+    saveCatches();refreshCount();
+    toast('Ссылка возвращена в улов — попадёт в следующий разбор');
+    b.closest('.fail-row').style.opacity='.4';b.disabled=true;
+  }));
   $('#digestCard').querySelectorAll('.sum-exp[data-si]').forEach(b=>b.addEventListener('click',()=>downloadSummary(+b.dataset.si)));
   const tmb=$('#tasksMdBtn');if(tmb)tmb.addEventListener('click',()=>{download('tasks_'+dateKey(entry.ts)+'.md',tasksToMd(entry.tasks),'text/markdown');toast('Задачи сохранены .md');});
   const ttb=$('#tasksTickBtn');if(ttb)ttb.addEventListener('click',()=>copyTick(entry.tasks));
@@ -656,7 +719,131 @@ function createProject(name,type){
   return proj;
 }
 function touchProject(p){p.updatedAt=Date.now();saveProjects(loadProjects().map(x=>x.id===p.id?p:x));}
+function seedNeuroCatchProject(){
+  if(localStorage.getItem('neurocatch_nc_project_seeded'))return;
+  localStorage.setItem('neurocatch_nc_project_seeded','1');
+  if(loadProjects().some(p=>p.name==='NeuroCatch'))return;
+  const p=createProject('NeuroCatch','web');
+  const hist=[
+    ['v36','Voice-to-task, дедупликация закладок, связи между заметками',[
+      ['feat','Автодобавление записи в улов сразу после диктовки, с распознаванием даты'],
+      ['feat','Дедупликация закладок — нормализация URL (www, слэш, utm-метки)'],
+      ['feat','Двусторонние связи между заметками в духе Obsidian'],
+    ]],
+    ['v37','Архивация отчётов, первая версия E2E-теста',[
+      ['feat','Архивация отчётов — автоматическая по возрасту и вручную'],
+      ['feat','E2E-тест приложения (первая версия)'],
+    ]],
+    ['v38','Календарь, сворачиваемые теги, ручные заметки',[
+      ['feat','Экспорт задач в .ics и живая подписка на календарь (webcal)'],
+      ['feat','Сворачиваемые панели тегов'],
+      ['feat','Ручное создание заметок'],
+    ]],
+    ['v39','Оффлайн-очередь ритуала',[
+      ['feat','Разбор откладывается без сети и запускается сам при восстановлении соединения'],
+    ]],
+    ['v43','Тема «Воздушная Эстетика»',[
+      ['feat','Тёплый светлый режим — Manrope, стеклянные карточки, тени в тон акцента'],
+    ]],
+    ['v44','Проверка улова перед разбором',[
+      ['feat','Вечерний ритуал начинается с экрана проверки улова, а не сразу с ИИ'],
+    ]],
+    ['v45','Точечное удаление данных отчёта',[
+      ['feat','Удаление отдельных элементов отчёта: инсайт/конспект/задача/ссылка/закладка/тег'],
+    ]],
+    ['v46','Редактирование и группировка задач',[
+      ['feat','Клик по тексту задачи — редактирование, галочка — только отметка выполненной'],
+      ['feat','Удаление задач (кнопка + свайп)'],
+      ['feat','Группировка задач: список / по сроку / по разбору'],
+    ]],
+    ['v47','Выделения и Anki',[
+      ['feat','Выделение текста в заметках, спойлер «Выделения»'],
+      ['feat','Блок «Похожие по тегам» под заметкой'],
+      ['feat','Anki: колоды, карточки, SM-2 планирование, экран повторения'],
+    ]],
+    ['v48','Markdown-редактор заметок',[
+      ['feat','Панель форматирования (жирный/курсив/заголовки/списки/цитата/ссылка) + предпросмотр'],
+    ]],
+    ['v51','Библиотека выделений, менеджер проектов',[
+      ['feat','Библиотека выделений с мультивыбором и объединением фрагментов в заметку'],
+      ['feat','Менеджер проектов: типы, шаблоны секций, доска с карточками'],
+      ['feat','Менеджер версий проекта с типизированными изменениями (эта самая система)'],
+    ]],
+    ['v52','Движок повторений, вложения к улову',[
+      ['feat','Движок повторяющихся задач (день/неделя/2нед/месяц), автогенерация'],
+      ['feat','Вложения фото/PDF к улову — сжатие на клиенте, хранение в IndexedDB'],
+    ]],
+    ['v54','Инсайты в карточке, вкладка Рутина',[
+      ['feat','Инсайты встроены в карточку конспекта вместо отдельных записей'],
+      ['feat','Фильтр по основному тегу заметки'],
+      ['feat','Вкладка «Рутина» — каталог бытовых дел по 12 категориям'],
+    ]],
+    ['v55','Доработка менеджера версий',[
+      ['feat','Поля «Краткий коммит», «Описание», время; сортировка версий по номеру'],
+    ]],
+    ['v58','Новая навигация',[
+      ['feat','4 кнопки в шапке слева (Задачи/Поиск/Заметки/Ещё) вместо нижнего бара'],
+      ['feat','Экран «Ещё» с плитками-бейджами'],
+      ['feat','Подвкладки внутри «Заметки» (Заметки/Выделения/Проекты)'],
+    ]],
+    ['v61','Задачи, матрица, Anki, редактор',[
+      ['feat','Ручное добавление задачи, drag-and-drop в матрице'],
+      ['feat','Просмотр всех карточек колоды Anki'],
+      ['feat','Список уже использованных тегов в редакторе заметки'],
+      ['feat','Продолжение списка по Enter в редакторе'],
+    ]],
+    ['v62','Дашборд в «Ещё»',[
+      ['feat','Дашборд встроен прямо в страницу «Ещё»'],
+    ]],
+  ];
+  p.versions=hist.map(([version,shortMsg,changes],i)=>({
+    id:uid('ver'),version,shortMsg,description:'',date:dateKey(Date.now()-((hist.length-i)*86400000)),
+    githubUrl:'',changes:changes.map(([type,text])=>({type,text})),ts:Date.now()-((hist.length-i)*86400000)
+  }));
+  saveProjects(loadProjects().map(x=>x.id===p.id?p:x));
+}
 function findProject(id){return loadProjects().find(p=>p.id===id);}
+
+/* ---------- забытые заметки (не открывались/не редактировались давно) ---------- */
+function loadNoteActivity(){try{return JSON.parse(localStorage.getItem('neurocatch_note_activity')||'{}');}catch(e){return {};}}
+function saveNoteActivity(o){localStorage.setItem('neurocatch_note_activity',JSON.stringify(o));}
+function touchNoteActivity(id){const a=loadNoteActivity();a[id]=Date.now();saveNoteActivity(a);}
+function getStaleNotes(){
+  const days=settings.staleNoteDays||30;
+  const cutoff=Date.now()-days*86400000;
+  const act=loadNoteActivity();
+  let notes=[];try{notes=buildNotes();}catch(e){}
+  return notes.filter(n=>(act[n.id]||n.ts||0)<cutoff).sort((a,b)=>(act[a.id]||a.ts||0)-(act[b.id]||b.ts||0));
+}
+function renderStaleNotes(){
+  const box=$('#staleList');if(!box)return;
+  const stale=getStaleNotes();
+  const cats=loadNoteCats();
+  box.innerHTML=stale.length?stale.map(n=>noteCardHtml(n,cats)).join(''):'<div class="empty">Забытых заметок нет — всё, что у тебя есть, ты недавно открывал(а) или редактировал(а).</div>';
+  lucide.createIcons();
+  wireNoteCards(box,stale);
+}
+$('#staleBack')&&$('#staleBack').addEventListener('click',()=>{show($('#view-more'));renderMoreTiles();});
+let staleReminderNote=null;
+function checkStaleReminder(){
+  const todayK=dateKey(Date.now());
+  if(localStorage.getItem('neurocatch_stale_reminder_date')===todayK)return;
+  const stale=getStaleNotes();
+  if(!stale.length)return;
+  staleReminderNote=stale[0];
+  $('#staleReminderTitle').textContent=staleReminderNote.title||'Без названия';
+  $('#staleReminderOverlay').classList.add('open');
+}
+function dismissStaleReminder(){
+  localStorage.setItem('neurocatch_stale_reminder_date',dateKey(Date.now()));
+  $('#staleReminderOverlay').classList.remove('open');
+}
+$('#staleReminderClose')&&$('#staleReminderClose').addEventListener('click',dismissStaleReminder);
+$('#staleReminderLater')&&$('#staleReminderLater').addEventListener('click',dismissStaleReminder);
+$('#staleReminderView')&&$('#staleReminderView').addEventListener('click',()=>{
+  dismissStaleReminder();
+  if(staleReminderNote)openNoteDetail(staleReminderNote);
+});
 
 function renderProjectsList(){
   const box=$('#projectsList');if(!box)return;
@@ -1002,6 +1189,7 @@ function similarNotesBlock(n,allNotes){
   return `<div class="nd-links" style="margin-top:16px"><div class="nd-links-h">🏷 Похожие по тегам</div>${scored.map(s=>`<button class="nd-link-row nd-link-open-full" data-sid="${attr(s.x.id)}">${s.x.kind==='man'?'📝 ':'📄 '}${esc(s.x.title)}<span class="sim-score">${s.score}</span></button>`).join('')}</div>`;
 }
 async function openNoteDetail(n){
+  touchNoteActivity(n.id);
   $('#ndKindLabel').textContent=n.kind==='ins'?'Инсайт':n.kind==='man'?'Заметка':'Конспект';
   const dt=new Date(n.ts||Date.now()).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
   let preview='';
@@ -1201,6 +1389,7 @@ $('#neSave')&&$('#neSave').addEventListener('click',()=>{
     else{arr.unshift({id:uid('mn'),title,body,tags,ts:Date.now()});}
     saveManualNotes(arr);
   }
+  if(neEditingId)touchNoteActivity(neEditingId);
   $('#noteEditOverlay').classList.remove('open');
   toast(neEditingId?'Заметка обновлена':'Заметка добавлена');
   renderNotes();
@@ -1751,6 +1940,54 @@ function renderMatrixDateRow(){
   const tb=$('#matrixDateToday');if(tb)tb.hidden=(matrixDate===dateKey(Date.now()));
 }
 /* ---------- routine tasks catalog ---------- */
+const SHOPPING_CATALOG={
+  'Продукты':['Молоко','Яйца','Хлеб','Масло сливочное','Масло растительное','Сыр','Творог','Йогурт','Мясо','Курица','Рыба','Овощи','Фрукты','Крупы','Макароны','Мука','Сахар','Соль','Чай','Кофе','Специи','Консервы'],
+  'Бытовая химия':['Стиральный порошок','Кондиционер для белья','Средство для мытья посуды','Чистящее средство','Мыло','Губки для посуды','Мешки для мусора'],
+  'Личная гигиена':['Зубная паста','Зубные щётки','Шампунь','Гель для душа','Туалетная бумага','Салфетки','Бритвенные станки','Дезодорант'],
+  'Дом и хозяйство':['Лампочки','Батарейки','Скотч','Пакеты','Фольга','Пищевая плёнка','Бумажные полотенца'],
+  'Аптека':['Обезболивающее','Пластыри','Витамины','Антисептик','Термометр'],
+  'Для детей':['Подгузники','Детское питание','Влажные салфетки'],
+  'Для питомцев':['Корм','Наполнитель для лотка','Лакомства'],
+};
+function loadShoppingList(){try{return JSON.parse(localStorage.getItem('neurocatch_shopping_list')||'[]');}catch(e){return [];}}
+function saveShoppingList(a){localStorage.setItem('neurocatch_shopping_list',JSON.stringify(a));touchLocal();}
+function addShoppingItem(text,category){
+  const arr=loadShoppingList();
+  if(arr.some(x=>x.text===text&&!x.done)){toast('Уже в списке');return;}
+  arr.push({id:uid('sh'),text,category:category||'Своё',done:false,ts:Date.now()});
+  saveShoppingList(arr);
+  toast('Добавлено: '+text);
+}
+function renderShoppingActive(){
+  const box=$('#shoppingActive');if(!box)return;
+  const arr=loadShoppingList();
+  const open=arr.filter(x=>!x.done);
+  const done=arr.filter(x=>x.done);
+  if(!arr.length){box.innerHTML='<div class="empty">Список пуст. Выбирай товары из каталога ниже.</div>';return;}
+  const row=x=>`<div class="shop-row${x.done?' done':''}"><button class="shop-check" data-id="${x.id}"><i data-lucide="${x.done?'check-square':'square'}"></i></button><span class="shop-text">${esc(x.text)}</span><button class="mini shop-del" data-id="${x.id}"><i data-lucide="x"></i></button></div>`;
+  box.innerHTML='<div class="shop-list">'+open.map(row).join('')+'</div>'+
+    (done.length?`<details class="done-spoiler" style="margin-top:10px"><summary><i data-lucide="chevron-down"></i>Куплено (${done.length})</summary><div class="shop-list" style="margin-top:8px">${done.map(row).join('')}</div></details><button class="btn" id="shopClearDone" style="width:100%;margin-top:10px">Убрать купленное</button>`:'');
+  lucide.createIcons();
+  box.querySelectorAll('.shop-check').forEach(b=>b.addEventListener('click',()=>{const a=loadShoppingList();const it=a.find(x=>x.id===b.dataset.id);if(it){it.done=!it.done;saveShoppingList(a);renderShoppingActive();}}));
+  box.querySelectorAll('.shop-del').forEach(b=>b.addEventListener('click',()=>{saveShoppingList(loadShoppingList().filter(x=>x.id!==b.dataset.id));renderShoppingActive();}));
+  const cd=$('#shopClearDone');if(cd)cd.addEventListener('click',()=>{saveShoppingList(loadShoppingList().filter(x=>!x.done));renderShoppingActive();});
+}
+function renderShoppingCatalog(){
+  const box=$('#shoppingCatalog');if(!box)return;
+  const q=(($('#shoppingSearch')&&$('#shoppingSearch').value)||'').trim().toLowerCase();
+  const activeTexts=new Set(loadShoppingList().filter(x=>!x.done).map(x=>x.text));
+  const cats=Object.keys(SHOPPING_CATALOG);
+  const html=cats.map(cat=>{
+    const items=SHOPPING_CATALOG[cat].filter(t=>!q||t.toLowerCase().includes(q));
+    if(!items.length)return '';
+    return `<details class="routine-cat" open><summary>${esc(cat)}<span class="t-group-n">${items.length}</span></summary><div class="routine-items">${items.map(t=>{const added=activeTexts.has(t);return `<button class="routine-item-add" data-t="${attr(t)}" data-cat="${attr(cat)}" ${added?'disabled':''}><span>${esc(t)}</span><i data-lucide="${added?'check':'plus'}"></i></button>`;}).join('')}</div></details>`;
+  }).join('');
+  box.innerHTML=html||'<div class="empty">Ничего не найдено.</div>';
+  lucide.createIcons();
+  box.querySelectorAll('.routine-item-add:not([disabled])').forEach(b=>b.addEventListener('click',()=>{addShoppingItem(b.dataset.t,b.dataset.cat);renderShoppingCatalog();renderShoppingActive();}));
+}
+$('#shoppingSearch')&&$('#shoppingSearch').addEventListener('input',()=>renderShoppingCatalog());
+$('#shoppingBack')&&$('#shoppingBack').addEventListener('click',()=>{show($('#view-more'));renderMoreTiles();});
 const ROUTINE_CATALOG={
   'Уборка дома':['Пропылесосить полы','Помыть полы','Протереть пыль','Помыть окна','Постирать бельё','Погладить одежду','Разобрать шкаф','Вынести мусор','Помыть зеркала','Убрать в ванной','Почистить санузел','Сменить постельное бельё','Проветрить квартиру','Разобрать балкон/кладовку'],
   'Кухня и посуда':['Помыть посуду','Разгрузить/загрузить посудомойку','Протереть столешницы','Почистить плиту','Разморозить холодильник','Выбросить просрочку из холодильника','Помыть холодильник изнутри','Почистить микроволновку','Помыть чайник от накипи','Составить список покупок','Сходить за продуктами','Приготовить еду на неделю (meal prep)'],
@@ -1929,7 +2166,7 @@ function initMatrixDrag(){
           eis=[...wrap.children].indexOf(zone)+1;
         }
         const h=history.find(x2=>x2.id===dragEl.dataset.ref);
-        if(h&&h.tasks[+dragEl.dataset.idx]){h.tasks[+dragEl.dataset.idx].eis=eis;saveHistory();renderMatrix();}
+        if(h&&h.tasks[+dragEl.dataset.idx]){h.tasks[+dragEl.dataset.idx].eis=eis;saveHistory();renderMatrix();try{refreshTodayBtn();}catch(e){}}
       }
     }
     cleanup();
@@ -1946,7 +2183,7 @@ function quadMenu(anchor){
   m.innerHTML='<div class="sm-h">Куда отнести</div>'+EIS.map((q,i)=>`<button data-q="${i+1}">${esc(q.n)}</button>`).join('')+'<button data-q="0">Убрать</button>';
   document.body.appendChild(m);const r=anchor.getBoundingClientRect();m.style.top=(r.bottom+6+window.scrollY)+'px';let left=r.left+window.scrollX;if(left+230>window.innerWidth)left=window.innerWidth-238;m.style.left=Math.max(8,left)+'px';
   const close=()=>{m.remove();document.removeEventListener('click',out);};function out(e){if(!e.target.closest('#catMenu')&&e.target!==anchor)close();}
-  m.querySelectorAll('button[data-q]').forEach(b=>b.addEventListener('click',()=>{const h=history.find(x=>x.id===anchor.dataset.ref);if(h){const t=h.tasks[+anchor.dataset.idx];t.eis=+b.dataset.q||0;saveHistory();renderMatrix();}close();}));
+  m.querySelectorAll('button[data-q]').forEach(b=>b.addEventListener('click',()=>{const h=history.find(x=>x.id===anchor.dataset.ref);if(h){const t=h.tasks[+anchor.dataset.idx];t.eis=+b.dataset.q||0;saveHistory();renderMatrix();try{refreshTodayBtn();}catch(e){}}close();}));
   setTimeout(()=>document.addEventListener('click',out),0);
 }
 function setSubTab(st){curSubTab=st;document.querySelectorAll('#view-tasks .subtab').forEach(b=>b.classList.toggle('active',b.dataset.st===st));document.querySelectorAll('#view-tasks .st-panel').forEach(p=>p.hidden=p.dataset.st!==st);if(st==='tasks')renderTasks();else if(st==='habits')renderHabits();else if(st==='routine')renderRoutine();else{matrixDate=dateKey(Date.now());renderMatrix();}}
@@ -2005,9 +2242,11 @@ $('#taskAddBtn')&&$('#taskAddBtn').addEventListener('click',()=>{
 });
 function renderTaskList(){
   renderTaskGroupRow();
-  const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts)),reportDate:h.date||dateKey(h.ts)}));});
+  const all=[];history.forEach(h=>{ensureEntry(h);(h.tasks||[]).forEach((t,i)=>all.push({ref:h.id,idx:i,text:t.text,done:t.done,ts:h.ts,due:t.due||0,eis:t.eis||0,date:t.due?dateKey(t.due):(h.date||dateKey(h.ts)),reportDate:h.date||dateKey(h.ts)}));});
   const scoped=selTaskDate?all.filter(t=>t.date===selTaskDate):all;
-  const openL=scoped.filter(t=>!t.done).sort((a,b)=>b.ts-a.ts);
+  const isToday=selTaskDate===dateKey(Date.now());
+  const matrixOrder=t=>t.eis?t.eis:5; // 1..4 — квадранты матрицы, 5 — нераспределённые (в конец)
+  const openL=scoped.filter(t=>!t.done).sort((a,b)=>isToday?(matrixOrder(a)-matrixOrder(b)||b.ts-a.ts):(b.ts-a.ts));
   const doneL=scoped.filter(t=>t.done).sort((a,b)=>b.ts-a.ts);
   $('#tasksLabel').textContent=(selTaskDate?('За '+selTaskDate+' · '):'')+'Открыто: '+openL.length+' из '+scoped.length;
   const row=t=>`<div class="t-row${t.done?' done':''}" data-ref="${t.ref}" data-idx="${t.idx}"><button class="box" data-ref="${t.ref}" data-idx="${t.idx}" title="Отметить выполненной"><i data-lucide="check"></i></button><div class="tt"><div class="tx" data-ref="${t.ref}" data-idx="${t.idx}" title="Нажми, чтобы изменить">${safe(t.text)}</div><div class="src">${fmtDate(t.ts)}${t.due?` · <span class="due-badge">⏰ ${esc(fmtDueShort(t.due))}</span>`:''}</div></div><button class="mini t-date" data-ref="${t.ref}" data-idx="${t.idx}" title="Срок"><i data-lucide="calendar"></i></button><button class="mini t-del" data-ref="${t.ref}" data-idx="${t.idx}" title="Удалить"><i data-lucide="trash-2"></i></button></div>`;
@@ -2085,7 +2324,7 @@ const ov=$('#overlay');
 $('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov&&ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const snd=$('#staleNoteDays');if(snd)settings.staleNoteDays=+snd.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt')&&$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov&&ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov)ov.classList.remove('open');});
@@ -2566,6 +2805,8 @@ const MORE_TILES=[
   ['Выделения','highlighter',()=>getAllFragments().length,()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}],
   ['Проекты','layout-grid',()=>loadProjects().length,()=>{renderProjectsList();show($('#view-projects'));}],
   ['Закладки','bookmark',()=>bookmarks.length,()=>{renderBookmarks();show($('#view-bookmarks'));}],
+  ['Забытые','clock',()=>getStaleNotes().length,()=>{renderStaleNotes();show($('#view-stale'));}],
+  ['Покупки','shopping-cart',()=>loadShoppingList().filter(x=>!x.done).length,()=>{renderShoppingActive();renderShoppingCatalog();show($('#view-shopping'));}],
 ];
 function renderMoreTiles(){
   const box=$('#moreTiles');if(!box)return;
@@ -2586,7 +2827,31 @@ document.querySelectorAll('#view-notes .subtab').forEach(b=>b.addEventListener('
 }));
 /* ---------- today's tasks button ---------- */
 function todayOpenCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done)n++;});});return n;}
-function refreshTodayBtn(){const b=$('#todayCount');if(!b)return;const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
+function todayUnsortedCount(){const k=dateKey(Date.now());let n=0;history.forEach(h=>{ensureEntry(h);if((h.date||dateKey(h.ts))===k)(h.tasks||[]).forEach(t=>{if(!t.done&&!t.eis)n++;});});return n;}
+function refreshTodayBtn(){
+  const b=$('#todayCount');if(b){const n=todayOpenCount();if(n>0){b.textContent=n;b.hidden=false;}else b.hidden=true;}
+  const sb=$('#sortTodayBtn'),ub=$('#unsortedCount');
+  const un=todayUnsortedCount();
+  if(sb)sb.hidden=un===0;
+  if(ub){if(un>0){ub.textContent=un;ub.hidden=false;}else ub.hidden=true;}
+}
+function goSortToday(){matrixDate=dateKey(Date.now());setSubTab('matrix');show($('#view-tasks'));}
+$('#sortTodayBtn')&&$('#sortTodayBtn').addEventListener('click',goSortToday);
+function checkUnsortedReminder(){
+  const todayK=dateKey(Date.now());
+  if(localStorage.getItem('neurocatch_unsorted_reminder_date')===todayK)return;
+  const n=todayUnsortedCount();
+  if(!n)return;
+  $('#unsortedReminderText').textContent='На сегодня есть '+n+' задач'+(n===1?'а':(n<5?'и':''))+' без приоритета. Разложи по матрице — и точно будешь знать, за что браться первым.';
+  $('#unsortedReminderOverlay').classList.add('open');
+}
+function dismissUnsortedReminder(){
+  localStorage.setItem('neurocatch_unsorted_reminder_date',dateKey(Date.now()));
+  $('#unsortedReminderOverlay').classList.remove('open');
+}
+$('#unsortedReminderClose')&&$('#unsortedReminderClose').addEventListener('click',dismissUnsortedReminder);
+$('#unsortedReminderLater')&&$('#unsortedReminderLater').addEventListener('click',dismissUnsortedReminder);
+$('#unsortedReminderGo')&&$('#unsortedReminderGo').addEventListener('click',()=>{dismissUnsortedReminder();goSortToday();});
 $('#todayTasks')&&$('#todayTasks').addEventListener('click',()=>{selTaskDate=dateKey(Date.now());taskCalCursor=new Date();taskCalMode='week';curSubTab='tasks';setSubTab('tasks');show($('#view-tasks'));});
 
 /* ---------- share note (self-contained link + file, no auth) ---------- */
@@ -2727,6 +2992,9 @@ function checkSharedHash(){const hs=location.hash||'';
 try{loadAll();}catch(e){console.error('loadAll failed:',e);}
 try{autoArchiveOldReports();}catch(e){}
 try{processRecurringRules(false);}catch(e){}
+try{seedNeuroCatchProject();}catch(e){}
+setTimeout(()=>{try{checkStaleReminder();}catch(e){}},1500);
+setTimeout(()=>{try{if(!$('#staleReminderOverlay').classList.contains('open'))checkUnsortedReminder();}catch(e){}},3200);
 try{initNotify();}catch(e){console.error('initNotify failed:',e);}
 try{startAutoSync();}catch(e){}
 lucide.createIcons();
