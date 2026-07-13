@@ -891,7 +891,7 @@ html[data-theme="light"] .note-title{
 .routine-repeat{flex:0 0 auto;color:var(--faint)}
 .routine-repeat:hover{color:var(--accent-2)}
 .routine-item:hover{border-color:rgba(var(--seed-rgb),.4);color:var(--accent-2)}
-.routine-item svg{width:15px;height:15px;flex:0 0 auto;color:var(--faint)}
+.routine-item svg,.routine-item-add svg{width:15px;height:15px;flex:0 0 auto;color:var(--faint)}
 .routine-item.added{opacity:.55;cursor:default}
 .routine-item.added svg{color:var(--green)}
 

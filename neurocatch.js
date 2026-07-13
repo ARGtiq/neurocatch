@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v63';
+const APP_VERSION='2025.7-06';const SW_VER='v64';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1974,17 +1974,25 @@ function renderShoppingActive(){
 }
 function renderShoppingCatalog(){
   const box=$('#shoppingCatalog');if(!box)return;
-  const q=(($('#shoppingSearch')&&$('#shoppingSearch').value)||'').trim().toLowerCase();
+  const rawQ=($('#shoppingSearch')&&$('#shoppingSearch').value||'').trim();
+  const q=rawQ.toLowerCase();
   const activeTexts=new Set(loadShoppingList().filter(x=>!x.done).map(x=>x.text));
   const cats=Object.keys(SHOPPING_CATALOG);
+  const exactMatch=q&&cats.some(cat=>SHOPPING_CATALOG[cat].some(t=>t.toLowerCase()===q));
+  const customBtn=(rawQ&&!exactMatch)?`<button class="btn btn-primary" id="shopAddCustom" style="width:100%;margin-bottom:16px"><i data-lucide="plus"></i>Добавить «${esc(rawQ)}» в список</button>`:'';
   const html=cats.map(cat=>{
     const items=SHOPPING_CATALOG[cat].filter(t=>!q||t.toLowerCase().includes(q));
     if(!items.length)return '';
     return `<details class="routine-cat" open><summary>${esc(cat)}<span class="t-group-n">${items.length}</span></summary><div class="routine-items">${items.map(t=>{const added=activeTexts.has(t);return `<button class="routine-item-add" data-t="${attr(t)}" data-cat="${attr(cat)}" ${added?'disabled':''}><span>${esc(t)}</span><i data-lucide="${added?'check':'plus'}"></i></button>`;}).join('')}</div></details>`;
   }).join('');
-  box.innerHTML=html||'<div class="empty">Ничего не найдено.</div>';
+  box.innerHTML=customBtn+(html||(rawQ?'<div class="empty">В каталоге такого нет — добавь кнопкой выше.</div>':'<div class="empty">Ничего не найдено.</div>'));
   lucide.createIcons();
   box.querySelectorAll('.routine-item-add:not([disabled])').forEach(b=>b.addEventListener('click',()=>{addShoppingItem(b.dataset.t,b.dataset.cat);renderShoppingCatalog();renderShoppingActive();}));
+  const cb=$('#shopAddCustom');if(cb)cb.addEventListener('click',()=>{
+    addShoppingItem(rawQ,'Своё');
+    const si=$('#shoppingSearch');if(si)si.value='';
+    renderShoppingCatalog();renderShoppingActive();
+  });
 }
 $('#shoppingSearch')&&$('#shoppingSearch').addEventListener('input',()=>renderShoppingCatalog());
 $('#shoppingBack')&&$('#shoppingBack').addEventListener('click',()=>{show($('#view-more'));renderMoreTiles();});
@@ -2350,15 +2358,61 @@ async function cloudInit(){
   }catch(e){setCloudStatus('ошибка',false);}
   updateCloudButtons();
 }
-function cloudAppSettings(){return {model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt};}
+function cloudAppSettings(){return {
+  model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt,
+  provider:settings.provider,clearAfter:settings.clearAfter,autoClip:settings.autoClip,bg:settings.bg,
+  preset:settings.preset,swipesOn:settings.swipesOn,voiceAutoAdd:settings.voiceAutoAdd,
+  archiveDays:settings.archiveDays,staleNoteDays:settings.staleNoteDays,
+  microPerLink:settings.microPerLink,microExclude:settings.microExclude,
+  studyCustomName:settings.studyCustomName,studyCustomUrl:settings.studyCustomUrl
+};}
 function setSync(state){const el=$('#syncDot');if(!el)return;el.hidden=!sbUser;el.className='sync-dot'+(state?' '+state:'');el.innerHTML=state==='ok'?'<span class="d"></span>':state==='err'?'<span class="d"></span>':state==='sync'?'':'<span class="d"></span>';}
+const CLOUD_SYNC_KEYS=[
+  'neurocatch_bookmarks','neurocatch_habits','neurocatch_extracted','neurocatch_highlights',
+  'neurocatch_manual_notes','neurocatch_note_activity','neurocatch_note_cats','neurocatch_note_links',
+  'neurocatch_projects','neurocatch_recur_rules','neurocatch_shopping_list',
+  'neurocatch_anki_cards','neurocatch_anki_decks'
+];
 function replaceState(remote){ // last-writer-wins: полностью заменяем локальное состояние удалённым
   applyingRemote=true;
   if(Array.isArray(remote.catches)){catches=remote.catches;catches.forEach(c=>{if(!c.id)c.id=uid('c');});}
   if(Array.isArray(remote.history)){history=remote.history;history.forEach(ensureEntry);history.sort((a,b)=>b.ts-a.ts);}
-  if(remote.settings&&typeof remote.settings==='object'){const rs=remote.settings;if(rs.model)settings.model=rs.model;if(typeof rs.prompt==='string')settings.prompt=rs.prompt;if(rs.seed){settings.seed=rs.seed;setAccent(rs.seed,false);buildSwatches();}if(rs.themeMode)applyThemeMode(rs.themeMode,false);const mEl=$('#model');if(mEl)mEl.value=settings.model;const pEl=$('#promptInput');if(pEl)pEl.value=settings.prompt||DEFAULT_PROMPT;}
+  if(remote.settings&&typeof remote.settings==='object'){
+    const rs=remote.settings;
+    if(rs.model)settings.model=rs.model;
+    if(typeof rs.prompt==='string')settings.prompt=rs.prompt;
+    if(rs.seed){settings.seed=rs.seed;setAccent(rs.seed,false);buildSwatches();}
+    if(rs.themeMode)applyThemeMode(rs.themeMode,false);
+    if(rs.provider)settings.provider=rs.provider;
+    if(typeof rs.clearAfter==='boolean')settings.clearAfter=rs.clearAfter;
+    if(typeof rs.autoClip==='boolean')settings.autoClip=rs.autoClip;
+    if(rs.bg)settings.bg=rs.bg;
+    if(rs.preset)settings.preset=rs.preset;
+    if(typeof rs.swipesOn==='boolean')settings.swipesOn=rs.swipesOn;
+    if(typeof rs.voiceAutoAdd==='boolean')settings.voiceAutoAdd=rs.voiceAutoAdd;
+    if(rs.archiveDays!=null)settings.archiveDays=+rs.archiveDays;
+    if(rs.staleNoteDays!=null)settings.staleNoteDays=+rs.staleNoteDays;
+    if(typeof rs.microPerLink==='boolean')settings.microPerLink=rs.microPerLink;
+    if(Array.isArray(rs.microExclude))settings.microExclude=rs.microExclude;
+    if(typeof rs.studyCustomName==='string')settings.studyCustomName=rs.studyCustomName;
+    if(typeof rs.studyCustomUrl==='string')settings.studyCustomUrl=rs.studyCustomUrl;
+    const mEl=$('#model');if(mEl)mEl.value=settings.model;
+    const pEl=$('#promptInput');if(pEl)pEl.value=settings.prompt||DEFAULT_PROMPT;
+  }
   localStorage.setItem('neurocatch_catches',JSON.stringify(catches));
   localStorage.setItem('neurocatch_history',JSON.stringify(history));
+  // остальные хранилища — просто перезаписываем localStorage целиком (last-writer-wins),
+  // без отдельных in-memory зеркал (они читаются лениво при каждом открытии экрана),
+  // кроме bookmarks/habits — у них есть глобальные переменные, обновляем и их тоже.
+  if(remote.data&&typeof remote.data==='object'){
+    CLOUD_SYNC_KEYS.forEach(k=>{
+      if(k in remote.data){
+        try{localStorage.setItem(k,JSON.stringify(remote.data[k]));}catch(e){}
+      }
+    });
+    try{loadBookmarks();}catch(e){}
+    try{loadHabits();}catch(e){}
+  }
   saveSettings();refreshCount();
   applyingRemote=false;
 }
@@ -2376,10 +2430,17 @@ async function cloudPull(silent){
     }
   }catch(e){cloudBusy=false;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
 }
+function collectCloudExtraData(){
+  const out={};
+  CLOUD_SYNC_KEYS.forEach(k=>{
+    try{const raw=localStorage.getItem(k);if(raw!=null)out[k]=JSON.parse(raw);}catch(e){}
+  });
+  return out;
+}
 async function cloudPush(silent){
   if(cloudBusy||applyingRemote){return;}const c=await sbClient();if(!c||!sbUser)return;
   setSync('sync');
-  try{const ts=localUpdatedAt||Date.now();const payload={catches,history,settings:cloudAppSettings()};
+  try{const ts=localUpdatedAt||Date.now();const payload={catches,history,settings:cloudAppSettings(),data:collectCloudExtraData()};
     const {error}=await c.from('states').upsert({id:sbUser.id,data:payload,updated_at:new Date(ts).toISOString()});
     if(error)throw error;setSync('ok');if(!silent)toast('Выгружено в облако');
   }catch(e){setSync('err');if(!silent)toast('Выгрузка: '+(e.message||e),true);}
