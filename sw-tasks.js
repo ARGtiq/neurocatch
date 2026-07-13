@@ -1,5 +1,5 @@
 // Отдельный service worker для мини-приложения «Задачи» (tasks.html).
-const CACHE='neurocatch-tasks-v26';
+const CACHE='neurocatch-tasks-v27';
 const ASSETS=['./tasks.html','./neurocatch.css','./nc-parsers.js','./nc-ai.js','./neurocatch.js','./tasks.webmanifest','./icon.svg'];
 
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});

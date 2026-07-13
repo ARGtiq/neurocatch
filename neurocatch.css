@@ -888,6 +888,8 @@ html[data-theme="light"] .note-title{
 .routine-items{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .routine-item{display:flex;align-items:stretch;gap:6px}
 .routine-item-add{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--glass-2);color:var(--text);font:inherit;font-size:13px;cursor:pointer;text-align:left;transition:.15s}
+.routine-item-add svg{width:16px;height:16px;flex:0 0 auto;color:var(--faint)}
+.routine-item-add[disabled] svg{color:var(--green)}
 .routine-repeat{flex:0 0 auto;color:var(--faint)}
 .routine-repeat:hover{color:var(--accent-2)}
 .routine-item:hover{border-color:rgba(var(--seed-rgb),.4);color:var(--accent-2)}
@@ -1094,3 +1096,18 @@ body.minimal .topbar .nav-btn{display:none}
 .shop-check svg{width:18px;height:18px}
 .shop-text{flex:1;font-size:14px;color:var(--text)}
 .shop-row .shop-del{flex:0 0 auto;width:26px;height:26px}
+
+/* товары из списка покупок в общем списке задач */
+.t-row-shop{background:rgba(70,168,255,.06);border-color:rgba(70,168,255,.25)}
+.shop-box{color:#4aa8ff;border-color:rgba(70,168,255,.35)}
+.shop-box:hover{color:#4aa8ff}
+.tx-shop{cursor:default}
+
+/* разовые подсказки */
+.hint-banner{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:12px;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);font-size:13px;color:var(--muted);margin:10px 0}
+.hint-banner svg{width:16px;height:16px;color:#f5a623;flex:0 0 auto;margin-top:1px}
+.hint-banner span{flex:1;line-height:1.5}
+.hint-banner span b{color:var(--text)}
+.hint-x{flex:0 0 auto;background:none;border:none;color:var(--faint);cursor:pointer;padding:2px;display:flex}
+.hint-x:hover{color:var(--text)}
+.hint-x svg{width:14px;height:14px}
