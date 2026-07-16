@@ -9,8 +9,13 @@
    ============================================================ */
 
 const $ = window.$ || (s => document.querySelector(s));
-const esc = window.esc;
-const attr = window.attr;
+const fmtDate = ts => new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+// esc/attr/show объявлены в neurocatch.js как const-стрелочные функции — top-level
+// const/let НЕ становятся свойствами window (в отличие от function-деклараций типа
+// llmComplete/toast), и модуль (`type="module"`) их не видит вообще. Поэтому здесь —
+// собственные копии тех же самых реализаций, 1:1 с neurocatch.js, а не window.esc/window.attr.
+const esc = s => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+const attr = u => String(u).replace(/"/g, '%22');
 const toast = window.toast;
 const show = window.show;
 
@@ -62,9 +67,9 @@ function renderThemeSettings() {
       <div class="hint" style="margin-bottom:10px">Опиши желаемый вайб — промпт скопируется в буфер и, если настроен ИИ, применится сразу как предпросмотр.</div>
       <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:70px"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" id="genThemeBtn"><i data-lucide="sparkles"></i>Сгенерировать тему</button>
-        <button class="btn" id="saveThemePresetBtn"><i data-lucide="save"></i>Сохранить как пресет</button>
-        <button class="btn" id="resetThemeBtn"><i data-lucide="rotate-ccw"></i>Сбросить</button>
+        <button class="btn btn-primary" id="genThemeBtn"><i data-lucide="sparkle"></i>Сгенерировать тему</button>
+        <button class="btn" id="saveThemePresetBtn"><i data-lucide="check"></i>Сохранить как пресет</button>
+        <button class="btn" id="resetThemeBtn"><i data-lucide="refresh-cw"></i>Сбросить</button>
       </div>
       <label class="row" style="margin-top:14px;display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="reduceBlurToggle"> Уменьшить прозрачность/блюр (для слабых устройств)
@@ -197,7 +202,7 @@ async function renderCardBrowser() {
         <div class="q-time">${(c.tags || []).map(t => `<span class="tag-pill" style="margin-right:4px">${esc(t)}</span>`).join('')}
           <span class="tag-pill" style="margin-left:6px">${esc(c.state)}</span>
           ${c.suspended ? '<span class="tag-pill" style="color:var(--red)">приостановлена</span>' : ''}
-          · due ${window.fmtDate ? window.fmtDate(new Date(c.due_at).getTime()) : c.due_at}</div>
+          · due ${fmtDate(new Date(c.due_at).getTime())}</div>
       </div>
     </div>`).join('');
   lucide.createIcons();
@@ -214,10 +219,10 @@ function renderBrowserActionBar() {
   if (!n) { if (bar) bar.remove(); return; }
   if (!bar) { bar = document.createElement('div'); bar.id = 'browserActionBar'; bar.className = 'frag-action-bar'; document.body.appendChild(bar); }
   bar.innerHTML = `<span class="frag-count">${n} выбрано</span>
-    <button class="btn" id="bTag"><i data-lucide="tag"></i>Tag</button>
-    <button class="btn" id="bMove"><i data-lucide="move"></i>Move</button>
-    <button class="btn" id="bSuspend"><i data-lucide="pause"></i>Suspend</button>
-    <button class="btn" id="bReset"><i data-lucide="rotate-ccw"></i>Reset</button>
+    <button class="btn" id="bTag"><i data-lucide="list"></i>Tag</button>
+    <button class="btn" id="bMove"><i data-lucide="folder"></i>Move</button>
+    <button class="btn" id="bSuspend"><i data-lucide="clock"></i>Suspend</button>
+    <button class="btn" id="bReset"><i data-lucide="refresh-cw"></i>Reset</button>
     <button class="btn" id="bReschedule"><i data-lucide="calendar"></i>Reschedule</button>
     <button class="btn btn-clear" id="bDelete"><i data-lucide="trash-2"></i>Delete</button>`;
   lucide.createIcons();

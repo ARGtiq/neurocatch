@@ -2924,8 +2924,8 @@ $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.clo
 const MORE_TILES=[
   ['История','calendar',()=>realHistory().length,()=>{filterDate=null;searchQuery='';tagFilter=null;showArchived=false;const si=$('#searchInput');if(si)si.value='';renderHistory();show($('#view-history'));}],
   ['Anki','layers',()=>0,()=>{renderAnkiDeckList();show($('#view-anki'));}],
-  ['Теги','tag',()=>0,()=>{window.AnkiUI.renderTagManager();show($('#view-tag-manager'));}],
-  ['Anki-аналитика','bar-chart-2',()=>0,()=>{window.AnkiUI.renderAnkiAnalytics();show($('#view-anki-analytics'));}],
+  ['Теги','list',()=>0,()=>{window.AnkiUI.renderTagManager();show($('#view-tag-manager'));}],
+  ['Anki-аналитика','bar-chart-3',()=>0,()=>{window.AnkiUI.renderAnkiAnalytics();show($('#view-anki-analytics'));}],
   ['Выделения','highlighter',()=>getAllFragments().length,()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}],
   ['Проекты','layout-grid',()=>loadProjects().length,()=>{renderProjectsList();show($('#view-projects'));}],
   ['Закладки','bookmark',()=>bookmarks.length,()=>{renderBookmarks();show($('#view-bookmarks'));}],
