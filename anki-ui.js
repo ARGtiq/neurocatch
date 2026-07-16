@@ -62,21 +62,19 @@ function applyThemeTokensLive(tokens) {
 function renderThemeSettings() {
   const box = $('#themeSettingsBox'); if (!box) return;
   box.innerHTML = `
-    <div class="md-section">
-      <h3>🎨 Тема оформления</h3>
-      <div class="hint" style="margin-bottom:10px">Опиши желаемый вайб — промпт скопируется в буфер и, если настроен ИИ, применится сразу как предпросмотр.</div>
-      <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:70px"></textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" id="genThemeBtn"><i data-lucide="sparkle"></i>Сгенерировать тему</button>
-        <button class="btn" id="pasteThemeBtn"><i data-lucide="clipboard"></i>Вставить готовый код темы</button>
-        <button class="btn" id="saveThemePresetBtn"><i data-lucide="check"></i>Сохранить как пресет</button>
-        <button class="btn" id="resetThemeBtn"><i data-lucide="refresh-cw"></i>Сбросить</button>
+    <div class="sgroup" data-grp="main" style="display:none">
+      <div class="sec-title">AI-тема</div>
+      <div class="field">
+        <label for="themeDescInput" style="display:flex;align-items:center;justify-content:space-between">Описание желаемого вайба<button type="button" class="link-btn" id="resetThemeBtn">Сбросить</button></label>
+        <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:60px"></textarea>
+        <div class="hint">Промпт скопируется в буфер и, если настроен ИИ, применится сразу как предпросмотр.</div>
+        <div class="status-row"><span style="flex:1"></span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn" id="pasteThemeBtn">Вставить готовый код</button><button type="button" class="link-btn" id="genThemeBtn">Сгенерировать</button></div></div>
       </div>
-      <label class="row" style="margin-top:14px;display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="reduceBlurToggle"> Уменьшить прозрачность/блюр (для слабых устройств)
-      </label>
-      <div class="hint" style="margin-top:14px">Мои темы (синхронизируются между устройствами через облако):</div>
-      <div id="themePresetList" style="margin-top:6px"></div>
+      <div class="field">
+        <label style="display:flex;align-items:center;justify-content:space-between">Текущий предпросмотр<button type="button" class="link-btn" id="saveThemePresetBtn">Сохранить как пресет</button></label>
+        <div class="hint" id="themePresetList">Пока нет сохранённых пресетов</div>
+      </div>
+      <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="reduceBlurToggle" style="width:auto"> Уменьшить прозрачность/блюр (для слабых устройств)</label></div>
     </div>`;
   lucide.createIcons();
 
@@ -325,9 +323,13 @@ async function renderTagManager() {
    ============================================================ */
 let occState = { imageEl: null, shapes: [], drawing: null, cardId: null };
 function openOcclusionEditor(cardId, imageUrl) {
-  occState = { imageEl: null, shapes: [], drawing: null, cardId };
+  occState = { imageEl: null, shapes: [], drawing: null, cardId, shapeType: 'rect' };
   const wrap = $('#occlusionCanvasWrap'); if (!wrap) return;
-  wrap.innerHTML = `<div class="occ-stage" style="position:relative;display:inline-block">
+  wrap.innerHTML = `<div class="type-chip-row" style="margin-bottom:10px">
+    <button type="button" class="type-chip on" data-shape="rect">Прямоугольник</button>
+    <button type="button" class="type-chip" data-shape="ellipse">Эллипс</button>
+  </div>
+  <div class="occ-stage" style="position:relative;display:inline-block">
     <img id="occImg" src="${attr(imageUrl)}" style="max-width:100%;display:block;border-radius:12px">
     <svg id="occSvg" style="position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none"></svg>
   </div>
@@ -335,6 +337,10 @@ function openOcclusionEditor(cardId, imageUrl) {
   <button class="btn btn-primary" id="occSaveBtn" style="width:100%;margin-top:12px">Сохранить маски</button>`;
   const img = $('#occImg'); const svg = $('#occSvg');
   img.onload = () => { svg.setAttribute('viewBox', `0 0 ${img.naturalWidth} ${img.naturalHeight}`); };
+  wrap.querySelectorAll('.type-chip[data-shape]').forEach(b => b.addEventListener('click', () => {
+    occState.shapeType = b.dataset.shape;
+    wrap.querySelectorAll('.type-chip[data-shape]').forEach(x => x.classList.toggle('on', x === b));
+  }));
 
   function svgPoint(evt) {
     const rect = svg.getBoundingClientRect();
@@ -342,15 +348,24 @@ function openOcclusionEditor(cardId, imageUrl) {
     const y = ((evt.clientY - rect.top) / rect.height) * img.naturalHeight;
     return { x, y };
   }
+  function shapeSvg(s, dashed) {
+    const style = dashed
+      ? 'fill="rgba(0,219,233,0.2)" stroke="#00dbe9" stroke-dasharray="6 4" stroke-width="2"'
+      : 'fill="rgba(0,219,233,0.35)" stroke="#00dbe9" stroke-width="3"';
+    if (s.type === 'ellipse') {
+      const cx = s.coords[0] + s.coords[2] / 2, cy = s.coords[1] + s.coords[3] / 2;
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${s.coords[2] / 2}" ry="${s.coords[3] / 2}" ${style}></ellipse>`;
+    }
+    return `<rect x="${s.coords[0]}" y="${s.coords[1]}" width="${s.coords[2]}" height="${s.coords[3]}" rx="6" ${style}></rect>`;
+  }
   function redraw() {
-    svg.innerHTML = occState.shapes.map((s, i) => `<rect data-i="${i}" x="${s.coords[0]}" y="${s.coords[1]}" width="${s.coords[2]}" height="${s.coords[3]}"
-      fill="rgba(0,219,233,0.35)" stroke="#00dbe9" stroke-width="3" rx="6"></rect>`).join('');
+    svg.innerHTML = occState.shapes.map((s, i) => shapeSvg(s, false).replace('>', ` data-i="${i}">`)).join('');
     if (occState.drawing) {
       const d = occState.drawing;
-      svg.innerHTML += `<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" fill="rgba(0,219,233,0.2)" stroke="#00dbe9" stroke-dasharray="6 4" stroke-width="2"></rect>`;
+      svg.innerHTML += shapeSvg({ type: occState.shapeType, coords: [d.x, d.y, d.w, d.h] }, true);
     }
-    svg.querySelectorAll('rect[data-i]').forEach(r => r.addEventListener('click', () => {
-      occState.shapes.splice(+r.dataset.i, 1); redraw();
+    svg.querySelectorAll('[data-i]').forEach(el => el.addEventListener('click', () => {
+      occState.shapes.splice(+el.dataset.i, 1); redraw();
     }));
   }
   let start = null;
@@ -363,7 +378,7 @@ function openOcclusionEditor(cardId, imageUrl) {
   });
   svg.addEventListener('pointerup', () => {
     if (occState.drawing && occState.drawing.w > 8 && occState.drawing.h > 8) {
-      occState.shapes.push({ id: 'occ_' + Date.now() + '_' + occState.shapes.length, type: 'rect',
+      occState.shapes.push({ id: 'occ_' + Date.now() + '_' + occState.shapes.length, type: occState.shapeType,
         coords: [occState.drawing.x, occState.drawing.y, occState.drawing.w, occState.drawing.h] });
     }
     occState.drawing = null; start = null; redraw();
@@ -427,11 +442,8 @@ async function transcribeAndAttachAudio(cardId, blob) {
   let transcript = '';
   if (typeof window.llmComplete === 'function' && typeof window.hasLLM === 'function' && window.hasLLM()) {
     try {
-      // NB: транскрипция аудио через llmComplete() требует, чтобы провайдер поддерживал audio-input
-      // (Gemini поддерживает через inline_data). Если llmComplete() в текущей реализации принимает
-      // только текстовый prompt — этот вызов нужно расширить на стороне neurocatch.js под передачу blob.
-      transcript = await window.llmComplete('Сделай точную текстовую транскрипцию приложенного аудио, только текст, без пояснений.');
-    } catch (e) { transcript = ''; }
+      transcript = await window.llmComplete('Сделай точную текстовую транскрипцию приложенного аудио на русском языке, только текст, без пояснений и вводных фраз.', blob);
+    } catch (e) { transcript = ''; toast('Аудио сохранено, но транскрипция не удалась: ' + (e.message || e), true); }
   }
   const card = await window.AnkiData.getCard(cardId);
   const refs = (card.media_refs || []).concat([{ ...media, transcript }]);
@@ -523,13 +535,20 @@ function getSelectedType() {
 function setSelectedType(type) {
   document.querySelectorAll('#ankiTypeRow .type-chip').forEach(b => b.classList.toggle('on', b.dataset.type === type));
 }
+const TYPE_DESCRIPTIONS = {
+  basic: 'Простой вопрос и ответ — классическая карточка «спереди/сзади».',
+  cloze: 'В тексте ответа скрывается часть слов или фраз — при повторении нужно вспомнить именно их. Удобно для формулировок, дат, терминов внутри предложения.',
+  image_occlusion: 'На фото (например, схема или анатомический атлас) закрываются отдельные области — при повторении нужно вспомнить, что скрыто под маской.',
+};
 function updateTypeUI() {
   const type = getSelectedType();
   const clozeHint = $('#ankiClozeHint');
   const occBtn = $('#ankiOcclusionBtn');
   const backLabel = $('#ankiBackLabel');
+  const typeDesc = $('#ankiTypeDescription');
   if (clozeHint) clozeHint.hidden = type !== 'cloze';
   if (backLabel) backLabel.textContent = type === 'cloze' ? 'Текст с пропусками' : 'Ответ (оборот карточки)';
+  if (typeDesc) typeDesc.textContent = TYPE_DESCRIPTIONS[type] || '';
   const hasImage = editorState.mediaRefs.some(m => m.kind === 'image');
   if (occBtn) occBtn.hidden = !(type === 'image_occlusion' && hasImage && editorState.cardId);
 }

@@ -146,7 +146,12 @@ async function deleteCards(ids) {
    ============================================================ */
 async function uploadMedia(cardId, blob, kind, filename) {
   const { client, uid } = await requireUser();
-  const path = `${uid}/${cardId}/${Date.now()}_${filename}`;
+  // Storage-ключ должен быть безопасным (ASCII, без пробелов) независимо от того,
+  // что передал вызывающий код — кириллица/пробелы/спецсимволы в самом ключе объекта
+  // могут ронять upload. Красивое человекочитаемое имя сохраняем отдельно в filename.
+  const extMatch = /\.([a-zA-Z0-9]+)$/.exec(filename || '');
+  const ext = (extMatch && extMatch[1]) || (blob.type && blob.type.split('/')[1]) || 'bin';
+  const path = `${uid}/${cardId}/${Date.now()}_${kind}.${ext}`;
   const { error } = await client.storage.from('anki-media').upload(path, blob, {
     contentType: blob.type, upsert: false,
   });

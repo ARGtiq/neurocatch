@@ -44,7 +44,7 @@ body.blur-reduced * {
 .study-menu, .overlay .modal {
   border-radius: var(--theme-radius-card);
 }
-.btn, .chip, .algo-chip, .tag-pill {
+.btn, .chip, .algo-chip, .type-chip, .tag-pill {
   border-radius: var(--theme-radius-button);
 }
 
@@ -109,7 +109,23 @@ textarea.anki-input, input.anki-input {
 }
 textarea.anki-input:focus, input.anki-input:focus { border-color: var(--accent); outline: none; }
 
-/* -------- панель массовых действий Card Browser — не должна уезжать за край экрана -------- */
+/* -------- слайдеры (Deck Settings) — под единый стиль приложения -------- */
+#deckSettingsBox input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+  border-radius: 999px; background: rgba(0,0,0,0.12); outline: none; margin: 6px 0;
+}
+:root[data-theme="dark"] #deckSettingsBox input[type="range"] { background: rgba(255,255,255,0.15); }
+#deckSettingsBox input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+#deckSettingsBox input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+  cursor: pointer; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+#deckSettingsBox input[type="range"]::-moz-range-track { background: transparent; }
+
+
 #browserActionBar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
   display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;

@@ -323,11 +323,11 @@
 
     <section class="view" id="view-card-browser" hidden>
       <div class="head-row"><button class="back" id="browserBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Browser</h2></div>
-      <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
+      <div class="search-wrap" style="margin-bottom:12px"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
       <div class="chip-row" id="browserMaturityRow">
         <button class="chip on" data-m="">Все</button>
         <button class="chip" data-m="learning">Изучение</button>
-        <button class="chip" data-m="mature">Зрелые</button>
+        <button class="chip" data-m="mature">Закреплено</button>
       </div>
       <div class="chip-row" id="browserDueRow">
         <button class="chip on" data-d="">Любой срок</button>
@@ -370,9 +370,10 @@
           <label>Тип карточки</label>
           <div class="type-chip-row" id="ankiTypeRow">
             <button type="button" class="type-chip on" data-type="basic">Обычная</button>
-            <button type="button" class="type-chip" data-type="cloze">Cloze</button>
-            <button type="button" class="type-chip" data-type="image_occlusion">Occlusion</button>
+            <button type="button" class="type-chip" data-type="cloze">С пропусками</button>
+            <button type="button" class="type-chip" data-type="image_occlusion">Скрытые области на фото</button>
           </div>
+          <div class="hint" id="ankiTypeDescription" style="margin-top:6px"></div>
         </div>
         <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea class="anki-input" id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
         <div class="anki-btn-row">
@@ -554,8 +555,8 @@
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
     <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div>
-    <div id="themeSettingsBox"></div>
     </div>
+    <div id="themeSettingsBox"></div>
     
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
