@@ -1612,8 +1612,10 @@ async function openAnkiCardEditor(opts){
   $('#ankiCardTitle').textContent=ankiEditingId?'Изменить карточку':'Новая карточка';
   const fi=$('#ankiFrontInput');if(fi)fi.value=opts.front||'';
   const bi=$('#ankiBackInput');if(bi)bi.value=opts.back||'';
+  const ti=$('#ankiTypeSelect');if(ti)ti.value=opts.card_type||'basic';
   const del=$('#ankiCardDelete');if(del)del.hidden=!ankiEditingId;
   $('#ankiCardOverlay').classList.add('open');
+  try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, opts.media_refs||[]); }catch(e){}
   setTimeout(()=>{if(bi)bi.focus();},50);
 }
 $('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',()=>$('#ankiCardOverlay').classList.remove('open'));
@@ -1623,11 +1625,21 @@ $('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
   if(!back){toast('Заполни ответ/оборот карточки',true);return;}
   const front=$('#ankiFrontInput').value.trim();
   const deckId=$('#ankiDeckSelect').value;
+  const cardType=($('#ankiTypeSelect')&&$('#ankiTypeSelect').value)||'basic';
   try{
-    if(ankiEditingId){ await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId}); }
-    else{ await window.AnkiData.createCard(deckId,{front,back}); }
-    $('#ankiCardOverlay').classList.remove('open');
-    toast(ankiEditingId?'Карточка обновлена':'Карточка создана');
+    if(ankiEditingId){
+      await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType});
+      $('#ankiCardOverlay').classList.remove('open');
+      toast('Карточка обновлена');
+    }else{
+      const created = await window.AnkiData.createCard(deckId,{front,back,card_type:cardType});
+      // остаёмся в модалке в режиме редактирования — теперь есть id, можно прикреплять медиа
+      ankiEditingId=created.id;
+      $('#ankiCardTitle').textContent='Изменить карточку';
+      const del=$('#ankiCardDelete');if(del)del.hidden=false;
+      try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, []); }catch(e){}
+      toast('Карточка создана — теперь можно прикрепить фото/аудио или закрыть');
+    }
     renderAnkiDeckList();
   }catch(e){ toast('Ошибка сохранения: '+(e.message||e),true); }
 });

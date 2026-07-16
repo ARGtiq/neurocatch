@@ -483,10 +483,154 @@ function wireSecretKeyButtons() {
   }
 }
 
+/* ============================================================
+   9. CARD EDITOR EXTENSIONS — тип карточки, AI Auto-Fill, cloze, медиа
+   ============================================================ */
+let editorState = { cardId: null, mediaRefs: [], recording: false };
+
+function onCardEditorOpen(cardId, mediaRefs) {
+  editorState.cardId = cardId;
+  editorState.mediaRefs = mediaRefs || [];
+  const photoBtn = $('#ankiPhotoBtn'), audioBtn = $('#ankiAudioBtn'), hint = $('#ankiMediaHint');
+  const canAttach = !!cardId;
+  if (photoBtn) photoBtn.disabled = !canAttach;
+  if (audioBtn) audioBtn.disabled = !canAttach;
+  if (hint) hint.hidden = canAttach;
+  updateTypeUI();
+  renderMediaList();
+}
+function updateTypeUI() {
+  const type = ($('#ankiTypeSelect') && $('#ankiTypeSelect').value) || 'basic';
+  const clozeHint = $('#ankiClozeHint');
+  const occBtn = $('#ankiOcclusionBtn');
+  const backLabel = $('#ankiBackLabel');
+  if (clozeHint) clozeHint.hidden = type !== 'cloze';
+  if (backLabel) backLabel.textContent = type === 'cloze' ? 'Текст с пропусками' : 'Ответ (оборот карточки)';
+  const hasImage = editorState.mediaRefs.some(m => m.kind === 'image');
+  if (occBtn) occBtn.hidden = !(type === 'image_occlusion' && hasImage && editorState.cardId);
+}
+function renderMediaList() {
+  const box = $('#ankiMediaList'); if (!box) return;
+  if (!editorState.mediaRefs.length) { box.innerHTML = ''; return; }
+  box.innerHTML = editorState.mediaRefs.map((m, i) => `
+    <div class="q-item" data-i="${i}" style="padding:8px 12px">
+      <div style="flex:1;min-width:0" class="q-text">${m.kind === 'image' ? '🖼️' : '🎙️'} ${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : ''}</div>
+      <button class="q-del" data-mi="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>
+    </div>`).join('');
+  lucide.createIcons();
+  box.querySelectorAll('.q-del').forEach(b => b.addEventListener('click', async () => {
+    const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m) return;
+    try {
+      await window.AnkiData.deleteMedia(m.path);
+      editorState.mediaRefs.splice(i, 1);
+      await window.AnkiData.updateCard(editorState.cardId, { media_refs: editorState.mediaRefs });
+      renderMediaList(); updateTypeUI();
+    } catch (e) { toast('Ошибка удаления: ' + (e.message || e), true); }
+  }));
+}
+function wireCardEditorOnce() {
+  const typeSel = $('#ankiTypeSelect');
+  if (typeSel && !typeSel.dataset.wired) { typeSel.dataset.wired = '1'; typeSel.addEventListener('change', updateTypeUI); }
+
+  const clozeBtn = $('#ankiClozeWrapBtn');
+  if (clozeBtn && !clozeBtn.dataset.wired) {
+    clozeBtn.dataset.wired = '1';
+    clozeBtn.addEventListener('click', () => {
+      const ta = $('#ankiBackInput'); if (!ta) return;
+      const s = ta.selectionStart, e = ta.selectionEnd;
+      if (s === e) { toast('Сначала выдели текст для пропуска', true); return; }
+      const n = (ta.value.match(/\{\{c(\d+)::/g) || []).length + 1;
+      const sel = ta.value.slice(s, e);
+      ta.value = ta.value.slice(0, s) + `{{c${n}::${sel}}}` + ta.value.slice(e);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  const aiBtn = $('#ankiAiFillBtn');
+  if (aiBtn && !aiBtn.dataset.wired) {
+    aiBtn.dataset.wired = '1';
+    aiBtn.addEventListener('click', async () => {
+      const front = ($('#ankiFrontInput') && $('#ankiFrontInput').value.trim()) || '';
+      if (!front) { toast('Сначала введи вопрос (лицо карточки)', true); return; }
+      if (typeof window.hasLLM !== 'function' || !window.hasLLM()) { toast('Сначала настрой провайдера ИИ в настройках', true); return; }
+      toast('Генерирую ответ…');
+      try {
+        const answer = await window.llmComplete('Дай краткий точный ответ для карточки Anki на этот вопрос, только суть, без вводных фраз и пояснений:\n' + front);
+        const bi = $('#ankiBackInput'); if (bi && answer) { bi.value = answer.trim(); bi.dispatchEvent(new Event('input', { bubbles: true })); }
+        toast('Ответ сгенерирован');
+      } catch (e) { toast('Ошибка генерации: ' + (e.message || e), true); }
+    });
+  }
+
+  const photoBtn = $('#ankiPhotoBtn'), photoInput = $('#ankiPhotoInput');
+  if (photoBtn && !photoBtn.dataset.wired) {
+    photoBtn.dataset.wired = '1';
+    photoBtn.addEventListener('click', () => { if (!editorState.cardId) { toast('Сначала сохрани карточку', true); return; } photoInput.click(); });
+    photoInput.addEventListener('change', async e => {
+      const file = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!file || !editorState.cardId) return;
+      toast('Загружаю фото…');
+      try {
+        const compressed = await window.AnkiData.compressImage(file, 1600, 0.82);
+        const media = await window.AnkiData.uploadMedia(editorState.cardId, compressed, 'image', file.name);
+        editorState.mediaRefs.push(media);
+        await window.AnkiData.updateCard(editorState.cardId, { media_refs: editorState.mediaRefs });
+        renderMediaList(); updateTypeUI();
+        toast('Фото прикреплено');
+      } catch (e2) { toast('Ошибка загрузки: ' + (e2.message || e2), true); }
+    });
+  }
+
+  const audioBtn = $('#ankiAudioBtn');
+  if (audioBtn && !audioBtn.dataset.wired) {
+    audioBtn.dataset.wired = '1';
+    audioBtn.addEventListener('click', async () => {
+      if (!editorState.cardId) { toast('Сначала сохрани карточку', true); return; }
+      if (!editorState.recording) {
+        try {
+          await startAudioRecording(async blob => {
+            toast('Обрабатываю запись…');
+            try {
+              const { media } = await transcribeAndAttachAudio(editorState.cardId, blob);
+              editorState.mediaRefs.push(media);
+              renderMediaList(); updateTypeUI();
+              toast('Аудио прикреплено');
+            } catch (e3) { toast('Ошибка сохранения аудио: ' + (e3.message || e3), true); }
+          });
+          editorState.recording = true;
+          audioBtn.innerHTML = '<i data-lucide="mic"></i>Стоп';
+          lucide.createIcons();
+          toast('Запись идёт…');
+        } catch (e) { toast('Нет доступа к микрофону: ' + (e.message || e), true); }
+      } else {
+        stopAudioRecording();
+        editorState.recording = false;
+        audioBtn.innerHTML = '<i data-lucide="mic"></i>Записать аудио';
+        lucide.createIcons();
+      }
+    });
+  }
+
+  const occBtn = $('#ankiOcclusionBtn');
+  if (occBtn && !occBtn.dataset.wired) {
+    occBtn.dataset.wired = '1';
+    occBtn.addEventListener('click', async () => {
+      const img = editorState.mediaRefs.find(m => m.kind === 'image');
+      if (!img || !editorState.cardId) { toast('Сначала прикрепи фото', true); return; }
+      try {
+        const url = await window.AnkiData.mediaUrl(img.path);
+        openOcclusionEditor(editorState.cardId, url);
+      } catch (e) { toast('Ошибка загрузки фото: ' + (e.message || e), true); }
+    });
+  }
+}
+document.addEventListener('DOMContentLoaded', () => { try { wireCardEditorOnce(); } catch (e) {} });
+
 /* ============================================================ */
 window.AnkiUI = {
   applyThemeTokensLive, renderThemeSettings,
   renderSecretKeyStatus, wireSecretKeyButtons,
+  onCardEditorOpen,
   openDeckSettings,
   openCardBrowser, renderCardBrowser,
   renderTagManager,
