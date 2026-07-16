@@ -392,9 +392,62 @@ function wireCsvImportStub() {
   if (btn) btn.addEventListener('click', () => toast('Импорт из CSV — скоро', true));
 }
 
+/* ============================================================
+   8. USER SECRETS UI — шифрование AI-ключа паролем
+   ============================================================ */
+async function renderSecretKeyStatus() {
+  const statusEl = $('#secretStatus'); if (!statusEl) return;
+  statusEl.innerHTML = '<span class="sd"></span>проверяю…';
+  try {
+    const has = await window.AnkiData.hasStoredApiKey();
+    statusEl.className = 'status' + (has ? ' ok' : '');
+    statusEl.innerHTML = '<span class="sd"></span>' + (has ? 'в облаке сохранена зашифрованная копия' : 'в облаке пока ничего не сохранено');
+  } catch (e) {
+    statusEl.className = 'status';
+    statusEl.innerHTML = '<span class="sd"></span>нужен вход в облако, чтобы это работало';
+  }
+}
+function wireSecretKeyButtons() {
+  const encBtn = $('#secretEncryptBtn');
+  const decBtn = $('#secretDecryptBtn');
+  if (encBtn && !encBtn.dataset.wired) {
+    encBtn.dataset.wired = '1';
+    encBtn.addEventListener('click', async () => {
+      const key = ($('#apikey') && $('#apikey').value.trim()) || '';
+      if (!key) { toast('Сначала введи API-ключ в поле выше', true); return; }
+      const pass = prompt('Придумай пароль для шифрования (запомни его — без него ключ не восстановить):');
+      if (!pass) return;
+      const pass2 = prompt('Повтори пароль:');
+      if (pass !== pass2) { toast('Пароли не совпали', true); return; }
+      try {
+        await window.AnkiData.encryptAndStoreApiKey(key, pass);
+        toast('Ключ зашифрован и сохранён в облаке');
+        renderSecretKeyStatus();
+      } catch (e) { toast('Ошибка: ' + (e.message || e), true); }
+    });
+  }
+  if (decBtn && !decBtn.dataset.wired) {
+    decBtn.dataset.wired = '1';
+    decBtn.addEventListener('click', async () => {
+      const pass = prompt('Введи пароль для расшифровки ключа:');
+      if (!pass) return;
+      try {
+        const key = await window.AnkiData.fetchAndDecryptApiKey(pass);
+        if (!key) { toast('В облаке ещё нет сохранённого ключа — сначала зашифруй его на этом устройстве', true); return; }
+        const fi = $('#apikey'); if (fi) fi.value = key;
+        // settings — top-level let в neurocatch.js, недоступен из модуля напрямую;
+        // штатная кнопка сохранения настроек уже умеет читать #apikey.value в settings.key
+        const saveBtn = $('#saveSettings'); if (saveBtn) saveBtn.click();
+        toast('Ключ расшифрован и сохранён в настройках');
+      } catch (e) { toast('Ошибка: ' + (e.message || e), true); }
+    });
+  }
+}
+
 /* ============================================================ */
 window.AnkiUI = {
   applyThemeTokensLive, renderThemeSettings,
+  renderSecretKeyStatus, wireSecretKeyButtons,
   openDeckSettings,
   openCardBrowser, renderCardBrowser,
   renderTagManager,
