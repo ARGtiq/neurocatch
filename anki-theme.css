@@ -1,0 +1,78 @@
+/* ============================================================
+   anki-theme.css — токены расширенной темы + стили новых экранов.
+   Подключить в neurocatch.html после neurocatch.css.
+   ============================================================ */
+
+:root {
+  /* дефолты — перезаписываются applyThemeTokensLive() из anki-ui.js */
+  --theme-font: 'Inter', sans-serif;
+  --theme-radius-card: 16px;
+  --theme-radius-button: 9999px;
+  --theme-blur-1: 20px;
+  --theme-blur-3: 40px;
+}
+
+/* -------- глобальный blur-слой поверх существующих поверхностей NeuroCatch -------- */
+.overlay .modal,
+.study-menu,
+.hl-popup,
+.q-item,
+.bm-row,
+.note-card,
+.project-card,
+.anki-deck-card,
+.frag-action-bar,
+#browserActionBar,
+.stat,
+.dash-sec {
+  backdrop-filter: blur(var(--theme-blur-1));
+  -webkit-backdrop-filter: blur(var(--theme-blur-1));
+}
+.overlay .modal.level3, .guide-body, #errOverlay .modal {
+  backdrop-filter: blur(var(--theme-blur-3));
+  -webkit-backdrop-filter: blur(var(--theme-blur-3));
+}
+
+/* тумблер "уменьшить блюр" — для слабых Android-устройств */
+body.blur-reduced * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* -------- форма компонентов из токенов темы -------- */
+.q-item, .bm-row, .note-card, .project-card, .anki-deck-card, .stat, .dash-sec,
+.study-menu, .overlay .modal {
+  border-radius: var(--theme-radius-card);
+}
+.btn, .chip, .preset-chip, .tag-pill {
+  border-radius: var(--theme-radius-button);
+}
+
+/* -------- шрифт темы -------- */
+body { font-family: var(--theme-font); }
+
+/* ============================================================
+   Компоненты новых экранов
+   ============================================================ */
+.scroll-area { padding: 16px; overflow-y: auto; height: calc(100% - 56px); }
+
+.chip-row { display: flex; gap: 8px; padding: 0 16px 12px; flex-wrap: wrap; }
+.chip-row .chip.on { background: var(--accent); color: #000; }
+
+.preset-chip-row { display: flex; gap: 8px; margin-top: 8px; }
+.preset-chip {
+  flex: 1; padding: 10px 14px; text-align: center; cursor: pointer;
+  background: var(--surface-container, #201f20); border: 1px solid transparent;
+}
+.preset-chip.on { border-color: var(--accent); color: var(--accent); }
+
+.cnt-new { color: #00dbe9; }
+.cnt-learn { color: #ffb4ab; }
+.cnt-rev { color: #2ff801; }
+
+.stat-bar-row { font-size: 14px; color: var(--muted, #999); }
+
+/* Image Occlusion editor */
+.occ-stage svg rect { cursor: pointer; }
+
+/* Browser action bar reuse frag-action-bar styling, no extra needed */
