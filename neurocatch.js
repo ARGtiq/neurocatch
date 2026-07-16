@@ -1417,11 +1417,21 @@ $('#noteDetailOverlay')&&$('#noteDetailOverlay').addEventListener('click',e=>{if
 $('#openNotes')&&$('#openNotes').addEventListener('click',()=>{renderNotes();show($('#view-notes'));});
 $('#notesBack')&&$('#notesBack').addEventListener('click',()=>show($('#view-input')));
 $('#noteSearch')&&$('#noteSearch').addEventListener('input',e=>{noteSearch=e.target.value.toLowerCase();renderNotes();});
-async function llmComplete(prompt){
+async function llmComplete(prompt,audioBlob){
   const p=settings.provider||'gemini';
+  if(audioBlob&&p!=='gemini'){
+    // OpenRouter/Ollama в этой простой text-completion обвязке не поддерживают инлайн-аудио —
+    // транскрипция аудио доступна только с провайдером Gemini (inline_data).
+    throw new Error('Транскрипция аудио пока работает только с провайдером Gemini');
+  }
   if(p==='openrouter'){const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.orKey,'HTTP-Referer':location.origin,'X-Title':'NeuroCatch'},body:JSON.stringify({model:settings.orModel||'meta-llama/llama-3.3-70b-instruct:free',messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';}
   if(p==='ollama'){const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');const res=await fetch(base+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:settings.ollamaModel||'llama3.1',stream:false,messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.message&&j.message.content)||'';}
-  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+(settings.model||'gemini-2.5-flash')+':generateContent?key='+encodeURIComponent(settings.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2048}})});
+  const parts=[{text:prompt}];
+  if(audioBlob){
+    const b64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(audioBlob);});
+    parts.push({inlineData:{mimeType:audioBlob.type||'audio/webm',data:b64}});
+  }
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+(settings.model||'gemini-2.5-flash')+':generateContent?key='+encodeURIComponent(settings.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{temperature:0.2,maxOutputTokens:2048}})});
   const j=await res.json();try{return j.candidates[0].content.parts.map(x=>x.text||'').join('');}catch(e){return '';}
 }
 async function semanticSearch(){
@@ -2381,7 +2391,7 @@ ov&&ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open')
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov)ov.classList.remove('open');});
 
 /* ---------- cloud sync (Supabase, optional) ---------- */
-let sb=null, sbUser=null, cloudTimer=null, cloudBusy=false;
+let sb=null, sbUser=null, cloudTimer=null, cloudBusy=false, initialSyncDone=false;
 function setCloudStatus(t,on){const el=$('#cloudStatus');if(el){el.textContent=t;el.classList.toggle('on',!!on);}}
 function updateCloudButtons(){const io=!!sbUser;const out=$('#sbLogout');if(out)out.hidden=!io;const login=$('#sbLogin');if(!login)return;login.textContent='';const i=document.createElement('i');i.setAttribute('data-lucide','link');login.appendChild(i);login.appendChild(document.createTextNode(io?'Сменить аккаунт':'Войти по ссылке'));lucide.createIcons();}
 async function sbClient(){
@@ -2397,7 +2407,7 @@ async function cloudInit(){
   try{const {data}=await c.auth.getSession();
     if(data&&data.session){sbUser=data.session.user;setCloudStatus(sbUser.email,true);setSync('ok');await cloudPull(true);}
     else{setCloudStatus('не в сети');setSync();}
-    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{setCloudStatus('не в сети');setSync();}updateCloudButtons();});
+    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){initialSyncDone=false;setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{initialSyncDone=false;setCloudStatus('не в сети');setSync();}updateCloudButtons();});
   }catch(e){setCloudStatus('ошибка',false);}
   updateCloudButtons();
 }
@@ -2468,13 +2478,23 @@ async function cloudPull(silent){
   try{const {data,error}=await c.from('states').select('data,updated_at').eq('id',sbUser.id).maybeSingle();
     if(error)throw error;
     const remoteTs=data&&data.updated_at?new Date(data.updated_at).getTime():0;
-    if(data&&data.data&&remoteTs>localUpdatedAt){ // облако свежее — принимаем его
+    // На ЭТОМ браузере/устройстве ещё ни разу не было успешной синхронизации —
+    // значит вообще любая локальная запись (даже случайная, от автовставки из буфера)
+    // могла получить более свежий Date.now(), чем последнее сохранение на другом
+    // устройстве, и по обычному сравнению timestamp "выиграть" сравнение и переписать
+    // облако пустой/неполной копией. Поэтому первый pull на новом устройстве
+    // БЕЗУСЛОВНО принимает облако, если там вообще есть данные — не сравнивая время.
+    const everSynced=localStorage.getItem('neurocatch_ever_synced_'+sbUser.id)==='1';
+    const shouldTakeRemote = data&&data.data && (!everSynced || remoteTs>localUpdatedAt);
+    if(shouldTakeRemote){ // облако свежее (или это первая синхронизация устройства) — принимаем его
       replaceState(data.data);localUpdatedAt=remoteTs;localStorage.setItem('neurocatch_updated',String(remoteTs));
       cloudBusy=false;setSync('ok');if(!silent)toast('Загружено из облака (свежее)');
-    }else{ // локальное свежее или равно — выгружаем
+    }else{ // локальное свежее/равно, и это не первая синхронизация — выгружаем
       cloudBusy=false;await cloudPush(true);if(!silent)toast('Синхронизировано');
     }
-  }catch(e){cloudBusy=false;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
+    localStorage.setItem('neurocatch_ever_synced_'+sbUser.id,'1');
+    initialSyncDone=true;
+  }catch(e){cloudBusy=false;initialSyncDone=true;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
 }
 function collectCloudExtraData(){
   const out={};
@@ -2491,7 +2511,12 @@ async function cloudPush(silent){
     if(error)throw error;setSync('ok');if(!silent)toast('Выгружено в облако');
   }catch(e){setSync('err');if(!silent)toast('Выгрузка: '+(e.message||e),true);}
 }
-function scheduleCloudPush(){if(!sbUser)return;setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);}
+function scheduleCloudPush(){
+  if(!sbUser)return;
+  if(!initialSyncDone)return; // не пушим локальные изменения, пока не завершился первый pull после входа —
+                               // иначе можно случайно переписать облако, не успев дождаться данных с другого устройства
+  setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);
+}
 $('#sbLogin')&&$('#sbLogin').addEventListener('click',async()=>{
   settings.sbUrl=$('#sbUrl').value.trim().replace(/\/$/,'');settings.sbKey=$('#sbKey').value.trim();settings.sbEmail=$('#sbEmail').value.trim();saveSettings();sb=null;
   if(!settings.sbUrl||!settings.sbKey){toast('Укажи Supabase URL и anon key',true);return;}
