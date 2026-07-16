@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null, bookmarks=[];
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true,archiveDays:90};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true,archiveDays:90,backupReminderDays:7};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 let showArchived=false;
@@ -50,7 +50,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90),staleNoteDays:(s.staleNoteDays!=null?+s.staleNoteDays:30)};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90),staleNoteDays:(s.staleNoteDays!=null?+s.staleNoteDays:30),backupReminderDays:(s.backupReminderDays!=null?+s.backupReminderDays:7)};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -76,7 +76,12 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);const snd=$('#staleNoteDays');if(snd)snd.value=String(settings.staleNoteDays!=null?settings.staleNoteDays:30);updateProviderUI();try{applyBg();}catch(e){}
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);const snd=$('#staleNoteDays');if(snd)snd.value=String(settings.staleNoteDays!=null?settings.staleNoteDays:30);const brd=$('#backupReminderSelect');if(brd)brd.value=String(settings.backupReminderDays!=null?settings.backupReminderDays:7);updateLastBackupHint();updateProviderUI();try{applyBg();}catch(e){}
+}
+function updateLastBackupHint(){
+  const el=$('#lastBackupHint');if(!el)return;
+  const last=+(localStorage.getItem('neurocatch_last_backup')||0);
+  el.textContent=last?('Последний бэкап: '+fmtDate(last)+' '+fmtTime(last)):'Бэкап ещё не делался';
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -2379,6 +2384,58 @@ function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}c
 
 /* ---------- export / import (merge) ---------- */
 $('#exportBtn')&&$('#exportBtn').addEventListener('click',()=>{const payload={app:'NeuroCatch',version:3,exportedAt:new Date().toISOString(),settings,catches,history};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Данные выгружены');});
+$('#fullBackupBtn')&&$('#fullBackupBtn').addEventListener('click',async()=>{
+  toast('Собираю полный бэкап…');
+  let anki=null;
+  try{ if(window.AnkiData) anki=await window.AnkiData.exportAllAnkiData(); }
+  catch(e){ toast('Anki-данные не удалось выгрузить (бэкап будет без них): '+(e.message||e),true); }
+  const payload={app:'NeuroCatch',version:4,exportedAt:new Date().toISOString(),
+    settings,catches,history,extraData:collectCloudExtraData(),anki};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_full_backup_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);
+  localStorage.setItem('neurocatch_last_backup',String(Date.now()));
+  updateLastBackupHint();
+  toast('Полный бэкап сохранён (включая Anki)');
+});
+function checkBackupReminder(){
+  const days=settings.backupReminderDays||0;
+  if(!days)return;
+  const last=+(localStorage.getItem('neurocatch_last_backup')||0);
+  if(Date.now()-last<days*86400000)return;
+  const todayK=dateKey(Date.now());
+  if(localStorage.getItem('neurocatch_backup_reminder_date')===todayK)return;
+  localStorage.setItem('neurocatch_backup_reminder_date',todayK);
+  toast('Пора сделать резервную копию — Настройки → Основное → Полный бэкап');
+}
+/* ---------- CSV-импорт карточек Anki ---------- */
+let csvParsedCards=null;
+async function fillCsvDeckSelect(){
+  const sel=$('#csvDeckSelect');if(!sel||!window.AnkiData)return;
+  try{ const decks=await window.AnkiData.listDecks(); sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join(''); }
+  catch(e){ sel.innerHTML='<option value="">Ошибка загрузки колод</option>'; }
+}
+$('#csvPickBtn')&&$('#csvPickBtn').addEventListener('click',()=>{fillCsvDeckSelect();$('#csvFileInput').click();});
+$('#csvFileInput')&&$('#csvFileInput').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
+  try{
+    const text=await file.text();
+    csvParsedCards=window.AnkiData.parseCardsCSV(text);
+    $('#csvPreview').textContent=csvParsedCards.length?`Найдено карточек: ${csvParsedCards.length}. Пример: «${csvParsedCards[0].front.slice(0,40)}»`:'Не удалось найти ни одной карточки в файле';
+    $('#csvImportGo').hidden=!csvParsedCards.length;
+  }catch(err){ toast('Ошибка чтения файла: '+(err.message||err),true); }
+});
+$('#csvImportGo')&&$('#csvImportGo').addEventListener('click',async()=>{
+  const deckId=$('#csvDeckSelect').value;
+  if(!deckId){toast('Выбери колоду назначения',true);return;}
+  if(!csvParsedCards||!csvParsedCards.length){toast('Сначала выбери CSV-файл',true);return;}
+  toast('Импортирую…');
+  try{
+    const n=await window.AnkiData.bulkImportCards(deckId,csvParsedCards);
+    toast('Импортировано карточек: '+n);
+    csvParsedCards=null;$('#csvPreview').textContent='';$('#csvImportGo').hidden=true;
+    renderAnkiDeckList();
+  }catch(e){ toast('Ошибка импорта: '+(e.message||e),true); }
+});
 $('#importBtn')&&$('#importBtn').addEventListener('click',()=>$('#importFile').click());
 $('#importFile')&&$('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const o=JSON.parse(r.result);let addedH=0,addedC=0;
@@ -2398,7 +2455,7 @@ const ov=$('#overlay');
 $('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');try{window.AnkiUI.renderThemeSettings();}catch(e){}try{window.AnkiUI.wireSecretKeyButtons();window.AnkiUI.renderSecretKeyStatus();}catch(e){}});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov&&ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const snd=$('#staleNoteDays');if(snd)settings.staleNoteDays=+snd.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const snd=$('#staleNoteDays');if(snd)settings.staleNoteDays=+snd.value;const brd=$('#backupReminderSelect');if(brd)settings.backupReminderDays=+brd.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt')&&$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov&&ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov)ov.classList.remove('open');});
@@ -2428,7 +2485,7 @@ function cloudAppSettings(){return {
   model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt,
   provider:settings.provider,clearAfter:settings.clearAfter,autoClip:settings.autoClip,bg:settings.bg,
   preset:settings.preset,swipesOn:settings.swipesOn,voiceAutoAdd:settings.voiceAutoAdd,
-  archiveDays:settings.archiveDays,staleNoteDays:settings.staleNoteDays,
+  archiveDays:settings.archiveDays,staleNoteDays:settings.staleNoteDays,backupReminderDays:settings.backupReminderDays,
   microPerLink:settings.microPerLink,microExclude:settings.microExclude,
   studyCustomName:settings.studyCustomName,studyCustomUrl:settings.studyCustomUrl
 };}
@@ -2460,6 +2517,7 @@ function replaceState(remote){ // last-writer-wins: полностью заме�
     if(typeof rs.voiceAutoAdd==='boolean')settings.voiceAutoAdd=rs.voiceAutoAdd;
     if(rs.archiveDays!=null)settings.archiveDays=+rs.archiveDays;
     if(rs.staleNoteDays!=null)settings.staleNoteDays=+rs.staleNoteDays;
+    if(rs.backupReminderDays!=null)settings.backupReminderDays=+rs.backupReminderDays;
     if(typeof rs.microPerLink==='boolean')settings.microPerLink=rs.microPerLink;
     if(Array.isArray(rs.microExclude))settings.microExclude=rs.microExclude;
     if(typeof rs.studyCustomName==='string')settings.studyCustomName=rs.studyCustomName;
@@ -3176,6 +3234,7 @@ try{processRecurringRules(false);}catch(e){}
 try{seedNeuroCatchProject();}catch(e){}
 setTimeout(()=>{try{checkStaleReminder();}catch(e){}},1500);
 setTimeout(()=>{try{if(!$('#staleReminderOverlay').classList.contains('open'))checkUnsortedReminder();}catch(e){}},3200);
+setTimeout(()=>{try{checkBackupReminder();}catch(e){}},4500);
 try{initNotify();}catch(e){console.error('initNotify failed:',e);}
 try{startAutoSync();}catch(e){}
 lucide.createIcons();

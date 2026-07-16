@@ -536,7 +536,7 @@
 <div class="overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-head"><h2><i data-lucide="settings-2"></i>Настройки</h2><button class="icon-btn" id="closeSettings" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
-<div class="tabs"><button class="tab-btn active" data-tab="api">API и синхро</button><button class="tab-btn" data-tab="main">Основное</button></div>
+<div class="tabs"><button class="tab-btn active" data-tab="api">API и синхро</button><button class="tab-btn" data-tab="main">Основное</button><button class="tab-btn" data-tab="anki">Anki</button></div>
     <div class="sgroup" data-grp="api"><div class="sec-title">Провайдер ИИ</div>
     <div class="field"><label for="provider"><i data-lucide="sparkle"></i>Провайдер ИИ</label><select id="provider"><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter (много моделей)</option><option value="ollama">Ollama (локально)</option></select><div class="hint">OpenRouter — быстрые бесплатные модели по одному ключу. Ollama — локально на ПК (нужен запущенный сервер).</div></div>
     <div class="field"><label for="apikey" style="display:flex;align-items:center;justify-content:space-between">Gemini API Key<button type="button" class="link-btn guide-btn" data-guide="gemini">как настроить</button></label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div><div class="status-row"><span class="status" id="gemStatus"><span class="sd"></span>не проверено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn" id="provDiag">Диагностика</button><button type="button" class="link-btn" id="checkGem">Проверить</button></div></div><div id="provCheck" class="guide-check"></div></div>
@@ -629,7 +629,30 @@
       <label><i data-lucide="flask-conical"></i>Диагностика</label>
       <a href="e2e-test.html" target="_blank" rel="noopener" class="btn" style="width:100%;display:inline-flex"><i data-lucide="flask-conical"></i>Запустить E2E-тест приложения</a>
       <div class="hint">Открывает отдельную страницу с автоматической проверкой ключевых сценариев (улов, разбор, задачи, закладки, архив, поиск). Тестовые данные изолированы от реальных.</div>
+    </div>
+    <div class="field">
+      <label><i data-lucide="check-circle"></i>Полный бэкап (вместе с Anki)</label>
+      <button type="button" class="btn" id="fullBackupBtn" style="width:100%"><i data-lucide="download"></i>Скачать полный бэкап .json</button>
+      <div class="hint" id="lastBackupHint"></div>
+      <label style="margin-top:10px">Напоминать о бэкапе</label>
+      <select id="backupReminderSelect">
+        <option value="0">Не напоминать</option>
+        <option value="7">Раз в неделю</option>
+        <option value="14">Раз в 2 недели</option>
+        <option value="30">Раз в месяц</option>
+      </select>
     </div></div>
+    <div class="sgroup" data-grp="anki" style="display:none"><div class="sec-title">Импорт карточек из CSV</div>
+    <div class="field">
+      <label>Колода назначения</label>
+      <select id="csvDeckSelect"></select>
+      <div class="hint">Формат файла: колонки <code>front,back,tags</code> (заголовок необязателен, теги через пробел или «;»).</div>
+      <input type="file" id="csvFileInput" accept=".csv,text/csv" hidden>
+      <button type="button" class="btn" id="csvPickBtn" style="width:100%;margin-top:10px"><i data-lucide="upload"></i>Выбрать CSV-файл</button>
+      <div id="csvPreview" class="hint" style="margin-top:10px"></div>
+      <button type="button" class="btn btn-primary" id="csvImportGo" style="width:100%;margin-top:10px" hidden><i data-lucide="check"></i>Импортировать</button>
+    </div>
+    </div>
         <button class="btn btn-primary" id="saveSettings" style="width:100%"><i data-lucide="check"></i>Сохранить</button>
     <div class="ver-line" id="verLine"></div>
   </div>

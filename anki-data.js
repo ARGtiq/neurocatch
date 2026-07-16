@@ -556,8 +556,75 @@ async function analyticsSummary(days) {
   return { totalReviews: total, totalCards: totalCards || 0, retention, streak, heatmap, maturity };
 }
 
+/* ============================================================
+   CSV IMPORT
+   ============================================================ */
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',' || c === ';') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* ignore */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim().length));
+}
+/**
+ * Разбирает CSV в массив {front, back, tags[]}. Ожидаемые колонки: front, back, tags (необязательно).
+ * Шапка (первая строка) определяется автоматически по слову front/вопрос в первой ячейке.
+ */
+function parseCardsCSV(text) {
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+  const first = (rows[0][0] || '').trim().toLowerCase();
+  const hasHeader = ['front', 'вопрос', 'front side'].includes(first);
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  return dataRows.map(r => ({
+    front: (r[0] || '').trim(),
+    back: (r[1] || '').trim(),
+    tags: (r[2] || '').trim() ? r[2].split(/[;\s]+/).map(t => t.trim()).filter(Boolean) : [],
+  })).filter(c => c.front || c.back);
+}
+async function bulkImportCards(deckId, cards) {
+  const { client, uid } = await requireUser();
+  const rows = cards.map(c => ({
+    deck_id: deckId, owner: uid, card_type: 'basic',
+    front: c.front || '', back: c.back || '', tags: c.tags || [],
+  }));
+  const CHUNK = 500; let imported = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const { error } = await client.from('cards').insert(chunk);
+    if (error) throw error;
+    imported += chunk.length;
+  }
+  return imported;
+}
+
+/* ============================================================
+   ПОЛНЫЙ БЭКАП — все Anki-таблицы владельца (без user_secrets)
+   ============================================================ */
+async function exportAllAnkiData() {
+  const [decks, cards, reviews, themePresets] = await Promise.all([
+    listDecks(),
+    listCards(null),
+    (async () => { const { client, uid } = await requireUser(); const { data, error } = await client.from('reviews').select('*').eq('owner', uid); if (error) throw error; return data; })(),
+    listThemePresets(),
+  ]);
+  return { decks, cards, reviews, themePresets };
+}
+
 /* ============================================================ */
 window.AnkiData = {
+  parseCardsCSV, bulkImportCards, exportAllAnkiData,
   listAllTags, renameTag, deleteTag, analyticsSummary,
   listDecks, createDeck, updateDeck, deleteDeck, deckCounts,
   listCards, getCard, createCard, updateCard, deleteCards,

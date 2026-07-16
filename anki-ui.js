@@ -514,13 +514,8 @@ async function transcribeAndAttachAudio(cardId, blob) {
   return { media, transcript };
 }
 
-/* ============================================================
-   7. CSV IMPORT — заглушка
-   ============================================================ */
-function wireCsvImportStub() {
-  const btn = $('#csvImportBtn');
-  if (btn) btn.addEventListener('click', () => toast('Импорт из CSV — скоро', true));
-}
+/* CSV-импорт реализован в anki-data.js (parseCardsCSV/bulkImportCards)
+   и подключён в neurocatch.js (вкладка настроек "Anki"). */
 
 /* ============================================================
    8. USER SECRETS UI — шифрование AI-ключа паролем
@@ -813,7 +808,4 @@ window.AnkiUI = {
   openOcclusionEditor, returnFromOcclusionEditor,
   renderAnkiAnalytics,
   startAudioRecording, stopAudioRecording, transcribeAndAttachAudio,
-  wireCsvImportStub,
 };
-
-document.addEventListener('DOMContentLoaded', () => { try { wireCsvImportStub(); } catch (e) {} });
