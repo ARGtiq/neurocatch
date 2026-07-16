@@ -106,6 +106,7 @@
 })();
 </script>
 <link rel="stylesheet" href="neurocatch.css">
+<link rel="stylesheet" href="anki-theme.css">
 </head>
 <body>
 <div class="bg-pattern"></div>
@@ -307,7 +308,43 @@
 
     <section class="view" id="view-anki" hidden>
       <div class="head-row"><button class="back" id="ankiBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki</h2><button class="mini" id="ankiNewCard" title="Новая карточка"><i data-lucide="plus"></i></button></div>
+      <div style="padding:0 16px 12px"><button id="ankiMigrateBtn" class="btn">Перенести Anki в облачные таблицы (один раз)</button></div>
       <div id="ankiDeckList" class="anki-deck-list"></div>
+    </section>
+
+    <!-- ============================================================
+         Anki X — новые экраны (Deck Settings, Card Browser, Tag Manager,
+         Image Occlusion Editor, Analytics). Логика — anki-ui.js.
+         ============================================================ -->
+    <section class="view" id="view-deck-settings" hidden>
+      <div class="head-row"><button class="back" id="deckSettingsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Настройки колоды</h2></div>
+      <div id="deckSettingsBox" class="scroll-area"></div>
+    </section>
+
+    <section class="view" id="view-card-browser" hidden>
+      <div class="head-row"><button class="back" id="browserBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Browser</h2></div>
+      <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
+      <div class="chip-row" id="browserMaturityRow">
+        <button class="chip on" data-m="">Все</button>
+        <button class="chip" data-m="learning">Learning</button>
+        <button class="chip" data-m="mature">Mature</button>
+      </div>
+      <div id="browserList" class="scroll-area"></div>
+    </section>
+
+    <section class="view" id="view-tag-manager" hidden>
+      <div class="head-row"><button class="back" id="tagManagerBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Теги</h2></div>
+      <div id="tagManagerList" class="scroll-area"></div>
+    </section>
+
+    <section class="view" id="view-occlusion-editor" hidden>
+      <div class="head-row"><button class="back" id="occlusionBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Image Occlusion</h2></div>
+      <div id="occlusionCanvasWrap" class="scroll-area"></div>
+    </section>
+
+    <section class="view" id="view-anki-analytics" hidden>
+      <div class="head-row"><button class="back" id="ankiAnalyticsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki · Аналитика</h2></div>
+      <div id="ankiAnalyticsBox" class="scroll-area"></div>
     </section>
 
     <div class="overlay" id="ankiStudyOverlay">
@@ -476,7 +513,9 @@
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Внешний вид</div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
-    <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div></div>
+    <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div>
+    <div id="themeSettingsBox"></div>
+    </div>
     
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
@@ -657,5 +696,7 @@
 <script src="nc-parsers.js"></script>
 <script src="nc-ai.js"></script>
 <script src="neurocatch.js"></script>
+<script type="module" src="anki-data.js"></script>
+<script type="module" src="anki-ui.js"></script>
 </body>
 </html>
