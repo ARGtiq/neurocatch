@@ -91,6 +91,22 @@ async function listCards(deckId, opts) {
   if (opts && opts.search) q = q.textSearch('transcript_search', opts.search, { type: 'websearch' });
   if (opts && opts.maturity === 'mature') q = q.eq('state', 'review').gte('fsrs_stability', 21);
   if (opts && opts.maturity === 'learning') q = q.in('state', ['new', 'learning', 'relearning']);
+  if (opts && opts.dueRange) {
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const endToday = new Date(startToday); endToday.setDate(endToday.getDate() + 1);
+    if (opts.dueRange === 'overdue') { q = q.lt('due_at', startToday.toISOString()); }
+    else if (opts.dueRange === 'today') { q = q.gte('due_at', startToday.toISOString()).lt('due_at', endToday.toISOString()); }
+    else if (opts.dueRange === 'tomorrow') {
+      const t0 = new Date(endToday), t1 = new Date(endToday); t1.setDate(t1.getDate() + 1);
+      q = q.gte('due_at', t0.toISOString()).lt('due_at', t1.toISOString());
+    } else if (opts.dueRange === 'week') {
+      const w = new Date(startToday); w.setDate(w.getDate() + 7);
+      q = q.lt('due_at', w.toISOString());
+    } else if (opts.dueRange === 'month') {
+      const m = new Date(startToday); m.setDate(m.getDate() + 30);
+      q = q.lt('due_at', m.toISOString());
+    }
+  }
   q = q.order('updated_at', { ascending: false });
   const { data, error } = await q;
   if (error) throw error;

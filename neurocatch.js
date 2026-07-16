@@ -1612,10 +1612,9 @@ async function openAnkiCardEditor(opts){
   $('#ankiCardTitle').textContent=ankiEditingId?'Изменить карточку':'Новая карточка';
   const fi=$('#ankiFrontInput');if(fi)fi.value=opts.front||'';
   const bi=$('#ankiBackInput');if(bi)bi.value=opts.back||'';
-  const ti=$('#ankiTypeSelect');if(ti)ti.value=opts.card_type||'basic';
   const del=$('#ankiCardDelete');if(del)del.hidden=!ankiEditingId;
   $('#ankiCardOverlay').classList.add('open');
-  try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, opts.media_refs||[]); }catch(e){}
+  try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, opts.media_refs||[], opts.card_type||'basic'); }catch(e){}
   setTimeout(()=>{if(bi)bi.focus();},50);
 }
 $('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',()=>$('#ankiCardOverlay').classList.remove('open'));
@@ -1625,7 +1624,7 @@ $('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
   if(!back){toast('Заполни ответ/оборот карточки',true);return;}
   const front=$('#ankiFrontInput').value.trim();
   const deckId=$('#ankiDeckSelect').value;
-  const cardType=($('#ankiTypeSelect')&&$('#ankiTypeSelect').value)||'basic';
+  const cardType=(window.AnkiUI&&window.AnkiUI.getSelectedType&&window.AnkiUI.getSelectedType())||'basic';
   try{
     if(ankiEditingId){
       await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType});
@@ -1637,7 +1636,7 @@ $('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
       ankiEditingId=created.id;
       $('#ankiCardTitle').textContent='Изменить карточку';
       const del=$('#ankiCardDelete');if(del)del.hidden=false;
-      try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, []); }catch(e){}
+      try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, [], cardType); }catch(e){}
       toast('Карточка создана — теперь можно прикрепить фото/аудио или закрыть');
     }
     renderAnkiDeckList();
@@ -2514,7 +2513,7 @@ $('#ankiMigrateBtn')&&$('#ankiMigrateBtn').addEventListener('click',async()=>{
   }catch(e){ toast('Ошибка миграции: '+(e.message||e),true); }
 });
 $('#deckSettingsBack')&&$('#deckSettingsBack').addEventListener('click',()=>show($('#view-anki')));
-$('#browserBack')&&$('#browserBack').addEventListener('click',()=>show($('#view-anki')));
+$('#browserBack')&&$('#browserBack').addEventListener('click',()=>{try{window.AnkiUI.clearBrowserSelection();}catch(e){}show($('#view-anki'));});
 $('#tagManagerBack')&&$('#tagManagerBack').addEventListener('click',()=>show($('#view-more')));
 $('#occlusionBack')&&$('#occlusionBack').addEventListener('click',()=>$('#ankiCardOverlay')&&$('#ankiCardOverlay').classList.add('open'));
 $('#ankiAnalyticsBack')&&$('#ankiAnalyticsBack').addEventListener('click',()=>show($('#view-more')));
@@ -2524,6 +2523,14 @@ document.addEventListener('click',e=>{
   document.querySelectorAll('#browserMaturityRow .chip').forEach(c=>c.classList.remove('on'));
   chip.classList.add('on');
   window._browserMaturity = chip.dataset.m || null;
+  window.AnkiUI.renderCardBrowser();
+});
+document.addEventListener('click',e=>{
+  const chip=e.target.closest('#browserDueRow .chip');
+  if(!chip)return;
+  document.querySelectorAll('#browserDueRow .chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  window._browserDueRange = chip.dataset.d || null;
   window.AnkiUI.renderCardBrowser();
 });
 $('#browserSearch')&&$('#browserSearch').addEventListener('input',()=>{

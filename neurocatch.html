@@ -326,8 +326,16 @@
       <div class="search-wrap"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
       <div class="chip-row" id="browserMaturityRow">
         <button class="chip on" data-m="">Все</button>
-        <button class="chip" data-m="learning">Learning</button>
-        <button class="chip" data-m="mature">Mature</button>
+        <button class="chip" data-m="learning">Изучение</button>
+        <button class="chip" data-m="mature">Зрелые</button>
+      </div>
+      <div class="chip-row" id="browserDueRow">
+        <button class="chip on" data-d="">Любой срок</button>
+        <button class="chip" data-d="overdue">Просрочено</button>
+        <button class="chip" data-d="today">Сегодня</button>
+        <button class="chip" data-d="tomorrow">Завтра</button>
+        <button class="chip" data-d="week">Неделя</button>
+        <button class="chip" data-d="month">Месяц</button>
       </div>
       <div id="browserList" class="scroll-area"></div>
     </section>
@@ -358,23 +366,28 @@
       <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
         <div class="modal-head"><h2 id="ankiCardTitle">Новая карточка</h2><button class="icon-btn" id="ankiCardClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
         <div class="field"><label for="ankiDeckSelect">Колода</label><select id="ankiDeckSelect"></select></div>
-        <div class="field"><label for="ankiTypeSelect">Тип карточки</label><select id="ankiTypeSelect">
-          <option value="basic">Обычная</option>
-          <option value="cloze">Cloze (пропуски)</option>
-          <option value="image_occlusion">Image Occlusion</option>
-        </select></div>
-        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
-        <div style="display:flex;justify-content:center;margin:8px 0"><button type="button" class="mini" id="ankiAiFillBtn"><i data-lucide="sparkle"></i>AI Auto-Fill</button></div>
-        <div class="field"><label for="ankiBackInput" id="ankiBackLabel">Ответ (оборот карточки)</label><textarea id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
+        <div class="field">
+          <label>Тип карточки</label>
+          <div class="type-chip-row" id="ankiTypeRow">
+            <button type="button" class="type-chip on" data-type="basic">Обычная</button>
+            <button type="button" class="type-chip" data-type="cloze">Cloze</button>
+            <button type="button" class="type-chip" data-type="image_occlusion">Occlusion</button>
+          </div>
+        </div>
+        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea class="anki-input" id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
+        <div class="anki-btn-row">
+          <button type="button" class="btn" id="ankiAiFillBtn"><i data-lucide="sparkle"></i>AI Auto-Fill</button>
+        </div>
+        <div class="field"><label for="ankiBackInput" id="ankiBackLabel">Ответ (оборот карточки)</label><textarea class="anki-input" id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
         <div id="ankiClozeHint" class="hint" hidden>Выдели часть текста в поле ответа и нажми, чтобы обернуть её в пропуск: <button type="button" class="mini" id="ankiClozeWrapBtn" style="display:inline-flex">{{c1::…}}</button></div>
         <div class="field">
           <label>Медиа</label>
           <div id="ankiMediaHint" class="hint">Сначала сохрани карточку — после этого можно будет прикрепить фото и аудио.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
-            <button type="button" class="mini" id="ankiPhotoBtn" disabled><i data-lucide="image"></i>Фото</button>
+          <div class="anki-btn-row" style="margin-top:6px">
+            <button type="button" class="btn" id="ankiPhotoBtn" disabled><i data-lucide="image"></i>Фото</button>
             <input type="file" id="ankiPhotoInput" accept="image/*" hidden>
-            <button type="button" class="mini" id="ankiAudioBtn" disabled><i data-lucide="mic"></i>Записать аудио</button>
-            <button type="button" class="mini" id="ankiOcclusionBtn" hidden><i data-lucide="image"></i>Разметить маски</button>
+            <button type="button" class="btn" id="ankiAudioBtn" disabled><i data-lucide="mic"></i>Записать аудио</button>
+            <button type="button" class="btn" id="ankiOcclusionBtn" hidden><i data-lucide="image"></i>Разметить маски</button>
           </div>
           <div id="ankiMediaList" style="margin-top:8px"></div>
         </div>

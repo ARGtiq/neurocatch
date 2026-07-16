@@ -68,13 +68,15 @@ function renderThemeSettings() {
       <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:70px"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
         <button class="btn btn-primary" id="genThemeBtn"><i data-lucide="sparkle"></i>Сгенерировать тему</button>
+        <button class="btn" id="pasteThemeBtn"><i data-lucide="clipboard"></i>Вставить готовый код темы</button>
         <button class="btn" id="saveThemePresetBtn"><i data-lucide="check"></i>Сохранить как пресет</button>
         <button class="btn" id="resetThemeBtn"><i data-lucide="refresh-cw"></i>Сбросить</button>
       </div>
       <label class="row" style="margin-top:14px;display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="reduceBlurToggle"> Уменьшить прозрачность/блюр (для слабых устройств)
       </label>
-      <div id="themePresetList" style="margin-top:14px"></div>
+      <div class="hint" style="margin-top:14px">Мои темы (синхронизируются между устройствами через облако):</div>
+      <div id="themePresetList" style="margin-top:6px"></div>
     </div>`;
   lucide.createIcons();
 
@@ -86,6 +88,7 @@ function renderThemeSettings() {
   });
 
   let lastGenerated = null;
+  $('#pasteThemeBtn').addEventListener('click', () => openManualPasteModal(''));
   $('#genThemeBtn').addEventListener('click', async () => {
     const desc = $('#themeDescInput').value.trim();
     if (!desc) { toast('Опиши желаемый вайб', true); return; }
@@ -103,12 +106,12 @@ function renderThemeSettings() {
   function openManualPasteModal(desc) {
     const ex = document.getElementById('themePasteOverlay'); if (ex) ex.remove();
     const ov = document.createElement('div'); ov.className = 'overlay open'; ov.id = 'themePasteOverlay';
+    const explain = desc
+      ? 'Промпт уже в буфере обмена — ключ ИИ не настроен или генерация не удалась. Вставь промпт в любой чат (ChatGPT, Claude, Gemini...), скопируй ответ (JSON) целиком и вставь сюда:'
+      : 'Сгенерировал тему в другом чате (ChatGPT, Claude, Gemini...)? Вставь сюда её JSON-ответ целиком:';
     ov.innerHTML = `<div class="modal" style="max-width:480px">
-      <div class="modal-head"><h2>Вставь ответ ИИ</h2><button class="icon-btn" id="themePasteClose"><i data-lucide="x"></i></button></div>
-      <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">
-        Промпт уже в буфере обмена — ключ ИИ не настроен или генерация не удалась.
-        Вставь промпт в любой чат (ChatGPT, Claude, Gemini...), скопируй ответ (JSON) целиком и вставь сюда:
-      </p>
+      <div class="modal-head"><h2>Вставь код темы</h2><button class="icon-btn" id="themePasteClose"><i data-lucide="x"></i></button></div>
+      <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">${esc(explain)}</p>
       <textarea id="themePasteInput" placeholder="Вставь сюда JSON-ответ ИИ..." style="min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>
       <button class="btn btn-primary" id="themePasteApply" style="width:100%;margin-top:10px"><i data-lucide="check"></i>Применить тему</button>
     </div>`;
@@ -219,17 +222,23 @@ let browserSelected = new Set();
 let browserDeckId = null;
 async function openCardBrowser(deckId) {
   browserDeckId = deckId; browserSelected.clear();
+  window._browserMaturity = null; window._browserDueRange = null;
+  const bar = document.getElementById('browserActionBar'); if (bar) bar.remove();
+  document.querySelectorAll('#browserMaturityRow .chip').forEach(c => c.classList.toggle('on', c.dataset.m === ''));
+  document.querySelectorAll('#browserDueRow .chip').forEach(c => c.classList.toggle('on', c.dataset.d === ''));
   await renderCardBrowser();
   show($('#view-card-browser'));
 }
+const STATE_RU = { new: 'новая', learning: 'изучение', review: 'повтор', relearning: 'переучивание' };
 async function renderCardBrowser() {
   const box = $('#browserList'); if (!box) return;
   box.innerHTML = '<div class="empty">Загрузка…</div>';
   const search = ($('#browserSearch') && $('#browserSearch').value.trim()) || '';
   const maturity = window._browserMaturity || null;
+  const dueRange = window._browserDueRange || null;
   const tags = window._browserTags || [];
   let cards;
-  try { cards = await window.AnkiData.listCards(browserDeckId, { search: search || undefined, maturity, tags: tags.length ? tags : undefined }); }
+  try { cards = await window.AnkiData.listCards(browserDeckId, { search: search || undefined, maturity, dueRange: dueRange || undefined, tags: tags.length ? tags : undefined }); }
   catch (e) { box.innerHTML = '<div class="empty">Ошибка загрузки: ' + esc(e.message || e) + '</div>'; return; }
 
   if (!cards.length) { box.innerHTML = '<div class="empty">Карточек не найдено</div>'; renderBrowserActionBar(); return; }
@@ -239,9 +248,9 @@ async function renderCardBrowser() {
       <div style="flex:1;min-width:0">
         <div class="q-text">${esc((c.front || '').slice(0, 90))}</div>
         <div class="q-time">${(c.tags || []).map(t => `<span class="tag-pill" style="margin-right:4px">${esc(t)}</span>`).join('')}
-          <span class="tag-pill" style="margin-left:6px">${esc(c.state)}</span>
+          <span class="tag-pill" style="margin-left:6px">${esc(STATE_RU[c.state] || c.state)}</span>
           ${c.suspended ? '<span class="tag-pill state-suspended">приостановлена</span>' : ''}
-          · due ${fmtDate(new Date(c.due_at).getTime())}</div>
+          · срок ${fmtDate(new Date(c.due_at).getTime())}</div>
       </div>
     </div>`).join('');
   lucide.createIcons();
@@ -251,6 +260,11 @@ async function renderCardBrowser() {
     renderCardBrowser();
   }));
   renderBrowserActionBar();
+}
+function clearBrowserSelection() {
+  browserSelected.clear();
+  const bar = document.getElementById('browserActionBar');
+  if (bar) bar.remove();
 }
 function renderBrowserActionBar() {
   let bar = document.getElementById('browserActionBar');
@@ -407,7 +421,9 @@ async function startAudioRecording(onStop) {
 function stopAudioRecording() { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }
 
 async function transcribeAndAttachAudio(cardId, blob) {
-  const media = await window.AnkiData.uploadMedia(cardId, blob, 'audio', 'rec.webm');
+  const stamp = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/[.,:]/g, '-').replace(/\s+/g, '_');
+  const filename = `Запись_${stamp}.webm`;
+  const media = await window.AnkiData.uploadMedia(cardId, blob, 'audio', filename);
   let transcript = '';
   if (typeof window.llmComplete === 'function' && typeof window.hasLLM === 'function' && window.hasLLM()) {
     try {
@@ -488,7 +504,7 @@ function wireSecretKeyButtons() {
    ============================================================ */
 let editorState = { cardId: null, mediaRefs: [], recording: false };
 
-function onCardEditorOpen(cardId, mediaRefs) {
+function onCardEditorOpen(cardId, mediaRefs, cardType) {
   editorState.cardId = cardId;
   editorState.mediaRefs = mediaRefs || [];
   const photoBtn = $('#ankiPhotoBtn'), audioBtn = $('#ankiAudioBtn'), hint = $('#ankiMediaHint');
@@ -496,11 +512,19 @@ function onCardEditorOpen(cardId, mediaRefs) {
   if (photoBtn) photoBtn.disabled = !canAttach;
   if (audioBtn) audioBtn.disabled = !canAttach;
   if (hint) hint.hidden = canAttach;
+  setSelectedType(cardType || 'basic');
   updateTypeUI();
   renderMediaList();
 }
+function getSelectedType() {
+  const on = document.querySelector('#ankiTypeRow .type-chip.on');
+  return (on && on.dataset.type) || 'basic';
+}
+function setSelectedType(type) {
+  document.querySelectorAll('#ankiTypeRow .type-chip').forEach(b => b.classList.toggle('on', b.dataset.type === type));
+}
 function updateTypeUI() {
-  const type = ($('#ankiTypeSelect') && $('#ankiTypeSelect').value) || 'basic';
+  const type = getSelectedType();
   const clozeHint = $('#ankiClozeHint');
   const occBtn = $('#ankiOcclusionBtn');
   const backLabel = $('#ankiBackLabel');
@@ -529,8 +553,11 @@ function renderMediaList() {
   }));
 }
 function wireCardEditorOnce() {
-  const typeSel = $('#ankiTypeSelect');
-  if (typeSel && !typeSel.dataset.wired) { typeSel.dataset.wired = '1'; typeSel.addEventListener('change', updateTypeUI); }
+  const typeRow = $('#ankiTypeRow');
+  if (typeRow && !typeRow.dataset.wired) {
+    typeRow.dataset.wired = '1';
+    typeRow.querySelectorAll('.type-chip').forEach(b => b.addEventListener('click', () => { setSelectedType(b.dataset.type); updateTypeUI(); }));
+  }
 
   const clozeBtn = $('#ankiClozeWrapBtn');
   if (clozeBtn && !clozeBtn.dataset.wired) {
@@ -630,9 +657,9 @@ document.addEventListener('DOMContentLoaded', () => { try { wireCardEditorOnce()
 window.AnkiUI = {
   applyThemeTokensLive, renderThemeSettings,
   renderSecretKeyStatus, wireSecretKeyButtons,
-  onCardEditorOpen,
+  onCardEditorOpen, getSelectedType,
   openDeckSettings,
-  openCardBrowser, renderCardBrowser,
+  openCardBrowser, renderCardBrowser, clearBrowserSelection,
   renderTagManager,
   openOcclusionEditor,
   renderAnkiAnalytics,

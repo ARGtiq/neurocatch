@@ -89,6 +89,36 @@ body { font-family: var(--theme-font); }
 .stat-bar-row { font-size: 14px; color: #6b7099; }
 :root[data-theme="dark"] .stat-bar-row { color: #999; }
 
+/* -------- Card Editor: тип-кнопки, единый ряд кнопок, выделенные поля -------- */
+.type-chip-row { display: flex; gap: 8px; }
+.type-chip {
+  flex: 1; padding: 10px 8px; text-align: center; cursor: pointer; font-size: 13px;
+  background: rgba(0,0,0,0.05); color: #1c1b1c; border: 1px solid rgba(0,0,0,0.15);
+}
+.type-chip.on { border-color: var(--accent); color: var(--accent); background: rgba(var(--seed-rgb,124,92,255),0.12); }
+:root[data-theme="dark"] .type-chip { background: rgba(255,255,255,0.08); color: #e5e2e3; border-color: rgba(255,255,255,0.15); }
+
+.anki-btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
+.anki-btn-row .btn { flex: 1 1 auto; min-width: 120px; }
+
+textarea.anki-input, input.anki-input {
+  border: 1.5px solid rgba(0,0,0,0.15); background: rgba(0,0,0,0.02); border-radius: var(--theme-radius-card);
+}
+:root[data-theme="dark"] textarea.anki-input, :root[data-theme="dark"] input.anki-input {
+  border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04);
+}
+textarea.anki-input:focus, input.anki-input:focus { border-color: var(--accent); outline: none; }
+
+/* -------- панель массовых действий Card Browser — не должна уезжать за край экрана -------- */
+#browserActionBar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  align-items: center;
+}
+#browserActionBar .btn { flex: 0 0 auto; white-space: nowrap; }
+#browserActionBar .frag-count { flex: 0 0 auto; white-space: nowrap; }
+
 /* Image Occlusion editor */
 .occ-stage svg rect { cursor: pointer; }
 
