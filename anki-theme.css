@@ -57,21 +57,37 @@ body { font-family: var(--theme-font); }
 .scroll-area { padding: 16px; overflow-y: auto; height: calc(100% - 56px); }
 
 .chip-row { display: flex; gap: 8px; padding: 0 16px 12px; flex-wrap: wrap; }
-.chip-row .chip.on { background: var(--accent); color: #000; }
+.chip-row .chip {
+  padding: 8px 16px; cursor: pointer; border: 1px solid rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.05); color: #1c1b1c;
+}
+.chip-row .chip.on { background: var(--accent); color: #000; border-color: transparent; }
+:root[data-theme="dark"] .chip-row .chip {
+  border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #e5e2e3;
+}
 
 .algo-chip-row { display: flex; gap: 8px; margin-top: 8px; }
 .algo-chip {
   flex: 1; padding: 10px 14px; text-align: center; cursor: pointer;
-  background: var(--surface-container, #201f20); color: var(--on-surface, #e5e2e3);
-  border: 1px solid transparent;
+  background: rgba(0,0,0,0.05); color: #1c1b1c; border: 1px solid rgba(0,0,0,0.15);
 }
-.algo-chip.on { border-color: var(--accent); color: var(--accent); }
+.algo-chip.on { border-color: var(--accent); color: var(--accent); background: rgba(var(--seed-rgb,124,92,255),0.12); }
+:root[data-theme="dark"] .algo-chip {
+  background: rgba(255,255,255,0.08); color: #e5e2e3; border-color: rgba(255,255,255,0.15);
+}
 
-.cnt-new { color: #00dbe9; }
-.cnt-learn { color: #ffb4ab; }
-.cnt-rev { color: #2ff801; }
+.cnt-new { color: #0089a3; font-weight: 600; }
+.cnt-learn { color: #c23b2e; font-weight: 600; }
+.cnt-rev { color: #1f8a1f; font-weight: 600; }
+:root[data-theme="dark"] .cnt-new { color: #00dbe9; }
+:root[data-theme="dark"] .cnt-learn { color: #ffb4ab; }
+:root[data-theme="dark"] .cnt-rev { color: #2ff801; }
 
-.stat-bar-row { font-size: 14px; color: var(--muted, #999); }
+.state-suspended { color: #c23b2e; font-weight: 600; }
+:root[data-theme="dark"] .state-suspended { color: #ffb4ab; }
+
+.stat-bar-row { font-size: 14px; color: #6b7099; }
+:root[data-theme="dark"] .stat-bar-row { color: #999; }
 
 /* Image Occlusion editor */
 .occ-stage svg rect { cursor: pointer; }

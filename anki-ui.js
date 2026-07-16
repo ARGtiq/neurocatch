@@ -92,10 +92,41 @@ function renderThemeSettings() {
     toast('Промпт скопирован в буфер…');
     try {
       const { tokens } = await window.AnkiData.generateThemeFromPrompt(desc);
-      if (tokens) { lastGenerated = tokens; applyThemeTokensLive(tokens); toast('Тема сгенерирована и применена как предпросмотр'); }
-      else toast('Ключ ИИ не настроен — промпт в буфере, вставь его в любой чат вручную');
-    } catch (e) { toast('Ошибка генерации: ' + (e.message || e), true); }
+      if (tokens) {
+        lastGenerated = tokens; applyThemeTokensLive(tokens);
+        toast('Тема сгенерирована и применена как предпросмотр');
+      } else {
+        openManualPasteModal(desc);
+      }
+    } catch (e) { toast('Ошибка генерации: ' + (e.message || e), true); openManualPasteModal(desc); }
   });
+  function openManualPasteModal(desc) {
+    const ex = document.getElementById('themePasteOverlay'); if (ex) ex.remove();
+    const ov = document.createElement('div'); ov.className = 'overlay open'; ov.id = 'themePasteOverlay';
+    ov.innerHTML = `<div class="modal" style="max-width:480px">
+      <div class="modal-head"><h2>Вставь ответ ИИ</h2><button class="icon-btn" id="themePasteClose"><i data-lucide="x"></i></button></div>
+      <p style="color:var(--muted,#888);font-size:13px;margin-bottom:10px">
+        Промпт уже в буфере обмена — ключ ИИ не настроен или генерация не удалась.
+        Вставь промпт в любой чат (ChatGPT, Claude, Gemini...), скопируй ответ (JSON) целиком и вставь сюда:
+      </p>
+      <textarea id="themePasteInput" placeholder="Вставь сюда JSON-ответ ИИ..." style="min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>
+      <button class="btn btn-primary" id="themePasteApply" style="width:100%;margin-top:10px"><i data-lucide="check"></i>Применить тему</button>
+    </div>`;
+    document.body.appendChild(ov); lucide.createIcons();
+    ov.querySelector('#themePasteClose').addEventListener('click', () => ov.remove());
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    ov.querySelector('#themePasteApply').addEventListener('click', () => {
+      let raw = ov.querySelector('#themePasteInput').value.trim();
+      raw = raw.replace(/```json|```/g, '').trim();
+      const m = raw.match(/\{[\s\S]*\}/);
+      try {
+        const tokens = JSON.parse(m ? m[0] : raw);
+        lastGenerated = tokens; applyThemeTokensLive(tokens);
+        toast('Тема применена как предпросмотр');
+        ov.remove();
+      } catch (e) { toast('Не получилось разобрать JSON — проверь, что скопировал ответ целиком', true); }
+    });
+  }
   $('#saveThemePresetBtn').addEventListener('click', async () => {
     if (!lastGenerated) { toast('Сначала сгенерируй тему', true); return; }
     const name = prompt('Название пресета:', lastGenerated.name || 'Моя тема');
@@ -144,15 +175,23 @@ async function openDeckSettings(deckId) {
         <button class="algo-chip${deck.algorithm === 'fsrs' ? ' on' : ''}" data-alg="fsrs">FSRS (рекомендуется)</button>
         <button class="algo-chip${deck.algorithm === 'sm2' ? ' on' : ''}" data-alg="sm2">SM-2 (классический)</button>
       </div>
+      <div class="hint" id="algoDescription" style="margin-top:8px"></div>
       <div class="hint" style="margin-top:6px">Смена алгоритма для этой колоды сбросит прогресс карточек под новый алгоритм.</div>
       <button class="btn btn-primary" id="dsSaveBtn" style="width:100%;margin-top:18px">Сохранить</button>
     </div>`;
   $('#dsNewPerDay').addEventListener('input', e => $('#dsNewPerDayVal').textContent = e.target.value);
   $('#dsReviewPerDay').addEventListener('input', e => $('#dsReviewPerDayVal').textContent = e.target.value);
   let selectedAlg = deck.algorithm;
+  const ALGO_DESCRIPTIONS = {
+    fsrs: 'FSRS (Free Spaced Repetition Scheduler) — современный алгоритм на основе модели памяти с тремя параметрами (устойчивость, сложность, вероятность вспоминания). Подстраивается под твою реальную статистику ответов по каждой карточке и обычно даёт более точные интервалы, чем SM-2, особенно на больших колодах.',
+    sm2: 'SM-2 — классический алгоритм из ранних версий SuperMemo и оригинального Anki. Интервал растёт по формуле «предыдущий интервал × фактор лёгкости», фактор корректируется после каждого ответа. Проще и предсказуемее, но менее точно учитывает индивидуальные различия между карточками.',
+  };
+  const descEl = $('#algoDescription');
+  if (descEl) descEl.textContent = ALGO_DESCRIPTIONS[selectedAlg] || '';
   box.querySelectorAll('.algo-chip[data-alg]').forEach(b => b.addEventListener('click', () => {
     selectedAlg = b.dataset.alg;
     box.querySelectorAll('.algo-chip[data-alg]').forEach(x => x.classList.toggle('on', x.dataset.alg === selectedAlg));
+    if (descEl) descEl.textContent = ALGO_DESCRIPTIONS[selectedAlg] || '';
   }));
   $('#dsSaveBtn').addEventListener('click', async () => {
     try {
@@ -201,7 +240,7 @@ async function renderCardBrowser() {
         <div class="q-text">${esc((c.front || '').slice(0, 90))}</div>
         <div class="q-time">${(c.tags || []).map(t => `<span class="tag-pill" style="margin-right:4px">${esc(t)}</span>`).join('')}
           <span class="tag-pill" style="margin-left:6px">${esc(c.state)}</span>
-          ${c.suspended ? '<span class="tag-pill" style="color:var(--red)">приостановлена</span>' : ''}
+          ${c.suspended ? '<span class="tag-pill state-suspended">приостановлена</span>' : ''}
           · due ${fmtDate(new Date(c.due_at).getTime())}</div>
       </div>
     </div>`).join('');
