@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v65';
+const APP_VERSION='2025.7-06';const SW_VER='v65';const ANKI_X_VER='0.5.0';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1577,7 +1577,7 @@ async function openAnkiStudy(deckId){
   $('#ankiStudyOverlay').classList.add('open');
   ankiNextCard();
 }
-function ankiNextCard(){
+async function ankiNextCard(){
   const body=$('#ankiStudyBody');if(!body)return;
   if(!ankiStudyQueue.length){
     body.innerHTML='<div class="empty" style="padding:40px 20px"><i data-lucide="check-circle"></i>Все карточки этой колоды повторены 👍</div>';
@@ -1585,15 +1585,26 @@ function ankiNextCard(){
   }
   ankiCurCard=ankiStudyQueue[0];
   ankiCardShownAt=Date.now();
-  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div></div>
+  body.innerHTML='<div class="empty">Загрузка…</div>';
+  let faceHtml;
+  try{ faceHtml = await window.AnkiUI.renderCardFaceHTML(ankiCurCard,false); }
+  catch(e){ faceHtml = `<div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div>`; }
+  if(ankiCurCard!==ankiStudyQueue[0])return; // карточку успели пролистать/сменить, пока грузились медиа
+  body.innerHTML=`<div class="anki-card-face">${faceHtml}</div>
     <button class="btn btn-primary" id="ankiReveal" style="width:100%;margin-top:16px">Показать ответ</button>
     <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
   lucide.createIcons();
   $('#ankiReveal')&&$('#ankiReveal').addEventListener('click',ankiRevealAnswer);
 }
-function ankiRevealAnswer(){
+async function ankiRevealAnswer(){
   const body=$('#ankiStudyBody');if(!body||!ankiCurCard)return;
-  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(ankiCurCard.back)}</div></div>
+  const cardAtReveal=ankiCurCard;
+  body.innerHTML='<div class="empty">Загрузка…</div>';
+  let faceHtml;
+  try{ faceHtml = await window.AnkiUI.renderCardFaceHTML(cardAtReveal,true); }
+  catch(e){ faceHtml = `<div class="anki-card-text">${esc(cardAtReveal.front||'')}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(cardAtReveal.back||'')}</div>`; }
+  if(ankiCurCard!==cardAtReveal)return;
+  body.innerHTML=`<div class="anki-card-face">${faceHtml}</div>
     <div class="anki-rate-row">
       <button class="anki-rate again" data-r="again">Забыл</button>
       <button class="anki-rate hard" data-r="hard">Трудно</button>
@@ -1601,6 +1612,7 @@ function ankiRevealAnswer(){
       <button class="anki-rate easy" data-r="easy">Легко</button>
     </div>
     <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
+  lucide.createIcons();
   body.querySelectorAll('.anki-rate').forEach(b=>b.addEventListener('click',async()=>{
     const rating=b.dataset.r;
     const cardBeingRated=ankiCurCard;
@@ -3170,7 +3182,7 @@ booting=false;
 try{refreshTodayBtn();}catch(e){}
 try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
-setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
+setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER+' · Anki '+ANKI_X_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;const hv=$('#homeVerLine');if(hv)hv.textContent='NeuroCatch '+SW_VER+' · Anki '+ANKI_X_VER;checkClipboard();},400);
 
 /* ---------- E2E debug bridge ----------
    Переменные, объявленные через let на верхнем уровне классического скрипта,

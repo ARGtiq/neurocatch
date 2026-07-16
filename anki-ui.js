@@ -30,7 +30,7 @@ const DEFAULT_THEME_TOKENS = {
   blur: { level1_px: 20, level3_px: 40, intensity: 'medium' },
 };
 
-function applyThemeTokensLive(tokens) {
+function applyThemeTokensLive(tokens, opts) {
   const root = document.documentElement.style;
   if (tokens.colors) {
     Object.entries(tokens.colors).forEach(([k, v]) => {
@@ -57,7 +57,19 @@ function applyThemeTokensLive(tokens) {
     root.setProperty('--theme-blur-3', (tokens.blur.level3_px || 40) + 'px');
   }
   document.body.classList.toggle('blur-reduced', localStorage.getItem('neurocatch_reduce_blur') === '1');
+  // применённая тема переживает перезагрузку страницы, пока пользователь не сбросит её явно
+  if (!opts || opts.persist !== false) {
+    if (tokens === DEFAULT_THEME_TOKENS) localStorage.removeItem('neurocatch_active_theme_tokens');
+    else { try { localStorage.setItem('neurocatch_active_theme_tokens', JSON.stringify(tokens)); } catch (e) {} }
+  }
 }
+function initThemeFromStorage() {
+  try {
+    const raw = localStorage.getItem('neurocatch_active_theme_tokens');
+    if (raw) applyThemeTokensLive(JSON.parse(raw), { persist: false });
+  } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', initThemeFromStorage);
 
 function renderThemeSettings() {
   const box = $('#themeSettingsBox'); if (!box) return;
@@ -66,15 +78,15 @@ function renderThemeSettings() {
       <div class="sec-title">AI-тема</div>
       <div class="field">
         <label for="themeDescInput" style="display:flex;align-items:center;justify-content:space-between">Описание желаемого вайба<button type="button" class="link-btn" id="resetThemeBtn">Сбросить</button></label>
-        <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:60px"></textarea>
+        <textarea id="themeDescInput" placeholder="Например: закат над океаном, спокойные тёплые тона..." style="min-height:60px;font-size:14px"></textarea>
         <div class="hint">Промпт скопируется в буфер и, если настроен ИИ, применится сразу как предпросмотр.</div>
         <div class="status-row"><span style="flex:1"></span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn" id="pasteThemeBtn">Вставить готовый код</button><button type="button" class="link-btn" id="genThemeBtn">Сгенерировать</button></div></div>
       </div>
       <div class="field">
-        <label style="display:flex;align-items:center;justify-content:space-between">Текущий предпросмотр<button type="button" class="link-btn" id="saveThemePresetBtn">Сохранить как пресет</button></label>
-        <div class="hint" id="themePresetList">Пока нет сохранённых пресетов</div>
+        <label style="display:flex;align-items:center;justify-content:space-between">Мои темы<button type="button" class="link-btn" id="saveThemePresetBtn">Сохранить текущую как пресет</button></label>
+        <div id="themePresetList" class="theme-preset-box">Пока нет сохранённых пресетов</div>
       </div>
-      <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="reduceBlurToggle" style="width:auto"> Уменьшить прозрачность/блюр (для слабых устройств)</label></div>
+      <div class="field" style="margin-bottom:0"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="reduceBlurToggle"><span class="track"></span></span>Уменьшить прозрачность/блюр (для слабых устройств)</label></div>
     </div>`;
   lucide.createIcons();
 
@@ -144,13 +156,22 @@ async function renderThemePresetList() {
   try {
     const list = await window.AnkiData.listThemePresets();
     box.innerHTML = list.length ? list.map(p => `
-      <div class="theme-preset-row" data-id="${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
-        <span>${esc(p.name)}${p.source === 'ai' ? ' 🤖' : ''}</span>
-        <button class="mini theme-preset-apply" data-id="${p.id}">Применить</button>
+      <div class="theme-preset-row" data-id="${p.id}">
+        <div class="theme-preset-name">${esc(p.name)}${p.source === 'ai' ? ' 🤖' : ''}</div>
+        <div class="theme-preset-acts">
+          <button class="link-btn theme-preset-apply" data-id="${p.id}">Применить</button>
+          <button class="link-btn theme-preset-del" data-id="${p.id}">Удалить</button>
+        </div>
       </div>`).join('') : '<div class="empty">Пока нет сохранённых пресетов</div>';
     box.querySelectorAll('.theme-preset-apply').forEach(b => b.addEventListener('click', async () => {
       const p = list.find(x => x.id === b.dataset.id);
       if (p) { applyThemeTokensLive(p.tokens); await window.AnkiData.setActiveTheme(p.id); toast('Тема применена: ' + p.name); }
+    }));
+    box.querySelectorAll('.theme-preset-del').forEach(b => b.addEventListener('click', async () => {
+      const p = list.find(x => x.id === b.dataset.id); if (!p) return;
+      if (!confirm('Удалить пресет «' + p.name + '»?')) return;
+      try { await window.AnkiData.deleteThemePreset(p.id); toast('Пресет удалён'); renderThemePresetList(); }
+      catch (e) { toast('Ошибка: ' + (e.message || e), true); }
     }));
   } catch (e) { box.innerHTML = '<div class="empty">Не удалось загрузить пресеты</div>'; }
 }
@@ -243,7 +264,7 @@ async function renderCardBrowser() {
   box.innerHTML = cards.map(c => `
     <div class="q-item" data-id="${c.id}">
       <button class="mini browser-check" data-id="${c.id}"><i data-lucide="${browserSelected.has(c.id) ? 'check-square' : 'square'}"></i></button>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0" class="browser-open" data-id="${c.id}">
         <div class="q-text">${esc((c.front || '').slice(0, 90))}</div>
         <div class="q-time">${(c.tags || []).map(t => `<span class="tag-pill" style="margin-right:4px">${esc(t)}</span>`).join('')}
           <span class="tag-pill" style="margin-left:6px">${esc(STATE_RU[c.state] || c.state)}</span>
@@ -252,10 +273,18 @@ async function renderCardBrowser() {
       </div>
     </div>`).join('');
   lucide.createIcons();
-  box.querySelectorAll('.browser-check').forEach(b => b.addEventListener('click', () => {
+  box.querySelectorAll('.browser-check').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
     const id = b.dataset.id;
     if (browserSelected.has(id)) browserSelected.delete(id); else browserSelected.add(id);
     renderCardBrowser();
+  }));
+  box.querySelectorAll('.browser-open').forEach(el => el.addEventListener('click', () => {
+    const c = cards.find(x => x.id === el.dataset.id); if (!c) return;
+    window.openAnkiCardEditor({
+      id: c.id, deckId: c.deck_id, front: c.front, back: c.back,
+      card_type: c.card_type, media_refs: c.media_refs,
+    });
   }));
   renderBrowserActionBar();
 }
@@ -364,8 +393,10 @@ function openOcclusionEditor(cardId, imageUrl) {
       const d = occState.drawing;
       svg.innerHTML += shapeSvg({ type: occState.shapeType, coords: [d.x, d.y, d.w, d.h] }, true);
     }
-    svg.querySelectorAll('[data-i]').forEach(el => el.addEventListener('click', () => {
-      occState.shapes.splice(+el.dataset.i, 1); redraw();
+    svg.querySelectorAll('[data-i]').forEach(el => el.addEventListener('pointerdown', e => {
+      e.stopPropagation(); // не даём событию дойти до svg-уровня и запустить рисование новой маски
+      occState.shapes.splice(+el.dataset.i, 1);
+      redraw();
     }));
   }
   let start = null;
@@ -388,7 +419,7 @@ function openOcclusionEditor(cardId, imageUrl) {
     try {
       await window.AnkiData.updateCard(occState.cardId, { occlusion_map: occState.shapes, card_type: 'image_occlusion' });
       toast('Маски сохранены (' + occState.shapes.length + ')');
-      show($('#view-anki-card-editor'));
+      $('#ankiCardOverlay') && $('#ankiCardOverlay').classList.add('open');
     } catch (e) { toast('Ошибка: ' + (e.message || e), true); }
   });
   show($('#view-occlusion-editor'));
@@ -552,12 +583,13 @@ function updateTypeUI() {
   const hasImage = editorState.mediaRefs.some(m => m.kind === 'image');
   if (occBtn) occBtn.hidden = !(type === 'image_occlusion' && hasImage && editorState.cardId);
 }
-function renderMediaList() {
+async function renderMediaList() {
   const box = $('#ankiMediaList'); if (!box) return;
   if (!editorState.mediaRefs.length) { box.innerHTML = ''; return; }
   box.innerHTML = editorState.mediaRefs.map((m, i) => `
     <div class="q-item" data-i="${i}" style="padding:8px 12px">
-      <div style="flex:1;min-width:0" class="q-text">${m.kind === 'image' ? '🖼️' : '🎙️'} ${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : ''}</div>
+      ${m.kind === 'image' ? `<img class="media-thumb" id="mediaThumb${i}" alt="">` : '<span style="font-size:20px">🎙️</span>'}
+      <div style="flex:1;min-width:0" class="q-text">${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : ''}</div>
       <button class="q-del" data-mi="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>
     </div>`).join('');
   lucide.createIcons();
@@ -570,6 +602,12 @@ function renderMediaList() {
       renderMediaList(); updateTypeUI();
     } catch (e) { toast('Ошибка удаления: ' + (e.message || e), true); }
   }));
+  // миниатюры подгружаем отдельно (подписанные ссылки — асинхронно), не блокируя отрисовку списка
+  editorState.mediaRefs.forEach(async (m, i) => {
+    if (m.kind !== 'image') return;
+    const img = document.getElementById('mediaThumb' + i); if (!img) return;
+    try { img.src = await window.AnkiData.mediaUrl(m.path); } catch (e) {}
+  });
 }
 function wireCardEditorOnce() {
   const typeRow = $('#ankiTypeRow');
@@ -672,8 +710,68 @@ function wireCardEditorOnce() {
 }
 document.addEventListener('DOMContentLoaded', () => { try { wireCardEditorOnce(); } catch (e) {} });
 
+/* ============================================================
+   10. РЕНДЕР КАРТОЧКИ В СЕССИИ ПОВТОРЕНИЯ — cloze/occlusion/медиа
+   ============================================================ */
+function processClozeText(text, revealed) {
+  if (!text) return '';
+  return esc(text).replace(/\{\{c(\d+)::(.*?)(?:::.*?)?\}\}/g, (m, n, content) =>
+    revealed ? `<span class="cloze-revealed">${content}</span>` : '<span class="cloze-hidden">[...]</span>'
+  );
+}
+function occlusionMaskSvg(shapes) {
+  return (shapes || []).map(s => {
+    if (s.type === 'ellipse') {
+      const cx = s.coords[0] + s.coords[2] / 2, cy = s.coords[1] + s.coords[3] / 2;
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${s.coords[2] / 2}" ry="${s.coords[3] / 2}" fill="#2b2b2b"></ellipse>`;
+    }
+    return `<rect x="${s.coords[0]}" y="${s.coords[1]}" width="${s.coords[2]}" height="${s.coords[3]}" rx="4" fill="#2b2b2b"></rect>`;
+  }).join('');
+}
+/**
+ * Собирает HTML для вопроса (revealed=false) или ответа (revealed=true)
+ * с учётом card_type, occlusion_map, media_refs. Асинхронно — картинки/аудио
+ * идут через подписанные Storage-ссылки.
+ */
+async function renderCardFaceHTML(card, revealed) {
+  const imageRef = (card.media_refs || []).find(m => m.kind === 'image');
+  const audioRefs = (card.media_refs || []).filter(m => m.kind === 'audio');
+  let html = '';
+
+  if (card.card_type === 'image_occlusion' && imageRef) {
+    try {
+      const url = await window.AnkiData.mediaUrl(imageRef.path);
+      const masks = revealed ? '' : occlusionMaskSvg(card.occlusion_map);
+      html += `<div class="occ-study-stage"><img src="${attr(url)}" class="occ-study-img" onload="this.nextElementSibling.setAttribute('viewBox','0 0 '+this.naturalWidth+' '+this.naturalHeight)"><svg class="occ-study-svg">${masks}</svg></div>`;
+    } catch (e) { html += '<div class="hint">Не удалось загрузить изображение</div>'; }
+    if (card.front) html += `<div class="anki-card-text" style="margin-top:10px">${esc(card.front)}</div>`;
+  } else if (card.card_type === 'cloze') {
+    html += `<div class="anki-card-text">${processClozeText(card.back, revealed)}</div>`;
+  } else {
+    html += `<div class="anki-card-text">${esc(revealed ? (card.back || '') : (card.front || '(без вопроса)'))}</div>`;
+    if (revealed && card.front && card.back) {
+      // для обычной карточки на ответе показываем и вопрос, и ответ — как раньше
+      html = `<div class="anki-card-text">${esc(card.front)}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(card.back)}</div>`;
+    }
+    if (revealed && imageRef) {
+      try { const url = await window.AnkiData.mediaUrl(imageRef.path); html += `<img src="${attr(url)}" style="max-width:100%;border-radius:12px;margin-top:10px">`; } catch (e) {}
+    }
+  }
+  if (revealed && audioRefs.length) {
+    for (const a of audioRefs) {
+      try {
+        const url = await window.AnkiData.mediaUrl(a.path);
+        html += `<audio controls style="width:100%;margin-top:10px"><source src="${attr(url)}"></audio>`;
+        if (a.transcript) html += `<div class="hint" style="margin-top:4px">${esc(a.transcript)}</div>`;
+      } catch (e) {}
+    }
+  }
+  return html;
+}
+
 /* ============================================================ */
 window.AnkiUI = {
+  renderCardFaceHTML,
   applyThemeTokensLive, renderThemeSettings,
   renderSecretKeyStatus, wireSecretKeyButtons,
   onCardEditorOpen, getSelectedType,

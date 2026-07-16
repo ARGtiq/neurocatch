@@ -68,11 +68,14 @@ async function deleteDeck(id) {
 async function deckCounts(deckId) {
   const { client } = await requireUser();
   const now = new Date().toISOString();
-  const base = client.from('cards').select('id', { count: 'exact', head: true })
-    .eq('deck_id', deckId).is('deleted_at', null).eq('suspended', false);
+  // ВАЖНО: query builder Supabase-JS мутируется при каждом .eq()/.in() —
+  // нельзя переиспользовать один и тот же объект для нескольких параллельных
+  // запросов (ломает фильтры друг друга). Каждый запрос строится с нуля.
   const [n, l, r] = await Promise.all([
-    base.eq('state', 'new'),
-    base.in('state', ['learning', 'relearning']),
+    client.from('cards').select('id', { count: 'exact', head: true })
+      .eq('deck_id', deckId).is('deleted_at', null).eq('suspended', false).eq('state', 'new'),
+    client.from('cards').select('id', { count: 'exact', head: true })
+      .eq('deck_id', deckId).is('deleted_at', null).eq('suspended', false).in('state', ['learning', 'relearning']),
     client.from('cards').select('id', { count: 'exact', head: true })
       .eq('deck_id', deckId).is('deleted_at', null).eq('suspended', false)
       .eq('state', 'review').lte('due_at', now),
@@ -455,6 +458,11 @@ async function setActiveTheme(id) {
   const { error } = await client.from('theme_presets').update({ is_active: true }).eq('id', id);
   if (error) throw error;
 }
+async function deleteThemePreset(id) {
+  const { client } = await requireUser();
+  const { error } = await client.from('theme_presets').delete().eq('id', id);
+  if (error) throw error;
+}
 
 const THEME_TOKEN_SCHEMA_HINT = `{
   "name": "строка — название темы",
@@ -558,5 +566,5 @@ window.AnkiData = {
   bulkTag, bulkMove, bulkDelete, bulkSuspend, bulkResetProgress, bulkReschedule,
   migrateFromLocalStorage,
   encryptAndStoreApiKey, fetchAndDecryptApiKey, hasStoredApiKey,
-  listThemePresets, saveThemePreset, setActiveTheme, generateThemeFromPrompt, buildThemePrompt,
+  listThemePresets, saveThemePreset, setActiveTheme, deleteThemePreset, generateThemeFromPrompt, buildThemePrompt,
 };

@@ -150,6 +150,7 @@
         <button class="btn btn-unsorted" id="sortTodayBtn" hidden><i data-lucide="layout-grid"></i>Разобрать по важности<span id="unsortedCount" class="today-badge" hidden>0</span></button>
         <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span><span id="ritualQueueBadge" class="ritual-badge queue-badge" title="В офлайн-очереди" hidden>0</span></button>
       </div>
+      <div class="hint" id="homeVerLine" style="text-align:center;margin-top:14px;opacity:.55"></div>
     </section>
 
     <!-- QUEUE -->
@@ -380,7 +381,7 @@
           <button type="button" class="btn" id="ankiAiFillBtn"><i data-lucide="sparkle"></i>AI Auto-Fill</button>
         </div>
         <div class="field"><label for="ankiBackInput" id="ankiBackLabel">Ответ (оборот карточки)</label><textarea class="anki-input" id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
-        <div id="ankiClozeHint" class="hint" hidden>Выдели часть текста в поле ответа и нажми, чтобы обернуть её в пропуск: <button type="button" class="mini" id="ankiClozeWrapBtn" style="display:inline-flex">{{c1::…}}</button></div>
+        <div id="ankiClozeHint" class="hint" hidden>Выдели часть текста в поле ответа, чтобы обернуть её в пропуск:<br><button type="button" class="btn" id="ankiClozeWrapBtn" style="margin-top:8px"><i data-lucide="square-check"></i>Обернуть выделенное в {{c1::…}}</button></div>
         <div class="field">
           <label>Медиа</label>
           <div id="ankiMediaHint" class="hint">Сначала сохрани карточку — после этого можно будет прикрепить фото и аудио.</div>

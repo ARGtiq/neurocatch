@@ -127,22 +127,50 @@ textarea.anki-input:focus, input.anki-input:focus { border-color: var(--accent);
 
 /* -------- визуальная группировка блоков Settings по категориям -------- */
 #overlay .sgroup {
-  background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08);
-  border-radius: var(--theme-radius-card); padding: 16px; margin-bottom: 16px;
+  background: rgba(0,0,0,0.05) !important; border: 1px solid rgba(0,0,0,0.12) !important;
+  border-radius: var(--theme-radius-card); padding: 16px; margin: 0 0 16px 0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-:root[data-theme="dark"] #overlay .sgroup { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+:root[data-theme="dark"] #overlay .sgroup {
+  background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
 #overlay .sgroup .sec-title:first-child { margin-top: 0; }
 
+/* -------- выделенный контейнер сохранённых тем -------- */
+.theme-preset-box {
+  background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--theme-radius-card); padding: 4px 12px;
+}
+:root[data-theme="dark"] .theme-preset-box { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+.theme-preset-row { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+:root[data-theme="dark"] .theme-preset-row { border-bottom-color: rgba(255,255,255,0.08); }
+.theme-preset-row:last-child { border-bottom: none; }
+.theme-preset-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-preset-acts { display: flex; gap: 16px; margin-top: 6px; }
+
 #browserActionBar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
+  transform: none !important; margin: 0 !important; width: auto !important; max-width: none !important;
+  z-index: 50; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   align-items: center;
 }
 #browserActionBar .btn { flex: 0 0 auto; white-space: nowrap; }
 #browserActionBar .frag-count { flex: 0 0 auto; white-space: nowrap; }
 
+/* -------- миниатюра фото в списке медиа редактора карточки -------- */
+.media-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: rgba(0,0,0,0.06); flex-shrink: 0; }
+
 /* Image Occlusion editor */
 .occ-stage svg rect { cursor: pointer; }
+
+/* -------- рендер cloze/occlusion в сессии повторения -------- */
+.cloze-hidden { color: var(--accent); font-weight: 700; }
+.cloze-revealed { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.occ-study-stage { position: relative; display: inline-block; max-width: 100%; }
+.occ-study-img { max-width: 100%; display: block; border-radius: 12px; }
+.occ-study-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
 
 /* Browser action bar reuse frag-action-bar styling, no extra needed */
