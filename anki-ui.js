@@ -30,6 +30,32 @@ const DEFAULT_THEME_TOKENS = {
   blur: { level1_px: 20, level3_px: 40, intensity: 'medium' },
 };
 
+/**
+ * Тексты заголовков разделов и ссылок-действий (Сбросить/Применить/...) красятся
+ * в var(--accent). Если ИИ сгенерировал слишком светлый акцент — эти надписи
+ * сливаются со светлым фоном. Подстраховываемся: слишком светлый цвет затемняем
+ * и подсыщаем до читаемого уровня, сохраняя исходный тон (hue).
+ */
+function ensureReadableAccent(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return hex;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255, g = parseInt(m[1].slice(2, 4), 16) / 255, b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; default: h = (r - g) / d + 4; }
+    h /= 6;
+  }
+  if (l > 0.6) { l = 0.4; s = Math.max(s, 0.55); } // слишком светлый — затемняем до читаемого
+  else if (l < 0.2) { l = 0.35; } // слишком тёмный на тёмной теме тоже плохо видно — чуть высветляем
+  const k = n => (n + h * 12) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const to = x => Math.round(x * 255).toString(16).padStart(2, '0');
+  return '#' + to(f(0)) + to(f(8)) + to(f(4));
+}
 function applyThemeTokensLive(tokens, opts) {
   const root = document.documentElement.style;
   if (tokens.colors) {
@@ -38,7 +64,7 @@ function applyThemeTokensLive(tokens, opts) {
     });
     // держим совместимость с существующей системой акцента NeuroCatch
     if (tokens.colors.primary && typeof window.setAccent === 'function') {
-      window.setAccent(tokens.colors.primary, false);
+      window.setAccent(ensureReadableAccent(tokens.colors.primary), false);
     }
   }
   if (tokens.font) {
@@ -351,7 +377,13 @@ async function renderTagManager() {
    4. IMAGE OCCLUSION EDITOR
    ============================================================ */
 let occState = { imageEl: null, shapes: [], drawing: null, cardId: null };
+function returnFromOcclusionEditor() {
+  const returnView = window._ankiReturnView;
+  if (returnView) show(returnView); // восстанавливаем экран, с которого открывали редактор карточки
+  $('#ankiCardOverlay') && $('#ankiCardOverlay').classList.add('open');
+}
 function openOcclusionEditor(cardId, imageUrl) {
+  $('#ankiCardOverlay') && $('#ankiCardOverlay').classList.remove('open'); // иначе view открывается ПОД ещё видимым оверлеем карточки
   occState = { imageEl: null, shapes: [], drawing: null, cardId, shapeType: 'rect' };
   const wrap = $('#occlusionCanvasWrap'); if (!wrap) return;
   wrap.innerHTML = `<div class="type-chip-row" style="margin-bottom:10px">
@@ -419,7 +451,7 @@ function openOcclusionEditor(cardId, imageUrl) {
     try {
       await window.AnkiData.updateCard(occState.cardId, { occlusion_map: occState.shapes, card_type: 'image_occlusion' });
       toast('Маски сохранены (' + occState.shapes.length + ')');
-      $('#ankiCardOverlay') && $('#ankiCardOverlay').classList.add('open');
+      returnFromOcclusionEditor();
     } catch (e) { toast('Ошибка: ' + (e.message || e), true); }
   });
   show($('#view-occlusion-editor'));
@@ -778,7 +810,7 @@ window.AnkiUI = {
   openDeckSettings,
   openCardBrowser, renderCardBrowser, clearBrowserSelection,
   renderTagManager,
-  openOcclusionEditor,
+  openOcclusionEditor, returnFromOcclusionEditor,
   renderAnkiAnalytics,
   startAudioRecording, stopAudioRecording, transcribeAndAttachAudio,
   wireCsvImportStub,

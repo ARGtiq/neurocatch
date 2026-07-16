@@ -1627,6 +1627,7 @@ async function ankiRevealAnswer(){
 }
 async function openAnkiCardEditor(opts){
   opts=opts||{};ankiEditingId=opts.id||null;
+  window._ankiReturnView=document.querySelector('.view:not([hidden])');
   let decks=[];
   try{ decks = await window.AnkiData.listDecks(); }catch(e){ toast('Ошибка загрузки колод',true); }
   const sel=$('#ankiDeckSelect');if(sel)sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join('');
@@ -2552,7 +2553,7 @@ $('#ankiMigrateBtn')&&$('#ankiMigrateBtn').addEventListener('click',async()=>{
 $('#deckSettingsBack')&&$('#deckSettingsBack').addEventListener('click',()=>show($('#view-anki')));
 $('#browserBack')&&$('#browserBack').addEventListener('click',()=>{try{window.AnkiUI.clearBrowserSelection();}catch(e){}show($('#view-anki'));});
 $('#tagManagerBack')&&$('#tagManagerBack').addEventListener('click',()=>show($('#view-more')));
-$('#occlusionBack')&&$('#occlusionBack').addEventListener('click',()=>$('#ankiCardOverlay')&&$('#ankiCardOverlay').classList.add('open'));
+$('#occlusionBack')&&$('#occlusionBack').addEventListener('click',()=>{try{window.AnkiUI.returnFromOcclusionEditor();}catch(e){$('#ankiCardOverlay')&&$('#ankiCardOverlay').classList.add('open');}});
 $('#ankiAnalyticsBack')&&$('#ankiAnalyticsBack').addEventListener('click',()=>show($('#view-more')));
 document.addEventListener('click',e=>{
   const chip=e.target.closest('#browserMaturityRow .chip');
