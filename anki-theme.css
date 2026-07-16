@@ -125,6 +125,13 @@ textarea.anki-input:focus, input.anki-input:focus { border-color: var(--accent);
 }
 #deckSettingsBox input[type="range"]::-moz-range-track { background: transparent; }
 
+/* -------- визуальная группировка блоков Settings по категориям -------- */
+#overlay .sgroup {
+  background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--theme-radius-card); padding: 16px; margin-bottom: 16px;
+}
+:root[data-theme="dark"] #overlay .sgroup { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+#overlay .sgroup .sec-title:first-child { margin-top: 0; }
 
 #browserActionBar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
