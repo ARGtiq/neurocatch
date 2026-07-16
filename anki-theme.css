@@ -44,7 +44,7 @@ body.blur-reduced * {
 .study-menu, .overlay .modal {
   border-radius: var(--theme-radius-card);
 }
-.btn, .chip, .preset-chip, .tag-pill {
+.btn, .chip, .algo-chip, .tag-pill {
   border-radius: var(--theme-radius-button);
 }
 
@@ -59,12 +59,13 @@ body { font-family: var(--theme-font); }
 .chip-row { display: flex; gap: 8px; padding: 0 16px 12px; flex-wrap: wrap; }
 .chip-row .chip.on { background: var(--accent); color: #000; }
 
-.preset-chip-row { display: flex; gap: 8px; margin-top: 8px; }
-.preset-chip {
+.algo-chip-row { display: flex; gap: 8px; margin-top: 8px; }
+.algo-chip {
   flex: 1; padding: 10px 14px; text-align: center; cursor: pointer;
-  background: var(--surface-container, #201f20); border: 1px solid transparent;
+  background: var(--surface-container, #201f20); color: var(--on-surface, #e5e2e3);
+  border: 1px solid transparent;
 }
-.preset-chip.on { border-color: var(--accent); color: var(--accent); }
+.algo-chip.on { border-color: var(--accent); color: var(--accent); }
 
 .cnt-new { color: #00dbe9; }
 .cnt-learn { color: #ffb4ab; }

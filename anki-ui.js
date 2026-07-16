@@ -140,9 +140,9 @@ async function openDeckSettings(deckId) {
       <input type="range" id="dsReviewPerDay" min="0" max="1000" step="10" value="${deck.review_per_day}">
       <div class="hint"><span id="dsReviewPerDayVal">${deck.review_per_day}</span></div>
       <label style="margin-top:14px">Алгоритм планирования</label>
-      <div class="preset-chip-row">
-        <button class="preset-chip${deck.algorithm === 'fsrs' ? ' on' : ''}" data-alg="fsrs">FSRS (рекомендуется)</button>
-        <button class="preset-chip${deck.algorithm === 'sm2' ? ' on' : ''}" data-alg="sm2">SM-2 (классический)</button>
+      <div class="algo-chip-row">
+        <button class="algo-chip${deck.algorithm === 'fsrs' ? ' on' : ''}" data-alg="fsrs">FSRS (рекомендуется)</button>
+        <button class="algo-chip${deck.algorithm === 'sm2' ? ' on' : ''}" data-alg="sm2">SM-2 (классический)</button>
       </div>
       <div class="hint" style="margin-top:6px">Смена алгоритма для этой колоды сбросит прогресс карточек под новый алгоритм.</div>
       <button class="btn btn-primary" id="dsSaveBtn" style="width:100%;margin-top:18px">Сохранить</button>
@@ -150,9 +150,9 @@ async function openDeckSettings(deckId) {
   $('#dsNewPerDay').addEventListener('input', e => $('#dsNewPerDayVal').textContent = e.target.value);
   $('#dsReviewPerDay').addEventListener('input', e => $('#dsReviewPerDayVal').textContent = e.target.value);
   let selectedAlg = deck.algorithm;
-  box.querySelectorAll('[data-alg]').forEach(b => b.addEventListener('click', () => {
+  box.querySelectorAll('.algo-chip[data-alg]').forEach(b => b.addEventListener('click', () => {
     selectedAlg = b.dataset.alg;
-    box.querySelectorAll('[data-alg]').forEach(x => x.classList.toggle('on', x.dataset.alg === selectedAlg));
+    box.querySelectorAll('.algo-chip[data-alg]').forEach(x => x.classList.toggle('on', x.dataset.alg === selectedAlg));
   }));
   $('#dsSaveBtn').addEventListener('click', async () => {
     try {
