@@ -149,9 +149,9 @@
       <div class="ritual-wrap">
         <button class="btn btn-today" id="todayTasks"><i data-lucide="list-checks"></i>Задачи на сегодня<span id="todayCount" class="today-badge" hidden>0</span></button>
         <button class="btn btn-unsorted" id="sortTodayBtn" hidden><i data-lucide="layout-grid"></i>Разобрать по важности<span id="unsortedCount" class="today-badge" hidden>0</span></button>
-        <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span><span id="ritualQueueBadge" class="ritual-badge queue-badge" title="В офлайн-очереди" hidden>0</span></button>
+        <div class="hint" id="homeVerLine" style="text-align:center;margin-top:14px;opacity:.55"></div>
+      <button class="btn btn-ritual" id="ritual"><i data-lucide="moon-star"></i>✨ Вечерний ритуал<span id="ritualCount" class="ritual-badge" hidden>0</span><span id="ritualQueueBadge" class="ritual-badge queue-badge" title="В офлайн-очереди" hidden>0</span></button>
       </div>
-      <div class="hint" id="homeVerLine" style="text-align:center;margin-top:14px;opacity:.55"></div>
     </section>
 
     <!-- QUEUE -->
@@ -310,52 +310,7 @@
 
     <section class="view" id="view-anki" hidden>
       <div class="head-row"><button class="back" id="ankiBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki</h2><button class="mini" id="ankiNewCard" title="Новая карточка"><i data-lucide="plus"></i></button></div>
-      <div style="padding:0 16px 12px"><button id="ankiMigrateBtn" class="btn">Перенести Anki в облачные таблицы (один раз)</button></div>
       <div id="ankiDeckList" class="anki-deck-list"></div>
-    </section>
-
-    <!-- ============================================================
-         Anki X — новые экраны (Deck Settings, Card Browser, Tag Manager,
-         Image Occlusion Editor, Analytics). Логика — anki-ui.js.
-         ============================================================ -->
-    <section class="view" id="view-deck-settings" hidden>
-      <div class="head-row"><button class="back" id="deckSettingsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Настройки колоды</h2></div>
-      <div id="deckSettingsBox" class="scroll-area"></div>
-    </section>
-
-    <section class="view" id="view-card-browser" hidden>
-      <div class="head-row"><button class="back" id="browserBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Browser</h2></div>
-      <div class="search-wrap" style="margin-bottom:12px"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
-      <div class="chip-row" id="browserMaturityRow">
-        <button class="chip on" data-m="">Все</button>
-        <button class="chip" data-m="learning">Изучение</button>
-        <button class="chip" data-m="mature">Закреплено</button>
-      </div>
-      <div id="browserTagRow" style="padding:0 0 8px"></div>
-      <div class="chip-row" id="browserDueRow">
-        <button class="chip on" data-d="">Любой срок</button>
-        <button class="chip" data-d="overdue">Просрочено</button>
-        <button class="chip" data-d="today">Сегодня</button>
-        <button class="chip" data-d="tomorrow">Завтра</button>
-        <button class="chip" data-d="week">Неделя</button>
-        <button class="chip" data-d="month">Месяц</button>
-      </div>
-      <div id="browserList" class="scroll-area"></div>
-    </section>
-
-    <section class="view" id="view-tag-manager" hidden>
-      <div class="head-row"><button class="back" id="tagManagerBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Теги</h2></div>
-      <div id="tagManagerList" class="scroll-area"></div>
-    </section>
-
-    <section class="view" id="view-occlusion-editor" hidden>
-      <div class="head-row"><button class="back" id="occlusionBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Image Occlusion</h2></div>
-      <div id="occlusionCanvasWrap" class="scroll-area"></div>
-    </section>
-
-    <section class="view" id="view-anki-analytics" hidden>
-      <div class="head-row"><button class="back" id="ankiAnalyticsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki · Аналитика</h2></div>
-      <div id="ankiAnalyticsBox" class="scroll-area"></div>
     </section>
 
     <div class="overlay" id="ankiStudyOverlay">
@@ -369,35 +324,10 @@
       <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
         <div class="modal-head"><h2 id="ankiCardTitle">Новая карточка</h2><button class="icon-btn" id="ankiCardClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
         <div class="field"><label for="ankiDeckSelect">Колода</label><select id="ankiDeckSelect"></select></div>
-        <div class="field">
-          <label>Тип карточки</label>
-          <div class="type-chip-row" id="ankiTypeRow">
-            <button type="button" class="type-chip on" data-type="basic">Обычная</button>
-            <button type="button" class="type-chip" data-type="cloze">С пропусками</button>
-            <button type="button" class="type-chip" data-type="image_occlusion">Скрытые области на фото</button>
-          </div>
-          <div class="hint" id="ankiTypeDescription" style="margin-top:6px"></div>
-        </div>
-        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea class="anki-input" id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
-        <div class="anki-btn-row">
-          <button type="button" class="btn" id="ankiAiFillBtn"><i data-lucide="sparkle"></i>AI Auto-Fill</button>
-        </div>
-        <div class="field"><label for="ankiBackInput" id="ankiBackLabel">Ответ (оборот карточки)</label><textarea class="anki-input" id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
-        <div id="ankiClozeHint" class="hint" hidden>Выдели часть текста в поле ответа, чтобы обернуть её в пропуск:<br><button type="button" class="btn" id="ankiClozeWrapBtn" style="margin-top:8px"><i data-lucide="square-check"></i>Обернуть выделенное в {{c1::…}}</button></div>
-        <div class="field">
-          <label>Медиа</label>
-          <div id="ankiMediaHint" class="hint">Сначала сохрани карточку — после этого можно будет прикрепить фото и аудио.</div>
-          <div class="anki-btn-row" style="margin-top:6px">
-            <button type="button" class="btn" id="ankiPhotoBtn" disabled><i data-lucide="image"></i>Фото</button>
-            <input type="file" id="ankiPhotoInput" accept="image/*" hidden>
-            <button type="button" class="btn" id="ankiAudioBtn" disabled><i data-lucide="mic"></i>Записать аудио</button>
-            <button type="button" class="btn" id="ankiOcclusionBtn" hidden><i data-lucide="image"></i>Разметить маски</button>
-          </div>
-          <div id="ankiMediaList" style="margin-top:8px"></div>
-        </div>
+        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
+        <div class="field"><label for="ankiBackInput">Ответ (оборот карточки)</label><textarea id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
         <div style="display:flex;gap:10px">
           <button class="btn btn-primary" id="ankiCardSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
-          <button class="btn" id="ankiCardSaveNext" style="flex:1"><i data-lucide="plus"></i>И добавить ещё</button>
           <button class="btn btn-clear" id="ankiCardDelete" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
         </div>
       </div>
@@ -535,49 +465,111 @@
 
 
 
+    <!-- Anki views -->
+    <section class="view" id="view-anki" hidden>
+      <div class="head-row"><button class="back" id="ankiBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki</h2><button class="mini" id="ankiNewCard" title="Новая карточка"><i data-lucide="plus"></i></button></div>
+      <div style="padding:0 16px 12px"><button id="ankiMigrateBtn" class="btn">Перенести Anki в облачные таблицы (один раз)</button></div>
+      <div id="ankiDeckList" class="anki-deck-list"></div>
+    </section>
+    <section class="view" id="view-deck-settings" hidden>
+      <div class="head-row"><button class="back" id="deckSettingsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Настройки колоды</h2></div>
+      <div id="deckSettingsBox" class="scroll-area"></div>
+    </section>
+    <section class="view" id="view-card-browser" hidden>
+      <div class="head-row"><button class="back" id="browserBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Browser</h2></div>
+      <div class="search-wrap" style="margin-bottom:12px"><i data-lucide="search"></i><input type="text" id="browserSearch" placeholder="Поиск по карточкам и транскриптам..."></div>
+      <div class="chip-row" id="browserMaturityRow">
+        <button class="chip on" data-m="">Все</button>
+        <button class="chip" data-m="learning">Изучение</button>
+        <button class="chip" data-m="mature">Закреплено</button>
+      </div>
+      <div class="chip-row" id="browserDueRow">
+        <button class="chip on" data-d="">Любой срок</button>
+        <button class="chip" data-d="overdue">Просрочено</button>
+        <button class="chip" data-d="today">Сегодня</button>
+        <button class="chip" data-d="tomorrow">Завтра</button>
+        <button class="chip" data-d="week">Неделя</button>
+        <button class="chip" data-d="month">Месяц</button>
+      </div>
+      <div id="browserTagRow" style="padding:0 0 8px"></div>
+      <div id="browserList" class="scroll-area"></div>
+    </section>
+    <section class="view" id="view-tag-manager" hidden>
+      <div class="head-row"><button class="back" id="tagManagerBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Теги</h2></div>
+      <div id="tagManagerList" class="scroll-area"></div>
+    </section>
+    <section class="view" id="view-occlusion-editor" hidden>
+      <div class="head-row"><button class="back" id="occlusionBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Image Occlusion</h2></div>
+      <div id="occlusionCanvasWrap" class="scroll-area"></div>
+    </section>
+    <section class="view" id="view-anki-analytics" hidden>
+      <div class="head-row"><button class="back" id="ankiAnalyticsBack"><i data-lucide="arrow-left"></i>Назад</button><h2>Anki · Аналитика</h2></div>
+      <div id="ankiAnalyticsBox" class="scroll-area"></div>
+    </section>
+
+    <!-- Anki study overlay -->
+    <div class="overlay" id="ankiStudyOverlay">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-head"><h2 id="ankiStudyDeckName">Повторение</h2><button class="icon-btn" id="ankiStudyClose"><i data-lucide="x"></i></button></div>
+        <div id="ankiStudyBody"></div>
+      </div>
+    </div>
+
+    <!-- Card Editor overlay -->
+    <div class="overlay" id="ankiCardOverlay">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:520px">
+        <div class="modal-head"><h2 id="ankiCardTitle">Новая карточка</h2><button class="icon-btn" id="ankiCardClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+        <div class="field"><label for="ankiDeckSelect">Колода</label><select id="ankiDeckSelect"></select></div>
+        <div class="field">
+          <label>Тип карточки</label>
+          <div class="type-chip-row" id="ankiTypeRow">
+            <button type="button" class="type-chip on" data-type="basic">Обычная</button>
+            <button type="button" class="type-chip" data-type="cloze">С пропусками</button>
+            <button type="button" class="type-chip" data-type="image_occlusion">Скрытые области на фото</button>
+          </div>
+          <div class="hint" id="ankiTypeDescription" style="margin-top:6px"></div>
+        </div>
+        <div class="field"><label for="ankiFrontInput">Вопрос (лицо карточки)</label><textarea class="anki-input" id="ankiFrontInput" placeholder="О чём спросить себя…" style="min-height:70px"></textarea></div>
+        <div class="anki-btn-row">
+          <button type="button" class="btn" id="ankiAiFillBtn"><i data-lucide="sparkle"></i>AI Auto-Fill</button>
+        </div>
+        <div class="field"><label for="ankiBackInput" id="ankiBackLabel">Ответ (оборот карточки)</label><textarea class="anki-input" id="ankiBackInput" placeholder="Ответ / цитата / инсайт…" style="min-height:90px"></textarea></div>
+        <div id="ankiClozeHint" class="hint" hidden>Выдели часть текста в поле ответа, чтобы обернуть её в пропуск:<br><button type="button" class="btn" id="ankiClozeWrapBtn" style="margin-top:8px"><i data-lucide="square-check"></i>Обернуть выделенное в {{c1::…}}</button></div>
+        <div class="field">
+          <label>Медиа</label>
+          <div id="ankiMediaHint" class="hint">Сначала сохрани карточку — после этого можно будет прикрепить фото и аудио.</div>
+          <div class="anki-btn-row" style="margin-top:6px">
+            <button type="button" class="btn" id="ankiPhotoBtn" disabled><i data-lucide="image"></i>Фото</button>
+            <input type="file" id="ankiPhotoInput" accept="image/*" hidden>
+            <button type="button" class="btn" id="ankiAudioBtn" disabled><i data-lucide="mic"></i>Записать аудио</button>
+            <button type="button" class="btn" id="ankiOcclusionBtn" hidden><i data-lucide="image"></i>Разметить маски</button>
+          </div>
+          <div id="ankiMediaList" style="margin-top:8px"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="ankiCardSave" style="flex:1"><i data-lucide="check"></i>Сохранить</button>
+          <button class="btn" id="ankiCardSaveNext" style="flex:1"><i data-lucide="plus"></i>И добавить ещё</button>
+          <button class="btn btn-clear" id="ankiCardDelete" style="flex:0 0 auto" hidden><i data-lucide="trash-2"></i></button>
+        </div>
+      </div>
+    </div>
+
+
 <!-- SETTINGS -->
 <div class="overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-head"><h2><i data-lucide="settings-2"></i>Настройки</h2><button class="icon-btn" id="closeSettings" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
 <div class="tabs"><button class="tab-btn active" data-tab="api">Синхро</button><button class="tab-btn" data-tab="main">Основное</button><button class="tab-btn" data-tab="iface">Интерфейс</button><button class="tab-btn" data-tab="anki">Данные</button></div>
-    <div class="sgroup" data-grp="api"><div class="sec-title">Синхронизация Supabase</div>
-    <div class="field">
-      <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
-      <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
-      <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
-      <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
-        <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
-      </div>
-      <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
-      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div>
-      <div id="sbCheck" class="guide-check"></div>
-      <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
-    </div></div>
     <div class="sgroup" data-grp="api"><div class="sec-title">Провайдер ИИ</div>
     <div class="field"><label for="provider"><i data-lucide="sparkle"></i>Провайдер ИИ</label><select id="provider"><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter (много моделей)</option><option value="ollama">Ollama (локально)</option></select><div class="hint">OpenRouter — быстрые бесплатные модели по одному ключу. Ollama — локально на ПК (нужен запущенный сервер).</div></div>
     <div class="field"><label for="apikey" style="display:flex;align-items:center;justify-content:space-between">Gemini API Key<button type="button" class="link-btn guide-btn" data-guide="gemini">как настроить</button></label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div><div class="status-row"><span class="status" id="gemStatus"><span class="sd"></span>не проверено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn" id="provDiag">Диагностика</button><button type="button" class="link-btn" id="checkGem">Проверить</button></div></div><div id="provCheck" class="guide-check"></div></div>
-    <div class="field">
-      <label>Зашифрованная копия ключа в облаке</label>
-      <div class="hint">Позволяет забрать ключ на другом устройстве, введя только пароль — не сам ключ. Пароль нигде не хранится: если забудешь его, придётся ввести ключ заново.</div>
-      <div class="status-row"><span class="status" id="secretStatus"><span class="sd"></span>проверяю…</span></div>
-      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <button type="button" class="link-btn" id="secretEncryptBtn">Зашифровать и сохранить в облако</button>
-        <button type="button" class="link-btn" id="secretDecryptBtn">Забрать ключ с другого устройства</button>
-      </div>
-    </div>
     <div class="field"><label for="model">Модель Gemini</label><select id="model"><option value="gemini-2.5-flash">gemini-2.5-flash</option><option value="gemini-2.5-pro">gemini-2.5-pro</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select></div>
     <div class="field prov prov-openrouter" hidden><label for="orKey" style="display:flex;align-items:center;justify-content:space-between">OpenRouter API key<button type="button" class="link-btn guide-btn" data-guide="openrouter">как настроить</button></label><input type="password" id="orKey" placeholder="sk-or-..." autocomplete="off"><input type="text" id="orModel" placeholder="meta-llama/llama-3.3-70b-instruct:free" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Бесплатные модели помечены :free. Ключ — openrouter.ai/keys. Читает страницы по ссылкам через r.jina.ai.</div></div>
-    <div class="field prov prov-ollama" hidden><label for="ollamaUrl">Ollama URL</label><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false"><input type="text" id="ollamaModel" placeholder="llama3.1" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Запусти Ollama с OLLAMA_ORIGINS=* . С https-страницы к http-localhost браузер может блокировать запрос.</div></div>
-    </div></div><!-- /sgroup Провайдер ИИ -->
+    <div class="field prov prov-ollama" hidden><label for="ollamaUrl">Ollama URL</label><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false"><input type="text" id="ollamaModel" placeholder="llama3.1" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Запусти Ollama с OLLAMA_ORIGINS=* . С https-страницы к http-localhost браузер может блокировать запрос.</div></div></div>
     <div class="sgroup" data-grp="iface" style="display:none"><div class="sec-title">Внешний вид</div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
-    <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div>
-    </div>
-    <div id="themeSettingsBox" data-grp="iface" style="display:none"></div>
+    <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div></div>
     
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
@@ -593,7 +585,21 @@
       <input type="text" id="studyUrl" placeholder="URL-шаблон: https://.../?q={q}" autocomplete="off" spellcheck="false" style="margin-top:8px">
       <div class="hint">{q} — готовый запрос со ссылкой, {url} — только ссылка. Появится в меню «Изучить» рядом с Perplexity / ChatGPT / Claude / Gemini / Grok.</div>
     </div></div>
-    <div id="sbCheck" class="guide-check"></div>
+    <div class="sgroup" data-grp="api"><div class="sec-title">Синхронизация</div>
+    <div class="field">
+      <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
+      <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
+      <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
+      <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
+        <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
+      </div>
+      <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
+      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div><div id="sbCheck" class="guide-check"></div>
+      <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
+    </div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Захват и улов</div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="clearAfter"><span class="track"></span></span>Удалять улов после разбора</label><div class="hint">Если выключено — записи и ссылки остаются в улове после вечернего разбора.</div></div>
     <div class="field"><label style="display:flex;align-items:center;gap:10px;margin-bottom:0"><span class="switch"><input type="checkbox" id="autoClip"><span class="track"></span></span>Читать буфер обмена при входе</label><div class="hint">При открытии приложения предложит вставить ссылку/текст из буфера. Браузер может запросить разрешение.</div></div>
@@ -635,18 +641,12 @@
       <label><i data-lucide="flask-conical"></i>Диагностика</label>
       <a href="e2e-test.html" target="_blank" rel="noopener" class="btn" style="width:100%;display:inline-flex"><i data-lucide="flask-conical"></i>Запустить E2E-тест приложения</a>
       <div class="hint">Открывает отдельную страницу с автоматической проверкой ключевых сценариев (улов, разбор, задачи, закладки, архив, поиск). Тестовые данные изолированы от реальных.</div>
-    </div>
+    </div></div>
+            <div id="themeSettingsBox" data-grp="iface" style="display:none"></div>
+    <div class="sgroup" data-grp="iface" style="display:none"><div class="sec-title">Порядок меню</div>
     <div class="field">
-      <label><i data-lucide="check-circle"></i>Полный бэкап (вместе с Anki)</label>
-      <button type="button" class="btn" id="fullBackupBtn" style="width:100%"><i data-lucide="download"></i>Скачать полный бэкап .json</button>
-      <div class="hint" id="lastBackupHint"></div>
-      <label style="margin-top:10px">Напоминать о бэкапе</label>
-      <select id="backupReminderSelect">
-        <option value="0">Не напоминать</option>
-        <option value="7">Раз в неделю</option>
-        <option value="14">Раз в 2 недели</option>
-        <option value="30">Раз в месяц</option>
-      </select>
+      <label>Перетащи пункты. Выше разделителя — первыми в «Ещё», ниже — обычный порядок.</label>
+      <div id="menuOrderList" style="margin-top:10px"></div>
     </div></div>
     <div class="sgroup" data-grp="anki" style="display:none"><div class="sec-title">Импорт карточек из CSV</div>
     <div class="field">
@@ -658,11 +658,6 @@
       <div id="csvPreview" class="hint" style="margin-top:10px"></div>
       <button type="button" class="btn btn-primary" id="csvImportGo" style="width:100%;margin-top:10px" hidden><i data-lucide="check"></i>Импортировать</button>
     </div>
-    </div>
-            <div class="sgroup" data-grp="iface" style="display:none"><div class="sec-title">Порядок меню</div>
-    <div class="field">
-      <label>Перетащи пункты. Выше разделителя — основное меню, ниже — «Ещё».</label>
-      <div id="menuOrderList" style="margin-top:10px"></div>
     </div>
     <button class="btn btn-primary" id="saveSettings" style="width:100%"><i data-lucide="check"></i>Сохранить</button>
     <div class="ver-line" id="verLine"></div>
@@ -772,7 +767,5 @@
 <script src="nc-parsers.js"></script>
 <script src="nc-ai.js"></script>
 <script src="neurocatch.js"></script>
-<script type="module" src="anki-data.js"></script>
-<script type="module" src="anki-ui.js"></script>
 </body>
 </html>
