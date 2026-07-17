@@ -1587,6 +1587,7 @@ async function renderAnkiDeckList(){
       <div class="anki-deck-acts">
         <button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button>
         <button class="mini anki-deck-addsub" data-id="${d.id}" title="Добавить вложенную колоду"><i data-lucide="plus"></i></button>
+        <button class="mini anki-deck-move" data-id="${d.id}" title="Переместить в другую колоду"><i data-lucide="folder"></i></button>
         <button class="mini anki-deck-settings" data-id="${d.id}" title="Настройки колоды"><i data-lucide="settings"></i></button>
         <button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button>
         <button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button>
@@ -1601,6 +1602,22 @@ async function renderAnkiDeckList(){
   box.querySelectorAll('.anki-deck-addsub').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const nm=prompt('Название вложенной колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim(),{parentDeckId:b.dataset.id});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
   box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openCardBrowser(b.dataset.id);}));
   box.querySelectorAll('.anki-deck-settings').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openDeckSettings(b.dataset.id);}));
+  box.querySelectorAll('.anki-deck-move').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;
+    // Строим список возможных родителей (все колоды кроме самой себя и её потомков)
+    function descendants(id){const ch=decks.filter(x=>x.parent_deck_id===id);return [id,...ch.flatMap(c=>descendants(c.id))];}
+    const excluded=new Set(descendants(d.id));
+    const candidates=decks.filter(x=>!excluded.has(x.id));
+    const options=['— корневая колода (без родителя)',...candidates.map(x=>x.name)];
+    const choice=prompt('Переместить «'+d.name+'» внутрь:\n'+options.map((o,i)=>`${i}. ${o}`).join('\n')+'\n\nВведи номер:');
+    if(choice===null)return;
+    const idx=+choice;
+    if(isNaN(idx)||idx<0||idx>candidates.length){toast('Неверный номер',true);return;}
+    const newParentId=idx===0?null:candidates[idx-1].id;
+    try{await window.AnkiData.updateDeck(d.id,{parent_deck_id:newParentId});renderAnkiDeckList();toast('Колода перемещена');}
+    catch(err){toast('Ошибка: '+(err.message||err),true);}
+  }));
   box.querySelectorAll('.anki-cnt').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window._browserMaturity=el.dataset.m||null;window.AnkiUI.openCardBrowser(el.dataset.deck);}));
   box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(!confirm('Удалить колоду и все её карточки (включая вложенные)?'))return;try{await window.AnkiData.deleteDeck(b.dataset.id);renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}));
   const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',async()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim());renderAnkiDeckList();}catch(e){toast('Ошибка: '+(e.message||e),true);}}});
