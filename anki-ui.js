@@ -616,10 +616,25 @@ async function renderMediaList() {
   box.innerHTML = editorState.mediaRefs.map((m, i) => `
     <div class="q-item" data-i="${i}" style="padding:8px 12px">
       ${m.kind === 'image' ? `<img class="media-thumb" id="mediaThumb${i}" alt="">` : '<span style="font-size:20px">🎙️</span>'}
-      <div style="flex:1;min-width:0" class="q-text">${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : ''}</div>
+      <div style="flex:1;min-width:0" class="q-text">${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : (m.kind === 'audio' ? '<div class="q-time">без транскрипта</div>' : '')}</div>
+      ${m.kind === 'audio' ? `<button class="mini media-retranscribe" data-mi="${i}" title="${m.transcript ? 'Перетранскрибировать' : 'Транскрибировать'}"><i data-lucide="refresh-cw"></i></button>` : ''}
       <button class="q-del" data-mi="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>
     </div>`).join('');
   lucide.createIcons();
+  box.querySelectorAll('.media-retranscribe').forEach(b => b.addEventListener('click', async () => {
+    const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m || m.kind !== 'audio') return;
+    if (typeof window.hasLLM !== 'function' || !window.hasLLM()) { toast('Сначала настрой провайдера ИИ (транскрипция работает только с Gemini)', true); return; }
+    toast('Транскрибирую…');
+    try {
+      const url = await window.AnkiData.mediaUrl(m.path);
+      const blob = await (await fetch(url)).blob();
+      const transcript = await window.llmComplete('Сделай точную текстовую транскрипцию приложенного аудио на русском языке, только текст, без пояснений и вводных фраз.', blob);
+      editorState.mediaRefs[i] = { ...m, transcript: transcript || '' };
+      await window.AnkiData.updateCard(editorState.cardId, { media_refs: editorState.mediaRefs });
+      renderMediaList();
+      toast(transcript ? 'Транскрипция готова' : 'ИИ вернул пустой ответ — попробуй ещё раз');
+    } catch (e) { toast('Ошибка транскрипции: ' + (e.message || e), true); }
+  }));
   box.querySelectorAll('.q-del').forEach(b => b.addEventListener('click', async () => {
     const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m) return;
     try {
