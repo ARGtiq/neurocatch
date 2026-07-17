@@ -1772,22 +1772,32 @@ function renderDashboard(){
   const maxN=Math.max(1,...days.map(x=>x.n));
   const tagFreq={};rh.forEach(h=>(h.tags||[]).forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1;}));
   const tags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,24);const maxT=Math.max(1,...tags.map(t=>t[1]));
-  const card=(n,l,extra)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</div>`;
+  const card=(n,l,extra,action)=>`<button class="stat${action?' stat-link':''}" ${action?`data-action="${action}"`:''}><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</button>`;
   box.innerHTML=`
     <div class="dash-grid">
-      ${card(reportsTotal,'разборов')}
-      ${card('🔥 '+streak,'дней подряд')}
-      ${card(tDone+'/'+tTotal,'задач закрыто','<div class="stat-bar"><span style="width:'+tPct+'%"></span></div>')}
-      ${card(habits.length,'привычек · 🔥'+habBest)}
-      ${card(noteCount,'заметок')}
-      ${card(bookmarks.length,'закладок')}
-      ${card(catches.length,'в улове')}
-      ${card((()=>{let o=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{if(!t.done&&t.due&&t.due<Date.now())o++;}));return o;})(),'просрочено')}
-      ${card(habWeek,'отметок за неделю')}
+      ${card(reportsTotal,'разборов','','history')}
+      ${card('🔥 '+streak,'дней подряд','','history')}
+      ${card(tDone+'/'+tTotal,'задач закрыто','<div class="stat-bar"><span style="width:'+tPct+'%"></span></div>','tasks')}
+      ${card(habits.length,'привычек · 🔥'+habBest,'','habits')}
+      ${card(noteCount,'заметок','','notes')}
+      ${card(bookmarks.length,'закладок','','bookmarks')}
+      ${card(catches.length,'в улове','','queue')}
+      ${card((()=>{let o=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{if(!t.done&&t.due&&t.due<Date.now())o++;}));return o;})(),'просрочено','','overdue')}
+      ${card(habWeek,'отметок за неделю','','habits')}
     </div>
     <div class="dash-sec"><h3>Активность · 14 дней</h3><div class="act-chart">${days.map(x=>`<div class="act-col"><div class="act-bar${x.n?'':' zero'}" style="height:${x.n?Math.max(8,Math.round(x.n/maxN*100)):3}%" title="${x.n} разбор(ов)"></div><span class="act-d">${x.d.getDate()}</span></div>`).join('')}</div></div>
     <div class="dash-sec"><h3>Облако тегов</h3><div class="tag-cloud">${tags.length?tags.map(([t,n])=>`<button class="tag-cloud-item" data-t="${attr(t)}" style="font-size:${(0.85+n/maxT*0.85).toFixed(2)}rem;opacity:${(0.6+n/maxT*0.4).toFixed(2)}">${esc(t)}<span class="tcn">${n}</span></button>`).join(''):'<span class="empty">Тегов пока нет</span>'}</div></div>`;
   box.querySelectorAll('.tag-cloud-item').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=b.dataset.t;renderNotes();show($('#view-notes'));}));
+  box.querySelectorAll('.stat-link').forEach(btn=>btn.addEventListener('click',()=>{
+    const a=btn.dataset.action;
+    if(a==='history'){filterDate=null;searchQuery='';tagFilter=null;showArchived=false;renderHistory();show($('#view-history'));}
+    else if(a==='tasks'){show($('#view-tasks'));setSubTab('tasks');}
+    else if(a==='habits'){show($('#view-tasks'));setSubTab('habits');}
+    else if(a==='notes'){try{renderNotes();}catch(e){}show($('#view-notes'));}
+    else if(a==='bookmarks'){renderBookmarks();show($('#view-bookmarks'));}
+    else if(a==='queue'){try{renderQueue();}catch(e){}show($('#view-queue'));}
+    else if(a==='overdue'){show($('#view-tasks'));setSubTab('tasks');}
+  }));
 }
 function renderActionBar(mode){
   const bar=$('#actionBar');
@@ -3116,8 +3126,21 @@ function setTab(t){
       if(sbGrp){
         const configured=settings.sbUrl&&settings.sbEmail;
         if(configured&&!sbGrp.querySelector('details')){
-          const inner=sbGrp.querySelector('.field');
-          if(inner){const det=document.createElement('details');const sum=document.createElement('summary');sum.textContent='Подключено к '+settings.sbEmail+' — нажми чтобы изменить';det.appendChild(sum);while(inner.firstChild)det.appendChild(inner.firstChild);inner.appendChild(det);}
+          // Прячем только поля ввода (URL, ключ, email) и кнопки login — статус и автосинк остаются
+          const inputs=[...sbGrp.querySelectorAll('input[id="sbUrl"],input[id="sbKey"],input[id="sbEmail"]')];
+          const loginBtns=sbGrp.querySelector('#sbLogin')?.closest('div');
+          const logoutBtn=sbGrp.querySelector('#sbLogout');
+          if(inputs.length){
+            const det=document.createElement('details');
+            const sum=document.createElement('summary');
+            sum.style.cssText='cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0';
+            sum.textContent='▶ Подключено: '+settings.sbEmail+' — изменить настройки';
+            det.appendChild(sum);
+            inputs.forEach(el=>det.appendChild(el.parentNode||el));
+            if(loginBtns)det.appendChild(loginBtns);
+            if(logoutBtn)det.appendChild(logoutBtn);
+            sbGrp.querySelector('.field').after(det);
+          }
         }
       }
     }catch(e){}
@@ -3150,8 +3173,8 @@ const MORE_TILES=[
 ];
 function renderMoreTiles(){
   const box=$('#moreTiles');if(!box)return;
-  const {order,cutoff}=loadMenuConfig();
-  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean).slice(cutoff); // «Ещё» = всё после cutoff
+  const {order}=loadMenuConfig();
+  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean); // все плитки, в заданном порядке
   box.innerHTML=tiles.map((t,i)=>{
     let n=0;try{n=t[2]?t[2]():0;}catch(e){n=0;}
     return `<button class="more-tile" data-i="${i}"><i data-lucide="${t[1]}"></i><span class="more-tile-label">${esc(t[0])}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
@@ -3160,7 +3183,7 @@ function renderMoreTiles(){
   box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=tiles[+b.dataset.i];if(t&&t[3])t[3]();}));
 }
 const DEFAULT_MENU_ORDER=MORE_TILES.map((_,i)=>i);
-const MAIN_MENU_CUTOFF_DEFAULT=4; // первые 4 пунктов показываются в основном меню (в topbar/nav)
+const MAIN_MENU_CUTOFF_DEFAULT=0; // 0 = все пункты в «Ещё»; разделитель только расставляет приоритет внутри списка
 function loadMenuConfig(){
   try{const s=JSON.parse(localStorage.getItem('neurocatch_menu_cfg')||'{}');return {order:s.order||[...DEFAULT_MENU_ORDER],cutoff:s.cutoff!=null?s.cutoff:MAIN_MENU_CUTOFF_DEFAULT};}catch(e){return {order:[...DEFAULT_MENU_ORDER],cutoff:MAIN_MENU_CUTOFF_DEFAULT};}
 }
