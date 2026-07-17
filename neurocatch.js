@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v65';const ANKI_X_VER='0.6.0';
+const APP_VERSION='2025.7-06';const SW_VER='6.5';const ANKI_X_VER='0.6.0';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1688,6 +1688,14 @@ async function ankiRevealAnswer(){
 async function openAnkiCardEditor(opts){
   opts=opts||{};ankiEditingId=opts.id||null;
   window._ankiReturnView=document.querySelector('.view:not([hidden])');
+  // Закрываем все открытые оверлеи чтобы #ankiCardOverlay не оказался под ними.
+  // Запоминаем их для восстановления после закрытия редактора карточки.
+  window._ankiPausedOverlays=[];
+  document.querySelectorAll('.overlay.open').forEach(ov=>{
+    if(ov.id==='ankiCardOverlay')return; // себя не трогаем
+    window._ankiPausedOverlays.push(ov.id);
+    ov.classList.remove('open');
+  });
   let decks=[];
   try{ decks = await window.AnkiData.listDecks(); }catch(e){ toast('Ошибка загрузки колод',true); }
   const sel=$('#ankiDeckSelect');if(sel)sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join('');
@@ -1700,8 +1708,16 @@ async function openAnkiCardEditor(opts){
   try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, opts.media_refs||[], opts.card_type||'basic'); }catch(e){}
   setTimeout(()=>{if(bi)bi.focus();},50);
 }
-$('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',()=>$('#ankiCardOverlay').classList.remove('open'));
-$('#ankiCardOverlay')&&$('#ankiCardOverlay').addEventListener('click',e=>{if(e.target===$('#ankiCardOverlay'))$('#ankiCardOverlay').classList.remove('open');});
+function closeAnkiCardEditor(){
+  closeAnkiCardEditor();
+  // Восстанавливаем оверлеи, которые были временно скрыты при открытии редактора
+  (window._ankiPausedOverlays||[]).forEach(id=>{
+    const ov=document.getElementById(id);if(ov)ov.classList.add('open');
+  });
+  window._ankiPausedOverlays=[];
+}
+$('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',closeAnkiCardEditor);
+$('#ankiCardOverlay')&&$('#ankiCardOverlay').addEventListener('click',e=>{if(e.target===$('#ankiCardOverlay'))closeAnkiCardEditor();});
 $('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
   const back=$('#ankiBackInput').value.trim();
   if(!back){toast('Заполни ответ/оборот карточки',true);return;}
@@ -1711,7 +1727,7 @@ $('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
   try{
     if(ankiEditingId){
       await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType});
-      $('#ankiCardOverlay').classList.remove('open');
+      closeAnkiCardEditor();
       toast('Карточка обновлена');
     }else{
       const created = await window.AnkiData.createCard(deckId,{front,back,card_type:cardType});
@@ -1729,7 +1745,7 @@ $('#ankiCardDelete')&&$('#ankiCardDelete').addEventListener('click',async()=>{
   if(!ankiEditingId)return;if(!confirm('Удалить карточку?'))return;
   try{ await window.AnkiData.deleteCards([ankiEditingId]); }
   catch(e){ toast('Ошибка удаления: '+(e.message||e),true); return; }
-  $('#ankiCardOverlay').classList.remove('open');
+  closeAnkiCardEditor();
   toast('Карточка удалена');renderAnkiDeckList();
 });
 $('#ankiCardSaveNext')&&$('#ankiCardSaveNext').addEventListener('click',async()=>{
