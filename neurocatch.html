@@ -544,23 +544,16 @@
     <div class="field">
       <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
       <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
-      <details id="sbDetails">
-        <summary id="sbSummary" style="cursor:pointer;color:var(--accent);font-size:14px;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px">
-          <i data-lucide="settings" style="width:14px;height:14px"></i>
-          <span id="sbSummaryText">Настройки подключения</span>
-        </summary>
-        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-          <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false">
-          <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <div style="display:flex;gap:8px">
-            <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
-            <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
-          </div>
-          <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%" hidden><i data-lucide="x"></i>Выйти из облака</button>
-        </div>
-      </details>
-      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div><div id="sbCheck" class="guide-check"></div>
+      <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
+      <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
+        <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
+      </div>
+      <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
+      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div>
+      <div id="sbCheck" class="guide-check"></div>
       <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
     </div></div>
     <div class="sgroup" data-grp="api"><div class="sec-title">Провайдер ИИ</div>
