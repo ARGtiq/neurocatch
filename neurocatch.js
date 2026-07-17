@@ -658,7 +658,7 @@ function renderHighlightsLibrary(){
     return `<div class="hl-lib-item${sel?' sel':''}" data-fid="${attr(f.id)}">
       ${fragSelectMode?`<span class="hl-lib-check"><i data-lucide="${sel?'check-square':'square'}"></i></span>`:''}
       <div class="hl-lib-main"><div class="hl-lib-text">${esc(f.text)}</div><div class="hl-lib-src">${f.kind==='insight'?'💡 ':'✂️ '}${esc(f.sourceTitle)}</div></div>
-      ${!fragSelectMode?`<button class="mini hl-lib-del" data-fid="${attr(f.id)}" title="Удалить"><i data-lucide="trash-2"></i></button>`:''}
+      ${!fragSelectMode?`<button class="mini hl-lib-goto" data-fid="${attr(f.id)}" title="Перейти к источнику"><i data-lucide="external-link"></i></button><button class="mini hl-lib-del" data-fid="${attr(f.id)}" title="Удалить"><i data-lucide="trash-2"></i></button>`:''}
     </div>`;
   }).join('');
   lucide.createIcons();
@@ -667,6 +667,16 @@ function renderHighlightsLibrary(){
       const f=frags.find(x=>x.id===el.dataset.fid);if(f)toggleFragSelected(f);renderHighlightsLibrary();
     }));
   }else{
+    box.querySelectorAll('.hl-lib-goto').forEach(b=>b.addEventListener('click',e=>{
+      e.stopPropagation();
+      const f=frags.find(x=>x.id===b.dataset.fid);if(!f)return;
+      if(f.kind==='insight'&&f.reportId){ openReport(f.reportId); }
+      else if(f.kind==='highlight'&&f.noteId){
+        const note=buildNotes().find(n=>n.id===f.noteId);
+        if(note){ openNoteDetail(note); }
+        else toast('Исходная заметка не найдена',true);
+      }
+    }));
     box.querySelectorAll('.hl-lib-del').forEach(b=>b.addEventListener('click',e=>{
       e.stopPropagation();const f=frags.find(x=>x.id===b.dataset.fid);if(f){fragRemoveFromSource(f);renderHighlightsLibrary();}
     }));
