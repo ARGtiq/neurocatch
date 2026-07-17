@@ -614,13 +614,48 @@ async function renderMediaList() {
   const box = $('#ankiMediaList'); if (!box) return;
   if (!editorState.mediaRefs.length) { box.innerHTML = ''; return; }
   box.innerHTML = editorState.mediaRefs.map((m, i) => `
-    <div class="q-item" data-i="${i}" style="padding:8px 12px">
-      ${m.kind === 'image' ? `<img class="media-thumb" id="mediaThumb${i}" alt="">` : '<span style="font-size:20px">🎙️</span>'}
+    <div class="q-item media-item" data-i="${i}" style="padding:8px 12px;flex-wrap:wrap">
+      ${m.kind === 'image'
+        ? `<img class="media-thumb media-preview-btn" id="mediaThumb${i}" data-mi="${i}" alt="" style="cursor:zoom-in" title="Нажми для просмотра">`
+        : '<span style="font-size:20px;flex-shrink:0">🎙️</span>'}
       <div style="flex:1;min-width:0" class="q-text">${esc(m.filename || m.path.split('/').pop())}${m.transcript ? '<div class="q-time">' + esc(m.transcript.slice(0, 80)) + '</div>' : (m.kind === 'audio' ? '<div class="q-time">без транскрипта</div>' : '')}</div>
-      ${m.kind === 'audio' ? `<button class="mini media-retranscribe" data-mi="${i}" title="${m.transcript ? 'Перетранскрибировать' : 'Транскрибировать'}"><i data-lucide="refresh-cw"></i></button>` : ''}
-      <button class="q-del" data-mi="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        ${m.kind === 'audio' ? `<button class="mini media-play" data-mi="${i}" title="Воспроизвести/остановить"><i data-lucide="repeat"></i></button>` : ''}
+        ${m.kind === 'audio' ? `<button class="mini media-retranscribe" data-mi="${i}" title="${m.transcript ? 'Перетранскрибировать' : 'Транскрибировать'}"><i data-lucide="refresh-cw"></i></button>` : ''}
+        <button class="mini q-del" data-mi="${i}" aria-label="Удалить"><i data-lucide="x"></i></button>
+      </div>
+      ${m.kind === 'audio' ? `<div class="media-player-wrap" id="mediaPlayer${i}" style="width:100%;margin-top:6px;display:none"><audio controls style="width:100%;border-radius:8px" id="mediaAudio${i}"></audio></div>` : ''}
     </div>`).join('');
   lucide.createIcons();
+
+  // -------- Воспроизведение аудио --------
+  box.querySelectorAll('.media-play').forEach(b => b.addEventListener('click', async () => {
+    const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m) return;
+    const wrap = document.getElementById('mediaPlayer' + i);
+    const audio = document.getElementById('mediaAudio' + i);
+    if (!wrap || !audio) return;
+    if (wrap.style.display !== 'none') { wrap.style.display = 'none'; audio.pause(); return; }
+    if (!audio.src) {
+      try { audio.src = await window.AnkiData.mediaUrl(m.path); }
+      catch (e) { toast('Ошибка загрузки аудио: ' + (e.message || e), true); return; }
+    }
+    wrap.style.display = 'block';
+    audio.play().catch(() => {});
+  }));
+
+  // -------- Просмотр изображения --------
+  box.querySelectorAll('.media-preview-btn').forEach(img => img.addEventListener('click', async () => {
+    const i = +img.dataset.mi; const m = editorState.mediaRefs[i]; if (!m) return;
+    const url = img.src || (img.src = await window.AnkiData.mediaUrl(m.path).catch(() => ''));
+    if (!url) return;
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+    ov.innerHTML = `<img src="${attr(url)}" style="max-width:95vw;max-height:90vh;border-radius:12px;object-fit:contain">`;
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  }));
+
+  // -------- Транскрипция --------
   box.querySelectorAll('.media-retranscribe').forEach(b => b.addEventListener('click', async () => {
     const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m || m.kind !== 'audio') return;
     if (typeof window.hasLLM !== 'function' || !window.hasLLM()) { toast('Сначала настрой провайдера ИИ (транскрипция работает только с Gemini)', true); return; }
@@ -635,6 +670,8 @@ async function renderMediaList() {
       toast(transcript ? 'Транскрипция готова' : 'ИИ вернул пустой ответ — попробуй ещё раз');
     } catch (e) { toast('Ошибка транскрипции: ' + (e.message || e), true); }
   }));
+
+  // -------- Удаление --------
   box.querySelectorAll('.q-del').forEach(b => b.addEventListener('click', async () => {
     const i = +b.dataset.mi; const m = editorState.mediaRefs[i]; if (!m) return;
     try {
@@ -644,7 +681,8 @@ async function renderMediaList() {
       renderMediaList(); updateTypeUI();
     } catch (e) { toast('Ошибка удаления: ' + (e.message || e), true); }
   }));
-  // миниатюры подгружаем отдельно (подписанные ссылки — асинхронно), не блокируя отрисовку списка
+
+  // миниатюры изображений — подгружаем URL асинхронно
   editorState.mediaRefs.forEach(async (m, i) => {
     if (m.kind !== 'image') return;
     const img = document.getElementById('mediaThumb' + i); if (!img) return;
