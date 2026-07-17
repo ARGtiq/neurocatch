@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='v65';const ANKI_X_VER='0.5.0';
+const APP_VERSION='2025.7-06';const SW_VER='v65';const ANKI_X_VER='0.6.0';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -1568,7 +1568,7 @@ async function renderAnkiDeckList(){
     const c=counts[i];
     return `<div class="anki-deck-card" data-id="${d.id}">
       <div class="anki-deck-main"><div class="anki-deck-name">${esc(d.name)}</div>
-        <div class="anki-deck-meta"><span class="cnt-new">${c.new} new</span> · <span class="cnt-learn">${c.learning} learning</span> · <span class="cnt-rev">${c.review} review</span></div></div>
+        <div class="anki-deck-meta"><span class="cnt-new anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.new} new</span> · <span class="cnt-learn anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.learning} learning</span> · <span class="cnt-rev anki-cnt" data-deck="${d.id}" data-m="mature" style="cursor:pointer" title="Открыть в Browser">${c.review} review</span></div></div>
       <div class="anki-deck-acts">
         <button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button>
         <button class="mini anki-deck-settings" data-id="${d.id}" title="Настройки колоды"><i data-lucide="settings"></i></button>
@@ -1582,6 +1582,7 @@ async function renderAnkiDeckList(){
   box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){try{await window.AnkiData.updateDeck(d.id,{name:nm.trim()});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
   box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openCardBrowser(b.dataset.id);}));
   box.querySelectorAll('.anki-deck-settings').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openDeckSettings(b.dataset.id);}));
+  box.querySelectorAll('.anki-cnt').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window._browserMaturity=el.dataset.m||null;window.AnkiUI.openCardBrowser(el.dataset.deck);}));
   box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(decks.length<=1){toast('Нужна хотя бы одна колода',true);return;}if(!confirm('Удалить колоду и все её карточки?'))return;try{await window.AnkiData.deleteDeck(b.dataset.id);renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}));
   const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',async()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim());renderAnkiDeckList();}catch(e){toast('Ошибка: '+(e.message||e),true);}}});
 }
@@ -1634,12 +1635,31 @@ async function ankiRevealAnswer(){
     </div>
     <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
   lucide.createIcons();
+  const RATING_ORDER={again:0,hard:1,good:2,easy:3};
   body.querySelectorAll('.anki-rate').forEach(b=>b.addEventListener('click',async()=>{
     const rating=b.dataset.r;
     const cardBeingRated=ankiCurCard;
     body.querySelectorAll('.anki-rate').forEach(x=>x.disabled=true);
+    const isSubCard = cardBeingRated._clozeIndex!==undefined || cardBeingRated._occlusionIndex!==undefined;
+    if(isSubCard && !cardBeingRated._isLastSub){
+      // Не последняя суб-карточка — накапливаем худший рейтинг на следующей и продвигаемся
+      if(ankiStudyQueue.length>1){
+        const next=ankiStudyQueue[1];
+        const prevWorst=next._worstRating;
+        if(!prevWorst||RATING_ORDER[rating]<RATING_ORDER[prevWorst]) next._worstRating=rating;
+      }
+      ankiStudyQueue.shift();
+      ankiNextCard();
+      renderAnkiDeckList();
+      return;
+    }
+    // Последняя суб-карточка или обычная — применяем финальный рейтинг
+    let finalRating=rating;
+    if(isSubCard&&cardBeingRated._worstRating){
+      finalRating=RATING_ORDER[cardBeingRated._worstRating]<RATING_ORDER[rating]?cardBeingRated._worstRating:rating;
+    }
     try{
-      await window.AnkiData.rateCard(cardBeingRated, ankiStudyDeck, rating, Date.now()-ankiCardShownAt);
+      await window.AnkiData.rateCard(cardBeingRated, ankiStudyDeck, finalRating, Date.now()-ankiCardShownAt);
     }catch(e){ toast('Ошибка сохранения оценки: '+(e.message||e),true); }
     ankiStudyQueue.shift();
     ankiNextCard();
@@ -1692,6 +1712,26 @@ $('#ankiCardDelete')&&$('#ankiCardDelete').addEventListener('click',async()=>{
   catch(e){ toast('Ошибка удаления: '+(e.message||e),true); return; }
   $('#ankiCardOverlay').classList.remove('open');
   toast('Карточка удалена');renderAnkiDeckList();
+});
+$('#ankiCardSaveNext')&&$('#ankiCardSaveNext').addEventListener('click',async()=>{
+  const back=$('#ankiBackInput').value.trim();
+  if(!back){toast('Заполни ответ/оборот карточки',true);return;}
+  const front=$('#ankiFrontInput').value.trim();
+  const deckId=$('#ankiDeckSelect').value;
+  const cardType=(window.AnkiUI&&window.AnkiUI.getSelectedType&&window.AnkiUI.getSelectedType())||'basic';
+  try{
+    if(ankiEditingId){ await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType}); }
+    else{ await window.AnkiData.createCard(deckId,{front,back,card_type:cardType}); }
+    // Сброс полей для новой карточки, модалка остаётся открытой
+    ankiEditingId=null;
+    const fi=$('#ankiFrontInput');if(fi)fi.value='';
+    const bi=$('#ankiBackInput');if(bi){bi.value='';setTimeout(()=>bi.focus(),50);}
+    const del=$('#ankiCardDelete');if(del)del.hidden=true;
+    $('#ankiCardTitle').textContent='Новая карточка';
+    try{ window.AnkiUI.onCardEditorOpen(null, [], cardType); }catch(e){}
+    toast('Карточка сохранена — добавляй следующую');
+    renderAnkiDeckList();
+  }catch(e){ toast('Ошибка сохранения: '+(e.message||e),true); }
 });
 $('#ankiStudyClose')&&$('#ankiStudyClose').addEventListener('click',()=>{$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();});
 $('#ankiStudyOverlay')&&$('#ankiStudyOverlay').addEventListener('click',e=>{if(e.target===$('#ankiStudyOverlay')){$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();}});

@@ -793,45 +793,63 @@ document.addEventListener('DOMContentLoaded', () => { try { wireCardEditorOnce()
 /* ============================================================
    10. РЕНДЕР КАРТОЧКИ В СЕССИИ ПОВТОРЕНИЯ — cloze/occlusion/медиа
    ============================================================ */
-function processClozeText(text, revealed) {
+function processClozeText(text, revealed, targetIndex) {
   if (!text) return '';
-  return esc(text).replace(/\{\{c(\d+)::(.*?)(?:::.*?)?\}\}/g, (m, n, content) =>
-    revealed ? `<span class="cloze-revealed">${content}</span>` : '<span class="cloze-hidden">[...]</span>'
-  );
+  // targetIndex: undefined — все вместе (старое поведение)
+  // targetIndex: N — скрываем только c-N, остальные показываем как текст
+  return esc(text).replace(/\{\{c(\d+)::(.*?)(?:::.*?)?\}\}/g, (m, n, content) => {
+    const num = +n;
+    if (targetIndex !== undefined) {
+      if (num === targetIndex) return revealed ? `<span class="cloze-revealed">${content}</span>` : '<span class="cloze-hidden">[...]</span>';
+      return content; // другие пропуски — просто текст
+    }
+    return revealed ? `<span class="cloze-revealed">${content}</span>` : '<span class="cloze-hidden">[...]</span>';
+  });
 }
-function occlusionMaskSvg(shapes) {
-  return (shapes || []).map(s => {
+function occlusionMaskSvg(shapes, onlyIndex) {
+  // onlyIndex: undefined — скрыть все маски; число — скрыть только эту
+  return (shapes || []).map((s, i) => {
+    if (onlyIndex !== undefined && i !== onlyIndex) return ''; // другие маски прозрачны
+    const fill = '#2b2b2b';
     if (s.type === 'ellipse') {
       const cx = s.coords[0] + s.coords[2] / 2, cy = s.coords[1] + s.coords[3] / 2;
-      return `<ellipse cx="${cx}" cy="${cy}" rx="${s.coords[2] / 2}" ry="${s.coords[3] / 2}" fill="#2b2b2b"></ellipse>`;
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${s.coords[2] / 2}" ry="${s.coords[3] / 2}" fill="${fill}"></ellipse>`;
     }
-    return `<rect x="${s.coords[0]}" y="${s.coords[1]}" width="${s.coords[2]}" height="${s.coords[3]}" rx="4" fill="#2b2b2b"></rect>`;
+    return `<rect x="${s.coords[0]}" y="${s.coords[1]}" width="${s.coords[2]}" height="${s.coords[3]}" rx="4" fill="${fill}"></rect>`;
   }).join('');
 }
-/**
- * Собирает HTML для вопроса (revealed=false) или ответа (revealed=true)
- * с учётом card_type, occlusion_map, media_refs. Асинхронно — картинки/аудио
- * идут через подписанные Storage-ссылки.
- */
+function subCardProgress(card) {
+  if (card._clozeIndex !== undefined) {
+    const all = [...new Set([...((card.back)||'').matchAll(/\{\{c(\d+)::/g)].map(m=>+m[1]))].sort((a,b)=>a-b);
+    const cur = all.indexOf(card._clozeIndex) + 1;
+    return `<div class="hint" style="text-align:center;margin-bottom:6px">Пропуск ${cur} из ${all.length}</div>`;
+  }
+  if (card._occlusionIndex !== undefined) {
+    const total = (card.occlusion_map || []).length;
+    return `<div class="hint" style="text-align:center;margin-bottom:6px">Маска ${card._occlusionIndex + 1} из ${total}</div>`;
+  }
+  return '';
+}
 async function renderCardFaceHTML(card, revealed) {
   const imageRef = (card.media_refs || []).find(m => m.kind === 'image');
   const audioRefs = (card.media_refs || []).filter(m => m.kind === 'audio');
-  let html = '';
+  let html = subCardProgress(card);
 
   if (card.card_type === 'image_occlusion' && imageRef) {
     try {
       const url = await window.AnkiData.mediaUrl(imageRef.path);
-      const masks = revealed ? '' : occlusionMaskSvg(card.occlusion_map);
+      const masks = revealed
+        ? '' // на ответе — все маски убраны (раскрываем)
+        : occlusionMaskSvg(card.occlusion_map, card._occlusionIndex); // скрываем только текущую
       html += `<div class="occ-study-stage"><img src="${attr(url)}" class="occ-study-img" onload="this.nextElementSibling.setAttribute('viewBox','0 0 '+this.naturalWidth+' '+this.naturalHeight)"><svg class="occ-study-svg">${masks}</svg></div>`;
     } catch (e) { html += '<div class="hint">Не удалось загрузить изображение</div>'; }
     if (card.front) html += `<div class="anki-card-text" style="margin-top:10px">${esc(card.front)}</div>`;
   } else if (card.card_type === 'cloze') {
-    html += `<div class="anki-card-text">${processClozeText(card.back, revealed)}</div>`;
+    html += `<div class="anki-card-text">${processClozeText(card.back, revealed, card._clozeIndex)}</div>`;
   } else {
     html += `<div class="anki-card-text">${esc(revealed ? (card.back || '') : (card.front || '(без вопроса)'))}</div>`;
     if (revealed && card.front && card.back) {
-      // для обычной карточки на ответе показываем и вопрос, и ответ — как раньше
-      html = `<div class="anki-card-text">${esc(card.front)}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(card.back)}</div>`;
+      html = subCardProgress(card) + `<div class="anki-card-text">${esc(card.front)}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(card.back)}</div>`;
     }
     if (revealed && imageRef) {
       try { const url = await window.AnkiData.mediaUrl(imageRef.path); html += `<img src="${attr(url)}" style="max-width:100%;border-radius:12px;margin-top:10px">`; } catch (e) {}

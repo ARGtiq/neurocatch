@@ -279,7 +279,6 @@ async function buildStudyQueue(deckId) {
   const now = new Date().toISOString();
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
-  // сколько review и new уже показано сегодня — по reviews-логу
   const { data: doneToday } = await client.from('reviews')
     .select('id, card_id, state_before')
     .eq('owner', uid).gte('reviewed_at', todayStart.toISOString());
@@ -297,8 +296,23 @@ async function buildStudyQueue(deckId) {
       .eq('suspended', false).eq('state', 'new')
       .order('created_at', { ascending: true }).limit(newLeft),
   ]);
-  // review — впереди очереди, new — подмешиваются в конец
-  return { deck, queue: [...(dueCards || []), ...(newCards || [])] };
+
+  // Разбиваем cloze/occlusion на суб-карточки: по одному пропуску/маске за раз.
+  // Каждая суб-карточка несёт _clozeIndex (номер c) или _occlusionIndex (индекс маски),
+  // _isLastSub (нужно ли фиксировать оценку в БД), _worstRating (накопитель наихудшей оценки).
+  function expand(card) {
+    if (card.card_type === 'cloze' && card.back) {
+      const nums = [...new Set([...(card.back).matchAll(/\{\{c(\d+)::/g)].map(m => +m[1]))].sort((a,b)=>a-b);
+      if (nums.length > 1) return nums.map((n, i) => ({ ...card, _clozeIndex: n, _isLastSub: i === nums.length - 1, _worstRating: null }));
+    }
+    if (card.card_type === 'image_occlusion' && (card.occlusion_map || []).length > 1) {
+      return card.occlusion_map.map((_, i) => ({ ...card, _occlusionIndex: i, _isLastSub: i === card.occlusion_map.length - 1, _worstRating: null }));
+    }
+    return [card];
+  }
+  const allCards = [...(dueCards || []), ...(newCards || [])];
+  const queue = allCards.flatMap(expand);
+  return { deck, queue };
 }
 
 /* ============================================================
