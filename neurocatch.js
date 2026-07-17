@@ -2477,44 +2477,6 @@ $('#fullBackupBtn')&&$('#fullBackupBtn').addEventListener('click',async()=>{
   toast('Полный бэкап сохранён (включая Anki)');
 });
 /* ---------- Кастомизация порядка пунктов меню ---------- */
-const DEFAULT_MENU_ORDER=MORE_TILES.map((_,i)=>i);
-const MAIN_MENU_CUTOFF_DEFAULT=4; // первые 4 пунктов показываются в основном меню (в topbar/nav)
-function loadMenuConfig(){
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_menu_cfg')||'{}');return {order:s.order||[...DEFAULT_MENU_ORDER],cutoff:s.cutoff!=null?s.cutoff:MAIN_MENU_CUTOFF_DEFAULT};}catch(e){return {order:[...DEFAULT_MENU_ORDER],cutoff:MAIN_MENU_CUTOFF_DEFAULT};}
-}
-function saveMenuConfig(cfg){localStorage.setItem('neurocatch_menu_cfg',JSON.stringify(cfg));touchLocal();}
-function renderMenuOrderList(){
-  const box=$('#menuOrderList');if(!box)return;
-  const {order,cutoff}=loadMenuConfig();
-  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean);
-  box.innerHTML='<div class="menu-order-list" id="moList">'+
-    tiles.map((t,i)=>`<div class="menu-order-item" draggable="true" data-idx="${i}" data-orig="${order[i]}">
-      <span class="menu-order-drag">⠿</span>
-      <i data-lucide="${t[1]}"></i>
-      <span>${esc(t[0])}</span>
-    </div>${i===cutoff-1?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':''}`).join('')+
-    (cutoff>=tiles.length?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':'')+'</div>';
-  lucide.createIcons();
-  // простой drag-and-drop: mousedown → mousemove → mouseup / touch
-  let dragSrc=null;
-  box.querySelectorAll('.menu-order-item').forEach(el=>{
-    el.addEventListener('dragstart',()=>{dragSrc=el;el.style.opacity='0.4';});
-    el.addEventListener('dragend',()=>{el.style.opacity='';dragSrc=null;});
-    el.addEventListener('dragover',e=>{e.preventDefault();});
-    el.addEventListener('drop',e=>{
-      e.preventDefault();if(!dragSrc||dragSrc===el)return;
-      const list=box.querySelector('#moList');const items=[...list.querySelectorAll('.menu-order-item')];
-      const from=items.indexOf(dragSrc),to=items.indexOf(el);if(from<0||to<0)return;
-      const newOrder=[...order];const[moved]=newOrder.splice(from,1);newOrder.splice(to,0,moved);
-      // cutoff корректируем по положению разделителя
-      const divEl=box.querySelector('#moDiv');
-      let newCutoff=cutoff;
-      if(divEl){const divIdx=[...list.children].indexOf(divEl);newCutoff=divIdx;}
-      saveMenuConfig({order:newOrder,cutoff:newCutoff});
-      renderMenuOrderList();renderMoreTiles();
-    });
-  });
-}
 function checkBackupReminder(){
   const days=settings.backupReminderDays||0;
   if(!days)return;
@@ -3196,6 +3158,44 @@ function renderMoreTiles(){
   }).join('');
   lucide.createIcons();
   box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=tiles[+b.dataset.i];if(t&&t[3])t[3]();}));
+}
+const DEFAULT_MENU_ORDER=MORE_TILES.map((_,i)=>i);
+const MAIN_MENU_CUTOFF_DEFAULT=4; // первые 4 пунктов показываются в основном меню (в topbar/nav)
+function loadMenuConfig(){
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_menu_cfg')||'{}');return {order:s.order||[...DEFAULT_MENU_ORDER],cutoff:s.cutoff!=null?s.cutoff:MAIN_MENU_CUTOFF_DEFAULT};}catch(e){return {order:[...DEFAULT_MENU_ORDER],cutoff:MAIN_MENU_CUTOFF_DEFAULT};}
+}
+function saveMenuConfig(cfg){localStorage.setItem('neurocatch_menu_cfg',JSON.stringify(cfg));touchLocal();}
+function renderMenuOrderList(){
+  const box=$('#menuOrderList');if(!box)return;
+  const {order,cutoff}=loadMenuConfig();
+  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean);
+  box.innerHTML='<div class="menu-order-list" id="moList">'+
+    tiles.map((t,i)=>`<div class="menu-order-item" draggable="true" data-idx="${i}" data-orig="${order[i]}">
+      <span class="menu-order-drag">⠿</span>
+      <i data-lucide="${t[1]}"></i>
+      <span>${esc(t[0])}</span>
+    </div>${i===cutoff-1?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':''}`).join('')+
+    (cutoff>=tiles.length?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':'')+'</div>';
+  lucide.createIcons();
+  // простой drag-and-drop: mousedown → mousemove → mouseup / touch
+  let dragSrc=null;
+  box.querySelectorAll('.menu-order-item').forEach(el=>{
+    el.addEventListener('dragstart',()=>{dragSrc=el;el.style.opacity='0.4';});
+    el.addEventListener('dragend',()=>{el.style.opacity='';dragSrc=null;});
+    el.addEventListener('dragover',e=>{e.preventDefault();});
+    el.addEventListener('drop',e=>{
+      e.preventDefault();if(!dragSrc||dragSrc===el)return;
+      const list=box.querySelector('#moList');const items=[...list.querySelectorAll('.menu-order-item')];
+      const from=items.indexOf(dragSrc),to=items.indexOf(el);if(from<0||to<0)return;
+      const newOrder=[...order];const[moved]=newOrder.splice(from,1);newOrder.splice(to,0,moved);
+      // cutoff корректируем по положению разделителя
+      const divEl=box.querySelector('#moDiv');
+      let newCutoff=cutoff;
+      if(divEl){const divIdx=[...list.children].indexOf(divEl);newCutoff=divIdx;}
+      saveMenuConfig({order:newOrder,cutoff:newCutoff});
+      renderMenuOrderList();renderMoreTiles();
+    });
+  });
 }
 $('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();renderDashboard();show($('#view-more'));});
 /* ---------- вкладки внутри «Заметки»: Заметки / Выделения / Проекты ---------- */
