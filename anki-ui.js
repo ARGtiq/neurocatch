@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', initThemeFromStorage);
 function renderThemeSettings() {
   const box = $('#themeSettingsBox'); if (!box) return;
   box.innerHTML = `
-    <div class="sgroup" data-grp="main" style="display:none">
+    <div class="sgroup" data-grp="iface" style="display:none">
       <div class="sec-title">AI-тема</div>
       <div class="field">
         <label for="themeDescInput" style="display:flex;align-items:center;justify-content:space-between">Описание желаемого вайба<button type="button" class="link-btn" id="resetThemeBtn">Сбросить</button></label>

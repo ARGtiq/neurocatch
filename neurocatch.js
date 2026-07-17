@@ -1726,7 +1726,7 @@ async function openAnkiCardEditor(opts){
   setTimeout(()=>{if(bi)bi.focus();},50);
 }
 function closeAnkiCardEditor(){
-  closeAnkiCardEditor();
+  const ov=$('#ankiCardOverlay');if(ov)ov.classList.remove('open');
   // Восстанавливаем оверлеи, которые были временно скрыты при открытии редактора
   (window._ankiPausedOverlays||[]).forEach(id=>{
     const ov=document.getElementById(id);if(ov)ov.classList.add('open');
@@ -3153,32 +3153,19 @@ function setTab(t){
   const tsb=$('#themeSettingsBox');if(tsb)tsb.style.display=(t==='iface'?'':'none');
   const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;
   // Supabase-блок: сворачиваем в <details>, если уже настроен (URL/email заполнены)
+  // Supabase-спойлер: обновляем summary-текст если уже настроено
   if(t==='api'){
     try{
-      const sbGrp=Array.from(document.querySelectorAll('#overlay .sgroup')).find(g=>g.textContent.includes('Supabase'));
-      if(sbGrp){
-        const configured=settings.sbUrl&&settings.sbEmail;
-        if(configured&&!sbGrp.querySelector('details')){
-          // Прячем только поля ввода (URL, ключ, email) и кнопки login — статус и автосинк остаются
-          const inputs=[...sbGrp.querySelectorAll('input[id="sbUrl"],input[id="sbKey"],input[id="sbEmail"]')];
-          const loginBtns=sbGrp.querySelector('#sbLogin')?.closest('div');
-          const logoutBtn=sbGrp.querySelector('#sbLogout');
-          if(inputs.length){
-            const det=document.createElement('details');
-            const sum=document.createElement('summary');
-            sum.style.cssText='cursor:pointer;color:var(--accent);font-size:14px;padding:4px 0';
-            sum.textContent='▶ Подключено: '+settings.sbEmail+' — изменить настройки';
-            det.appendChild(sum);
-            inputs.forEach(el=>det.appendChild(el.parentNode||el));
-            if(loginBtns)det.appendChild(loginBtns);
-            if(logoutBtn)det.appendChild(logoutBtn);
-            sbGrp.querySelector('.field').after(det);
-          }
-        }
+      const det=$('#sbDetails');const sum=$('#sbSummaryText');
+      if(det&&sum&&settings.sbUrl&&settings.sbEmail){
+        sum.textContent='Подключено: '+settings.sbEmail+' (нажми чтобы изменить)';
+      }else if(sum){
+        sum.textContent='Настройки подключения';
       }
     }catch(e){}
     setTimeout(()=>{ try{ window.AnkiUI&&window.AnkiUI.renderSecretKeyStatus&&window.AnkiUI.renderSecretKeyStatus(); }catch(e){} },100);
   }
+  if(t==='anki') { setTimeout(()=>{try{fillCsvDeckSelect();}catch(e){}},100); }
   if(t==='iface') renderMenuOrderList();
 }
 $('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)setTab(b.dataset.tab);});
@@ -3225,13 +3212,15 @@ function renderMenuOrderList(){
   const box=$('#menuOrderList');if(!box)return;
   const {order,cutoff}=loadMenuConfig();
   const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean);
+  const divLabel='<div class="menu-order-divider" id="moDiv">— всё выше в «Ещё» первыми —</div>';
   box.innerHTML='<div class="menu-order-list" id="moList">'+
+    (cutoff===0?divLabel:'')+
     tiles.map((t,i)=>`<div class="menu-order-item" draggable="true" data-idx="${i}" data-orig="${order[i]}">
       <span class="menu-order-drag">⠿</span>
       <i data-lucide="${t[1]}"></i>
       <span>${esc(t[0])}</span>
-    </div>${i===cutoff-1?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':''}`).join('')+
-    (cutoff>=tiles.length?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':'')+'</div>';
+    </div>${i===cutoff-1&&cutoff>0?divLabel:''}`).join('')+
+    (cutoff>=tiles.length?divLabel:'')+'</div>';
   lucide.createIcons();
   // простой drag-and-drop: mousedown → mousemove → mouseup / touch
   let dragSrc=null;
