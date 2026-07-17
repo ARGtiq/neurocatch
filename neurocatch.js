@@ -1511,6 +1511,7 @@ function globalSearch(q){
     }).catch(()=>as.remove());
   }
 }
+$('#goHome')&&$('#goHome').addEventListener('click',()=>show($('#view-input')));
 $('#openSearch')&&$('#openSearch').addEventListener('click',()=>{show($('#view-search'));setTimeout(()=>{const gi=$('#globalSearch');if(gi)gi.focus();},60);});
 $('#searchBack')&&$('#searchBack').addEventListener('click',()=>show($('#view-input')));
 $('#globalSearch')&&$('#globalSearch').addEventListener('input',e=>globalSearch(e.target.value));
@@ -1574,26 +1575,34 @@ async function renderAnkiDeckList(){
     return;
   }
   const counts = await Promise.all(decks.map(d=>window.AnkiData.deckCounts(d.id).catch(()=>({new:0,learning:0,review:0}))));
-  box.innerHTML=decks.map((d,i)=>{
-    const c=counts[i];
-    return `<div class="anki-deck-card" data-id="${d.id}">
-      <div class="anki-deck-main"><div class="anki-deck-name">${esc(d.name)}</div>
+  const countMap=Object.fromEntries(decks.map((d,i)=>[d.id,counts[i]]));
+  // Строим дерево — рендерим рекурсивно начиная с корневых (parent_deck_id=null)
+  function renderDeckNode(d, depth){
+    const c=countMap[d.id]||{new:0,learning:0,review:0};
+    const children=decks.filter(x=>x.parent_deck_id===d.id);
+    const indent=depth?`style="margin-left:${depth*18}px;border-left:2px solid rgba(0,0,0,0.08);padding-left:8px"`:'';
+    return `<div class="anki-deck-card" data-id="${d.id}" ${indent}>
+      <div class="anki-deck-main"><div class="anki-deck-name">${depth?'└ ':''} ${esc(d.name)}</div>
         <div class="anki-deck-meta"><span class="cnt-new anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.new} new</span> · <span class="cnt-learn anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.learning} learning</span> · <span class="cnt-rev anki-cnt" data-deck="${d.id}" data-m="mature" style="cursor:pointer" title="Открыть в Browser">${c.review} review</span></div></div>
       <div class="anki-deck-acts">
         <button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button>
+        <button class="mini anki-deck-addsub" data-id="${d.id}" title="Добавить вложенную колоду"><i data-lucide="plus"></i></button>
         <button class="mini anki-deck-settings" data-id="${d.id}" title="Настройки колоды"><i data-lucide="settings"></i></button>
         <button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button>
         <button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button>
       </div>
-    </div>`;
-  }).join('')+'<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
+    </div>${children.map(ch=>renderDeckNode(ch,depth+1)).join('')}`;
+  }
+  const roots=decks.filter(d=>!d.parent_deck_id);
+  box.innerHTML=roots.map(d=>renderDeckNode(d,0)).join('')+'<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
   lucide.createIcons();
   box.querySelectorAll('.anki-deck-card').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('.anki-deck-acts'))return;openAnkiStudy(el.dataset.id);}));
   box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){try{await window.AnkiData.updateDeck(d.id,{name:nm.trim()});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
+  box.querySelectorAll('.anki-deck-addsub').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const nm=prompt('Название вложенной колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim(),{parentDeckId:b.dataset.id});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
   box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openCardBrowser(b.dataset.id);}));
   box.querySelectorAll('.anki-deck-settings').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openDeckSettings(b.dataset.id);}));
   box.querySelectorAll('.anki-cnt').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window._browserMaturity=el.dataset.m||null;window.AnkiUI.openCardBrowser(el.dataset.deck);}));
-  box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(decks.length<=1){toast('Нужна хотя бы одна колода',true);return;}if(!confirm('Удалить колоду и все её карточки?'))return;try{await window.AnkiData.deleteDeck(b.dataset.id);renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}));
+  box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(!confirm('Удалить колоду и все её карточки (включая вложенные)?'))return;try{await window.AnkiData.deleteDeck(b.dataset.id);renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}));
   const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',async()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim());renderAnkiDeckList();}catch(e){toast('Ошибка: '+(e.message||e),true);}}});
 }
 /* openAnkiBrowse (простой просмотр без фильтров) заменён на window.AnkiUI.openCardBrowser —
@@ -2457,12 +2466,55 @@ $('#fullBackupBtn')&&$('#fullBackupBtn').addEventListener('click',async()=>{
   catch(e){ toast('Anki-данные не удалось выгрузить (бэкап будет без них): '+(e.message||e),true); }
   const payload={app:'NeuroCatch',version:4,exportedAt:new Date().toISOString(),
     settings,catches,history,extraData:collectCloudExtraData(),anki};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const json=JSON.stringify(payload,null,2);
+  const blob=new Blob([json],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_full_backup_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);
+  const sizeKb=Math.round(json.length/1024);
   localStorage.setItem('neurocatch_last_backup',String(Date.now()));
   updateLastBackupHint();
+  // Сохраняем дату на сервере
+  try{ if(window.AnkiData&&window.AnkiData.saveBackupMeta) await window.AnkiData.saveBackupMeta(sizeKb); }catch(e){}
   toast('Полный бэкап сохранён (включая Anki)');
 });
+/* ---------- Кастомизация порядка пунктов меню ---------- */
+const DEFAULT_MENU_ORDER=MORE_TILES.map((_,i)=>i);
+const MAIN_MENU_CUTOFF_DEFAULT=4; // первые 4 пунктов показываются в основном меню (в topbar/nav)
+function loadMenuConfig(){
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_menu_cfg')||'{}');return {order:s.order||[...DEFAULT_MENU_ORDER],cutoff:s.cutoff!=null?s.cutoff:MAIN_MENU_CUTOFF_DEFAULT};}catch(e){return {order:[...DEFAULT_MENU_ORDER],cutoff:MAIN_MENU_CUTOFF_DEFAULT};}
+}
+function saveMenuConfig(cfg){localStorage.setItem('neurocatch_menu_cfg',JSON.stringify(cfg));touchLocal();}
+function renderMenuOrderList(){
+  const box=$('#menuOrderList');if(!box)return;
+  const {order,cutoff}=loadMenuConfig();
+  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean);
+  box.innerHTML='<div class="menu-order-list" id="moList">'+
+    tiles.map((t,i)=>`<div class="menu-order-item" draggable="true" data-idx="${i}" data-orig="${order[i]}">
+      <span class="menu-order-drag">⠿</span>
+      <i data-lucide="${t[1]}"></i>
+      <span>${esc(t[0])}</span>
+    </div>${i===cutoff-1?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':''}`).join('')+
+    (cutoff>=tiles.length?'<div class="menu-order-divider" id="moDiv">↑ основное меню · ↓ «Ещё»</div>':'')+'</div>';
+  lucide.createIcons();
+  // простой drag-and-drop: mousedown → mousemove → mouseup / touch
+  let dragSrc=null;
+  box.querySelectorAll('.menu-order-item').forEach(el=>{
+    el.addEventListener('dragstart',()=>{dragSrc=el;el.style.opacity='0.4';});
+    el.addEventListener('dragend',()=>{el.style.opacity='';dragSrc=null;});
+    el.addEventListener('dragover',e=>{e.preventDefault();});
+    el.addEventListener('drop',e=>{
+      e.preventDefault();if(!dragSrc||dragSrc===el)return;
+      const list=box.querySelector('#moList');const items=[...list.querySelectorAll('.menu-order-item')];
+      const from=items.indexOf(dragSrc),to=items.indexOf(el);if(from<0||to<0)return;
+      const newOrder=[...order];const[moved]=newOrder.splice(from,1);newOrder.splice(to,0,moved);
+      // cutoff корректируем по положению разделителя
+      const divEl=box.querySelector('#moDiv');
+      let newCutoff=cutoff;
+      if(divEl){const divIdx=[...list.children].indexOf(divEl);newCutoff=divIdx;}
+      saveMenuConfig({order:newOrder,cutoff:newCutoff});
+      renderMenuOrderList();renderMoreTiles();
+    });
+  });
+}
 function checkBackupReminder(){
   const days=settings.backupReminderDays||0;
   if(!days)return;
@@ -3089,7 +3141,28 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
 window.addEventListener('focus',()=>setTimeout(checkClipboard,300));
 window.addEventListener('pointerdown',()=>setTimeout(checkClipboard,120),{once:true});
 /* ---------- settings tabs ---------- */
-function setTab(t){document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;}
+function setTab(t){
+  document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});
+  // themeSettingsBox не sgroup, управляем отдельно
+  const tsb=$('#themeSettingsBox');if(tsb)tsb.style.display=(t==='iface'?'':'none');
+  const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;
+  // Supabase-блок: сворачиваем в <details>, если уже настроен (URL/email заполнены)
+  if(t==='api'){
+    try{
+      const sbGrp=Array.from(document.querySelectorAll('#overlay .sgroup')).find(g=>g.textContent.includes('Supabase'));
+      if(sbGrp){
+        const configured=settings.sbUrl&&settings.sbEmail;
+        if(configured&&!sbGrp.querySelector('details')){
+          const inner=sbGrp.querySelector('.field');
+          if(inner){const det=document.createElement('details');const sum=document.createElement('summary');sum.textContent='Подключено к '+settings.sbEmail+' — нажми чтобы изменить';det.appendChild(sum);while(inner.firstChild)det.appendChild(inner.firstChild);inner.appendChild(det);}
+        }
+      }
+    }catch(e){}
+    setTimeout(()=>{ try{ window.AnkiUI&&window.AnkiUI.renderSecretKeyStatus&&window.AnkiUI.renderSecretKeyStatus(); }catch(e){} },100);
+  }
+  if(t==='iface') renderMenuOrderList();
+}
 $('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)setTab(b.dataset.tab);});
 
 /* ---------- ritual presets ---------- */
@@ -3115,12 +3188,14 @@ const MORE_TILES=[
 ];
 function renderMoreTiles(){
   const box=$('#moreTiles');if(!box)return;
-  box.innerHTML=MORE_TILES.map(([label,icon,countFn],i)=>{
-    let n=0;try{n=countFn?countFn():0;}catch(e){n=0;}
-    return `<button class="more-tile" data-i="${i}"><i data-lucide="${icon}"></i><span class="more-tile-label">${esc(label)}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
+  const {order,cutoff}=loadMenuConfig();
+  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean).slice(cutoff); // «Ещё» = всё после cutoff
+  box.innerHTML=tiles.map((t,i)=>{
+    let n=0;try{n=t[2]?t[2]():0;}catch(e){n=0;}
+    return `<button class="more-tile" data-i="${i}"><i data-lucide="${t[1]}"></i><span class="more-tile-label">${esc(t[0])}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
   }).join('');
   lucide.createIcons();
-  box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=MORE_TILES[+b.dataset.i];if(t&&t[3])t[3]();}));
+  box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=tiles[+b.dataset.i];if(t&&t[3])t[3]();}));
 }
 $('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();renderDashboard();show($('#view-more'));});
 /* ---------- вкладки внутри «Заметки»: Заметки / Выделения / Проекты ---------- */

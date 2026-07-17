@@ -117,6 +117,7 @@
   <div class="shell">
     <div class="topbar">
       <div class="grp">
+        <button class="icon-btn nav-btn" id="goHome" aria-label="Главная"><i data-lucide="inbox"></i></button>
         <button class="icon-btn nav-btn" id="openTasks" aria-label="Задачи"><i data-lucide="square-check"></i></button>
         <button class="icon-btn nav-btn" id="openSearch" aria-label="Поиск"><i data-lucide="search"></i></button>
         <button class="icon-btn nav-btn" id="openNotes" aria-label="Заметки"><i data-lucide="notebook-pen"></i></button>
@@ -330,6 +331,7 @@
         <button class="chip" data-m="learning">Изучение</button>
         <button class="chip" data-m="mature">Закреплено</button>
       </div>
+      <div id="browserTagRow" style="padding:0 0 8px"></div>
       <div class="chip-row" id="browserDueRow">
         <button class="chip on" data-d="">Любой срок</button>
         <button class="chip" data-d="overdue">Просрочено</button>
@@ -537,8 +539,20 @@
 <div class="overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-head"><h2><i data-lucide="settings-2"></i>Настройки</h2><button class="icon-btn" id="closeSettings" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
-<div class="tabs"><button class="tab-btn active" data-tab="api">API и синхро</button><button class="tab-btn" data-tab="main">Основное</button><button class="tab-btn" data-tab="anki">Anki</button></div>
-    <div class="sgroup" data-grp="api"><div class="sec-title">Провайдер ИИ</div>
+<div class="tabs"><button class="tab-btn active" data-tab="api">Синхро</button><button class="tab-btn" data-tab="main">Основное</button><button class="tab-btn" data-tab="iface">Интерфейс</button><button class="tab-btn" data-tab="anki">Данные</button></div>
+    <div class="sgroup" data-grp="api"><div class="sec-title">Синхронизация Supabase</div>
+    <div class="field">
+      <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
+      <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
+      <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
+      <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
+        <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
+      </div>
+      <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
+      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div><div class="sgroup" data-grp="api"><div class="sec-title">Провайдер ИИ</div>
     <div class="field"><label for="provider"><i data-lucide="sparkle"></i>Провайдер ИИ</label><select id="provider"><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter (много моделей)</option><option value="ollama">Ollama (локально)</option></select><div class="hint">OpenRouter — быстрые бесплатные модели по одному ключу. Ollama — локально на ПК (нужен запущенный сервер).</div></div>
     <div class="field"><label for="apikey" style="display:flex;align-items:center;justify-content:space-between">Gemini API Key<button type="button" class="link-btn guide-btn" data-guide="gemini">как настроить</button></label><input type="password" id="apikey" placeholder="••••••••••••••••" autocomplete="off"><div class="hint">Хранится локально в браузере. Без ключа — демо-разбор.</div><div class="status-row"><span class="status" id="gemStatus"><span class="sd"></span>не проверено</span><div style="display:flex;gap:10px"><button type="button" class="link-btn" id="provDiag">Диагностика</button><button type="button" class="link-btn" id="checkGem">Проверить</button></div></div><div id="provCheck" class="guide-check"></div></div>
     <div class="field">
@@ -553,12 +567,12 @@
     <div class="field"><label for="model">Модель Gemini</label><select id="model"><option value="gemini-2.5-flash">gemini-2.5-flash</option><option value="gemini-2.5-pro">gemini-2.5-pro</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select></div>
     <div class="field prov prov-openrouter" hidden><label for="orKey" style="display:flex;align-items:center;justify-content:space-between">OpenRouter API key<button type="button" class="link-btn guide-btn" data-guide="openrouter">как настроить</button></label><input type="password" id="orKey" placeholder="sk-or-..." autocomplete="off"><input type="text" id="orModel" placeholder="meta-llama/llama-3.3-70b-instruct:free" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Бесплатные модели помечены :free. Ключ — openrouter.ai/keys. Читает страницы по ссылкам через r.jina.ai.</div></div>
     <div class="field prov prov-ollama" hidden><label for="ollamaUrl">Ollama URL</label><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false"><input type="text" id="ollamaModel" placeholder="llama3.1" autocomplete="off" spellcheck="false" style="margin-top:8px"><div class="hint">Запусти Ollama с OLLAMA_ORIGINS=* . С https-страницы к http-localhost браузер может блокировать запрос.</div></div></div>
-    <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Внешний вид</div>
+    <div class="sgroup" data-grp="iface" style="display:none"><div class="sec-title">Внешний вид</div>
     <div class="field"><label for="themeSel">Тема</label><select id="themeSel"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Авто (день/ночь)</option></select><div class="hint">Авто следует системной теме, иначе — по времени суток.</div></div>
     <div class="field"><label><i data-lucide="palette" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"></i>Material You — акцент</label><div class="swatches" id="swatches"><input type="color" class="color-pick" id="colorPick" value="#7c5cff"></div></div>
     <div class="field"><label>Фоновый рисунок</label><div class="bg-picker" id="bgPicker"><button data-bg="none" class="bgopt"><span class="bgprev pv-none"></span>Нет</button><button data-bg="dots" class="bgopt"><span class="bgprev pv-dots"></span>Точки</button><button data-bg="grid" class="bgopt"><span class="bgprev pv-grid"></span>Сетка</button><button data-bg="mesh" class="bgopt"><span class="bgprev pv-mesh"></span>Меш</button><button data-bg="waves" class="bgopt"><span class="bgprev pv-waves"></span>Волны</button><button data-bg="topo" class="bgopt"><span class="bgprev pv-topo"></span>Топо</button></div></div>
     </div>
-    <div id="themeSettingsBox"></div>
+    <div id="themeSettingsBox" data-grp="iface" style="display:none"></div>
     
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Разбор</div>
     <div class="field">
@@ -574,19 +588,7 @@
       <input type="text" id="studyUrl" placeholder="URL-шаблон: https://.../?q={q}" autocomplete="off" spellcheck="false" style="margin-top:8px">
       <div class="hint">{q} — готовый запрос со ссылкой, {url} — только ссылка. Появится в меню «Изучить» рядом с Perplexity / ChatGPT / Claude / Gemini / Grok.</div>
     </div></div>
-    <div class="sgroup" data-grp="api"><div class="sec-title">Синхронизация</div>
-    <div class="field">
-      <label style="display:flex;align-items:center;justify-content:space-between"><span><i data-lucide="upload"></i>Облачная синхронизация</span><span id="cloudStatus" class="cloud-status">не подключено</span></label>
-      <label style="display:flex;align-items:center;gap:10px;margin:10px 0"><span class="switch"><input type="checkbox" id="autoSync"><span class="track"></span></span>Автосинхронизация (при старте и возврате)</label>
-      <input type="text" id="sbUrl" placeholder="Supabase URL (https://xxxx.supabase.co)" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <input type="text" id="sbKey" placeholder="Supabase anon key" autocomplete="off" spellcheck="false" style="margin-top:8px">
-      <input type="text" id="sbEmail" placeholder="Email для входа" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button type="button" class="btn" id="sbLogin" style="flex:1"><i data-lucide="link"></i>Войти по ссылке</button>
-        <button type="button" class="btn" id="sbSync" style="flex:1"><i data-lucide="download"></i>Синхр.</button>
-      </div>
-      <button type="button" class="btn btn-clear" id="sbLogout" style="width:100%;margin-top:8px" hidden><i data-lucide="x"></i>Выйти из облака</button>
-      <div class="status-row"><span class="status" id="dbStatus"><span class="sd"></span>не подключено</span><div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="link-btn guide-btn" data-guide="supabase">как настроить</button><button type="button" class="link-btn" id="sbDiag">Диагностика</button><button type="button" class="link-btn" id="cloudPushNow">Выгрузить</button><button type="button" class="link-btn" id="checkDb">Обновить</button></div></div><div id="sbCheck" class="guide-check"></div>
+    <div id="sbCheck" class="guide-check"></div>
       <div class="hint">Anon-ключ публичный — его можно держать в приложении; данные защищены RLS. Один раз выполни SQL из инструкции.</div>
     </div></div>
     <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Захват и улов</div>
@@ -617,7 +619,7 @@
       <div class="status-row"><span class="status" id="webPushStatus"><span class="sd"></span>не включено</span></div>
       <div class="hint">Требует настроенной облачной синхронизации (Supabase). Уведомление о вечернем ритуале приходит от сервера через браузер, даже если NeuroCatch полностью закрыт. Разово подтверди разрешение браузера.</div>
     </div></div>
-    <div class="sgroup" data-grp="main" style="display:none"><div class="sec-title">Данные</div>
+    <div class="sgroup" data-grp="anki" style="display:none"><div class="sec-title">Данные и бэкап</div>
     <div class="field">
       <label><i data-lucide="download"></i>Данные</label>
       <div style="display:flex;gap:10px">
@@ -654,7 +656,12 @@
       <button type="button" class="btn btn-primary" id="csvImportGo" style="width:100%;margin-top:10px" hidden><i data-lucide="check"></i>Импортировать</button>
     </div>
     </div>
-        <button class="btn btn-primary" id="saveSettings" style="width:100%"><i data-lucide="check"></i>Сохранить</button>
+            <div class="sgroup" data-grp="iface" style="display:none"><div class="sec-title">Порядок меню</div>
+    <div class="field">
+      <label>Перетащи пункты. Выше разделителя — основное меню, ниже — «Ещё».</label>
+      <div id="menuOrderList" style="margin-top:10px"></div>
+    </div></div>
+    <button class="btn btn-primary" id="saveSettings" style="width:100%"><i data-lucide="check"></i>Сохранить</button>
     <div class="ver-line" id="verLine"></div>
   </div>
 </div>

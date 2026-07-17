@@ -267,10 +267,28 @@ let browserSelected = new Set();
 let browserDeckId = null;
 async function openCardBrowser(deckId) {
   browserDeckId = deckId; browserSelected.clear();
-  window._browserMaturity = null; window._browserDueRange = null;
+  window._browserMaturity = null; window._browserDueRange = null; window._browserTags = [];
   const bar = document.getElementById('browserActionBar'); if (bar) bar.remove();
   document.querySelectorAll('#browserMaturityRow .chip').forEach(c => c.classList.toggle('on', c.dataset.m === ''));
   document.querySelectorAll('#browserDueRow .chip').forEach(c => c.classList.toggle('on', c.dataset.d === ''));
+  // Рендерим чипы тегов для текущей колоды
+  const tagRow = $('#browserTagRow');
+  if (tagRow) {
+    tagRow.innerHTML = '<div class="hint" style="padding:0 16px 4px">Загружаем теги…</div>';
+    try {
+      const tags = await window.AnkiData.listAllTags();
+      if (!tags.length) { tagRow.innerHTML = ''; }
+      else {
+        tagRow.innerHTML = '<div class="chip-row" style="padding-bottom:0">' +
+          tags.map(t => `<button class="chip" data-tag="${esc(t.tag)}">#${esc(t.tag)} <small>(${t.count})</small></button>`).join('') + '</div>';
+        tagRow.querySelectorAll('.chip[data-tag]').forEach(b => b.addEventListener('click', () => {
+          b.classList.toggle('on');
+          window._browserTags = [...tagRow.querySelectorAll('.chip.on')].map(x => x.dataset.tag);
+          renderCardBrowser();
+        }));
+      }
+    } catch (e) { tagRow.innerHTML = ''; }
+  }
   await renderCardBrowser();
   show($('#view-card-browser'));
 }
@@ -330,6 +348,7 @@ function renderBrowserActionBar() {
     <button class="btn" id="bSuspend"><i data-lucide="clock"></i>Suspend</button>
     <button class="btn" id="bReset"><i data-lucide="refresh-cw"></i>Reset</button>
     <button class="btn" id="bReschedule"><i data-lucide="calendar"></i>Reschedule</button>
+    <button class="btn" id="bExport"><i data-lucide="download"></i>Export CSV</button>
     <button class="btn btn-clear" id="bDelete"><i data-lucide="trash-2"></i>Delete</button>`;
   lucide.createIcons();
   const ids = () => [...browserSelected];
@@ -344,6 +363,18 @@ function renderBrowserActionBar() {
   $('#bSuspend').onclick = async () => { await window.AnkiData.bulkSuspend(ids(), true); toast('Приостановлено'); browserSelected.clear(); renderCardBrowser(); };
   $('#bReset').onclick = async () => { if (!confirm('Сбросить прогресс выбранных карточек?')) return; await window.AnkiData.bulkResetProgress(ids()); toast('Прогресс сброшен'); browserSelected.clear(); renderCardBrowser(); };
   $('#bReschedule').onclick = async () => { const d = +prompt('На сколько дней сдвинуть? (можно отрицательное)', '1'); if (!d) return; await window.AnkiData.bulkReschedule(ids(), d); toast('Срок сдвинут'); browserSelected.clear(); renderCardBrowser(); };
+  $('#bExport').onclick = async () => {
+    try {
+      const allCards = await window.AnkiData.listCards(browserDeckId);
+      const selected = allCards.filter(c => browserSelected.has(c.id));
+      const csv = window.AnkiData.exportCardsToCSV(selected);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'anki_export_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+      URL.revokeObjectURL(a.href);
+      toast(`Экспортировано ${selected.length} карточек`);
+    } catch (e) { toast('Ошибка экспорта: ' + (e.message || e), true); }
+  };
   $('#bDelete').onclick = async () => { if (!confirm('Удалить выбранные карточки?')) return; await window.AnkiData.bulkDelete(ids()); toast('Удалено'); browserSelected.clear(); renderCardBrowser(); };
 }
 

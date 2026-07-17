@@ -58,13 +58,51 @@ async function updateDeck(id, patch) {
   return data;
 }
 async function deleteDeck(id) {
-  const { client } = await requireUser();
-  // soft-delete колоды + всех её карточек
+  const { client, uid } = await requireUser();
   const now = new Date().toISOString();
+  // Подбираем пути медиа-файлов карточек перед soft-delete
+  const { data: cards } = await client.from('cards').select('id, media_refs').eq('deck_id', id).is('deleted_at', null);
+  const paths = (cards || []).flatMap(c => (c.media_refs || []).map(m => m.path).filter(Boolean));
+  if (paths.length) {
+    // Удаляем файлы из Storage батчами по 100 (лимит API)
+    for (let i = 0; i < paths.length; i += 100) {
+      await client.storage.from('anki-media').remove(paths.slice(i, i + 100)).catch(() => {});
+    }
+  }
   await client.from('cards').update({ deleted_at: now }).eq('deck_id', id);
   const { error } = await client.from('decks').update({ deleted_at: now }).eq('id', id);
   if (error) throw error;
 }
+
+/* ============================================================
+   ДАТА БЭКАПА НА СЕРВЕРЕ
+   ============================================================ */
+async function saveBackupMeta(sizeKb) {
+  const { client, uid } = await requireUser();
+  await client.from('user_backup_meta').upsert({ owner: uid, last_backup_at: new Date().toISOString(), last_backup_size_kb: sizeKb || null });
+}
+async function loadBackupMeta() {
+  const { client, uid } = await requireUser();
+  const { data } = await client.from('user_backup_meta').select('*').eq('owner', uid).maybeSingle();
+  return data;
+}
+
+/* ============================================================
+   ЭКСПОРТ ВЫБРАННЫХ КАРТОЧЕК (bulk export)
+   ============================================================ */
+function exportCardsToCSV(cards) {
+  const header = 'front,back,tags,state,deck_id';
+  const rows = cards.map(c => [
+    `"${(c.front || '').replace(/"/g, '""')}"`,
+    `"${(c.back || '').replace(/"/g, '""')}"`,
+    `"${(c.tags || []).join('; ')}"`,
+    c.state || '',
+    c.deck_id || '',
+  ].join(','));
+  return [header, ...rows].join('\n');
+}
+
+
 async function deckCounts(deckId) {
   const { client } = await requireUser();
   const now = new Date().toISOString();
@@ -638,7 +676,8 @@ async function exportAllAnkiData() {
 
 /* ============================================================ */
 window.AnkiData = {
-  parseCardsCSV, bulkImportCards, exportAllAnkiData,
+  parseCardsCSV, bulkImportCards, exportAllAnkiData, exportCardsToCSV,
+  saveBackupMeta, loadBackupMeta,
   listAllTags, renameTag, deleteTag, analyticsSummary,
   listDecks, createDeck, updateDeck, deleteDeck, deckCounts,
   listCards, getCard, createCard, updateCard, deleteCards,
