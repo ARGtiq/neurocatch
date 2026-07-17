@@ -1481,9 +1481,25 @@ function globalSearch(q){
   push('Отчёты',realHistory().filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор')+(h.archived?' 📦':''),act:()=>openReport(h.id)})));
   push('Привычки',habits.filter(hb=>hb.name.toLowerCase().includes(q)).slice(0,10).map(hb=>({t:hb.name,act:()=>{show($('#view-tasks'));setSubTab('habits');}})));
   const total=groups.reduce((n,g)=>n+g[1].length,0);
-  if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';return;}
+  if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';}
   box.innerHTML=groups.map(([name,items])=>`<div class="sr-group"><div class="sr-h">${esc(name)}<span>${items.length}</span></div>${items.map(it=>`<button class="sr-item" data-fi="${it.fi}"><span class="sr-t">${esc(it.t)}</span>${it.sub?`<span class="sr-sub">${esc(it.sub)}</span>`:''}</button>`).join('')}</div>`).join('');
   box.querySelectorAll('.sr-item').forEach(b=>b.addEventListener('click',()=>{const f=flat[+b.dataset.fi];if(f)f();}));
+  // Anki-карточки — асинхронно поверх клиентских результатов (запрос к Supabase Postgres)
+  if(window.AnkiData){
+    const as=document.createElement('div');as.id='sr-anki-section';as.className='sr-group';
+    as.innerHTML='<div class="sr-h">Карточки Anki<span>\u2026</span></div>';
+    if(!total)box.innerHTML='';
+    box.appendChild(as);
+    window.AnkiData.listCards(null,{search:q}).then(cards=>{
+      if(!cards||!cards.length){as.remove();if(!box.querySelector('.sr-group'))box.innerHTML='<div class="empty">\u041d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u043e \u00ab'+esc(q)+'\u00bb.</div>';return;}
+      as.innerHTML='<div class="sr-h">\u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0438 Anki<span>'+cards.length+'</span></div>'+
+        cards.slice(0,15).map((c,i)=>'<button class="sr-item" data-aci="'+i+'"><span class="sr-t">'+esc((c.front||'').slice(0,60))+'</span><span class="sr-sub">'+esc((c.back||'').slice(0,50))+'</span></button>').join('');
+      as.querySelectorAll('[data-aci]').forEach(b=>b.addEventListener('click',()=>{
+        const c=cards[+b.dataset.aci];if(!c)return;
+        openAnkiCardEditor({id:c.id,deckId:c.deck_id,front:c.front,back:c.back,card_type:c.card_type,media_refs:c.media_refs});
+      }));
+    }).catch(()=>as.remove());
+  }
 }
 $('#openSearch')&&$('#openSearch').addEventListener('click',()=>{show($('#view-search'));setTimeout(()=>{const gi=$('#globalSearch');if(gi)gi.focus();},60);});
 $('#searchBack')&&$('#searchBack').addEventListener('click',()=>show($('#view-input')));
