@@ -638,6 +638,18 @@
       </div>
     </div>
     <div class="field">
+      <label><i data-lucide="check-circle"></i>Полный бэкап (вместе с Anki)</label>
+      <button type="button" class="btn" id="fullBackupBtn" style="width:100%"><i data-lucide="download"></i>Скачать полный бэкап .json</button>
+      <div class="hint" id="lastBackupHint"></div>
+      <label style="margin-top:10px">Напоминать о бэкапе</label>
+      <select id="backupReminderSelect">
+        <option value="0">Не напоминать</option>
+        <option value="7">Раз в неделю</option>
+        <option value="14">Раз в 2 недели</option>
+        <option value="30">Раз в месяц</option>
+      </select>
+    </div>
+    <div class="field">
       <label><i data-lucide="flask-conical"></i>Диагностика</label>
       <a href="e2e-test.html" target="_blank" rel="noopener" class="btn" style="width:100%;display:inline-flex"><i data-lucide="flask-conical"></i>Запустить E2E-тест приложения</a>
       <div class="hint">Открывает отдельную страницу с автоматической проверкой ключевых сценариев (улов, разбор, задачи, закладки, архив, поиск). Тестовые данные изолированы от реальных.</div>
