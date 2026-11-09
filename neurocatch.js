@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 
 /* ---------- state ---------- */
 let catches=[], history=[], currentEntry=null, bookmarks=[];
-let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true,archiveDays:90,backupReminderDays:7};
+let settings={key:'',model:'gemini-2.5-flash',themeMode:'dark',seed:'#7c5cff',prompt:'',sbUrl:'',sbKey:'',sbEmail:'',microlinkKey:'',microPerLink:false,microExclude:[],studyCustomName:'',studyCustomUrl:'',provider:'gemini',orKey:'',orModel:'',ollamaUrl:'',ollamaModel:'',clearAfter:true,autoClip:true,bg:'mesh',autoSync:true,preset:'standard',swipesOn:true,voiceAutoAdd:true,archiveDays:90};
 let calCursor=new Date(); calCursor.setDate(1);
 let filterDate=null, searchQuery='', tagFilter=null, hideDone=false, backTarget='#view-input', streamAbort=null, typewriterStop=false;
 let showArchived=false;
@@ -15,7 +15,7 @@ const EIS=[{n:'Срочно и важно',s:'Сделать сейчас',c:'q1
 const PRESETS=['#4f378a','#7c5cff','#4aa8ff','#3ddc97','#f7a53b','#ff6b6b','#ff5c93','#22c7c7'];
 const mql=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const APP_VERSION='2025.7-06';const SW_VER='6.5';const ANKI_X_VER='0.6.0';
+const APP_VERSION='2025.7-06';const SW_VER='v67';
 const VAPID_PUBLIC_KEY='BJaLyd8hrKLUwqYuwUib6x6lt0iehguXj0tkHHfRJ2TyZzJJqWIG9OCUA006NnX096bNq-I-SSLZcTAA-Rv84gk';
 let crumbs=[];function crumb(m){try{crumbs.push(new Date().toISOString().slice(11,19)+' '+m);if(crumbs.length>25)crumbs.shift();}catch(e){}}
 let lastErrors=[];
@@ -50,7 +50,7 @@ function loadAll(){
   const hadSettings=!!localStorage.getItem('neurocatch_settings');
   localUpdatedAt=+(localStorage.getItem('neurocatch_updated')||0);
   loadBookmarks();loadHabits();
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90),staleNoteDays:(s.staleNoteDays!=null?+s.staleNoteDays:30),backupReminderDays:(s.backupReminderDays!=null?+s.backupReminderDays:7)};}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('neurocatch_settings')||'{}');settings={key:s.key||'',model:s.model||'gemini-2.5-flash',themeMode:s.themeMode||'dark',seed:s.seed||'#7c5cff',prompt:s.prompt||'',sbUrl:s.sbUrl||'',sbKey:s.sbKey||'',sbEmail:s.sbEmail||'',microlinkKey:s.microlinkKey||'',microPerLink:!!s.microPerLink,microExclude:Array.isArray(s.microExclude)?s.microExclude:[],studyCustomName:s.studyCustomName||'',studyCustomUrl:s.studyCustomUrl||'',provider:s.provider||'gemini',orKey:s.orKey||'',orModel:s.orModel||'',ollamaUrl:s.ollamaUrl||'',ollamaModel:s.ollamaModel||'',clearAfter:s.clearAfter!==false,autoClip:s.autoClip!==false,bg:s.bg||'mesh',autoSync:s.autoSync!==false,preset:s.preset||'standard',swipesOn:s.swipesOn!==false,voiceAutoAdd:s.voiceAutoAdd!==false,archiveDays:(s.archiveDays!=null?+s.archiveDays:90),staleNoteDays:(s.staleNoteDays!=null?+s.staleNoteDays:30)};}catch(e){}
   if(!hadSettings){const sysC=detectSystemAccent();if(sysC){settings.seed=sysC;toast('Акцент взят из системы');}}
   try{catches=JSON.parse(localStorage.getItem('neurocatch_catches')||'[]');}catch(e){catches=[];}
   try{history=JSON.parse(localStorage.getItem('neurocatch_history')||'[]');}catch(e){history=[];}
@@ -76,12 +76,7 @@ function fillSettings(){
   const nOn=$('#notifyOn');if(nOn)nOn.checked=!!settings.notifyOn;
   const nT=$('#notifyTime');if(nT)nT.value=settings.notifyTime||'21:00';
   setv('studyName',settings.studyCustomName);setv('studyUrl',settings.studyCustomUrl);
-  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);const snd=$('#staleNoteDays');if(snd)snd.value=String(settings.staleNoteDays!=null?settings.staleNoteDays:30);const brd=$('#backupReminderSelect');if(brd)brd.value=String(settings.backupReminderDays!=null?settings.backupReminderDays:7);updateLastBackupHint();updateProviderUI();try{applyBg();}catch(e){}
-}
-function updateLastBackupHint(){
-  const el=$('#lastBackupHint');if(!el)return;
-  const last=+(localStorage.getItem('neurocatch_last_backup')||0);
-  el.textContent=last?('Последний бэкап: '+fmtDate(last)+' '+fmtTime(last)):'Бэкап ещё не делался';
+  setv('provider',settings.provider||'gemini');setv('orKey',settings.orKey);setv('orModel',settings.orModel);setv('ollamaUrl',settings.ollamaUrl);setv('ollamaModel',settings.ollamaModel);const ca=$('#clearAfter');if(ca)ca.checked=settings.clearAfter!==false;const ac=$('#autoClip');if(ac)ac.checked=settings.autoClip!==false;const asy=$('#autoSync');if(asy)asy.checked=settings.autoSync!==false;const sw=$('#swipesOn');if(sw)sw.checked=settings.swipesOn!==false;const va=$('#voiceAutoAdd');if(va)va.checked=settings.voiceAutoAdd!==false;const ad=$('#archiveDays');if(ad)ad.value=String(settings.archiveDays!=null?settings.archiveDays:90);const snd=$('#staleNoteDays');if(snd)snd.value=String(settings.staleNoteDays!=null?settings.staleNoteDays:30);updateProviderUI();try{applyBg();}catch(e){}
 }
 
 function detectSystemAccent(){try{const p=document.createElement('span');p.style.cssText='color:AccentColor;position:absolute;opacity:0;pointer-events:none';document.body.appendChild(p);const c=getComputedStyle(p).color;p.remove();const m=c.match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/);if(!m)return null;const r=+m[1],g=+m[2],b=+m[3];if(Math.max(r,g,b)-Math.min(r,g,b)<12)return null;return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return null;}}
@@ -272,6 +267,16 @@ function openTaskifyMenu(anchor,catchId){
   });
   setTimeout(()=>document.addEventListener('click',out),0);
 }
+function processCatchSolo(catchId){
+  const c=catches.find(x=>x.id===catchId);if(!c)return;
+  if(!hasLLM()){toast('Сначала настрой провайдера ИИ в настройках',true);return;}
+  const preview=c.text.length>90?c.text.slice(0,90)+'…':c.text;
+  if(!confirm('Разобрать именно эту запись прямо сейчас, отдельно от остального улова?\n\n«'+preview+'»'))return;
+  const solo={id:c.id,text:c.text,at:c.at,due:c.due,dueLabel:c.dueLabel,dueHasTime:c.dueHasTime,attachment:c.attachment};
+  catches=catches.filter(x=>x.id!==catchId);saveCatches();refreshCount();
+  renderQueue();
+  runRitual([solo],{title:'Разбор записи',back:'#view-queue'});
+}
 async function deleteCatch(id){
   const c=catches.find(x=>x.id===id);
   if(c&&c.attachment)await idbDelete(c.attachment.id);
@@ -297,14 +302,16 @@ function renderQueue(){
     const att=c.attachment?`<button class="q-attach" data-att="${attr(c.attachment.id)}" data-atype="${attr(c.attachment.type)}"><i data-lucide="${c.attachment.type.startsWith('image/')?'image':'file-text'}"></i>${esc(c.attachment.name)}</button>`:'';
     const taskBtn=`<button class="ql-btn" data-mktask="${c.id}" title="Сразу в задачи, минуя разбор"><i data-lucide="square-check"></i>это задача</button>`;
     const projBtn=`<button class="ql-btn" data-mkproj="${c.id}" title="ИИ разобьёт на подзадачи и создаст проект"><i data-lucide="layout-grid"></i>это проект</button>`;
+    const soloBtn=`<button class="ql-btn ql-solo" data-solo="${c.id}" title="Разобрать именно эту запись прямо сейчас, отдельно от остального улова"><i data-lucide="sparkle"></i>разобрать сейчас</button>`;
     return `<div class="q-item${c.markBookmark?' as-bookmark':''}" data-id="${c.id}">
-      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${att}<div class="q-btnrow">${mbtn}${bmbtn}${taskBtn}${projBtn}</div></div>
+      <div style="flex:1;min-width:0"><div class="q-text" contenteditable="true" data-id="${c.id}">${esc(c.text)}</div><div class="q-time">${fmtTime(c.at)}${c.dueLabel?' · <span class="due-badge">⏰ '+esc(c.dueLabel)+'</span>':''}</div>${att}<div class="q-btnrow">${mbtn}${bmbtn}${taskBtn}${projBtn}${soloBtn}</div></div>
       <button class="q-del" data-del="${c.id}" aria-label="Удалить"><i data-lucide="trash-2"></i></button></div>`;}).join('');
   lucide.createIcons();
   box.querySelectorAll('.q-text').forEach(el=>el.addEventListener('input',()=>{const c=catches.find(x=>x.id===el.dataset.id);if(c){c.text=el.textContent;saveCatches();}}));
   box.querySelectorAll('.q-del').forEach(b=>b.addEventListener('click',async()=>{await deleteCatch(b.dataset.del);renderQueue();}));
   box.querySelectorAll('[data-mktask]').forEach(b=>b.addEventListener('click',()=>openTaskifyMenu(b,b.dataset.mktask)));
   box.querySelectorAll('[data-mkproj]').forEach(b=>b.addEventListener('click',()=>openProjectifyConfirm(b,b.dataset.mkproj)));
+  box.querySelectorAll('[data-solo]').forEach(b=>b.addEventListener('click',()=>processCatchSolo(b.dataset.solo)));
   box.querySelectorAll('.q-item').forEach(it=>attachSwipe(it,{onLeft:async()=>{await deleteCatch(it.dataset.id);renderQueue();toast('Удалено');}}));
   box.querySelectorAll('.q-attach').forEach(b=>b.addEventListener('click',()=>openAttachment(b.dataset.att,b.dataset.atype)));
   box.querySelectorAll('[data-mic]').forEach(b=>b.addEventListener('click',()=>{const c=catches.find(x=>x.id===b.dataset.mic);if(!c)return;const urls=(c.text.match(URL_RE)||[]).map(u=>u.replace(/[),.]+$/,''));const ex=new Set(settings.microExclude||[]);const allOff=urls.every(u=>ex.has(u));urls.forEach(u=>{if(allOff)ex.delete(u);else ex.add(u);});settings.microExclude=[...ex];saveSettings();renderQueue();toast(allOff?'microlink включён для ссылки':'microlink отключён для ссылки');}));
@@ -658,7 +665,7 @@ function renderHighlightsLibrary(){
     return `<div class="hl-lib-item${sel?' sel':''}" data-fid="${attr(f.id)}">
       ${fragSelectMode?`<span class="hl-lib-check"><i data-lucide="${sel?'check-square':'square'}"></i></span>`:''}
       <div class="hl-lib-main"><div class="hl-lib-text">${esc(f.text)}</div><div class="hl-lib-src">${f.kind==='insight'?'💡 ':'✂️ '}${esc(f.sourceTitle)}</div></div>
-      ${!fragSelectMode?`<button class="mini hl-lib-goto" data-fid="${attr(f.id)}" title="Перейти к источнику"><i data-lucide="external-link"></i></button><button class="mini hl-lib-del" data-fid="${attr(f.id)}" title="Удалить"><i data-lucide="trash-2"></i></button>`:''}
+      ${!fragSelectMode?`<button class="mini hl-lib-del" data-fid="${attr(f.id)}" title="Удалить"><i data-lucide="trash-2"></i></button>`:''}
     </div>`;
   }).join('');
   lucide.createIcons();
@@ -667,16 +674,6 @@ function renderHighlightsLibrary(){
       const f=frags.find(x=>x.id===el.dataset.fid);if(f)toggleFragSelected(f);renderHighlightsLibrary();
     }));
   }else{
-    box.querySelectorAll('.hl-lib-goto').forEach(b=>b.addEventListener('click',e=>{
-      e.stopPropagation();
-      const f=frags.find(x=>x.id===b.dataset.fid);if(!f)return;
-      if(f.kind==='insight'&&f.reportId){ openReport(f.reportId); }
-      else if(f.kind==='highlight'&&f.noteId){
-        const note=buildNotes().find(n=>n.id===f.noteId);
-        if(note){ openNoteDetail(note); }
-        else toast('Исходная заметка не найдена',true);
-      }
-    }));
     box.querySelectorAll('.hl-lib-del').forEach(b=>b.addEventListener('click',e=>{
       e.stopPropagation();const f=frags.find(x=>x.id===b.dataset.fid);if(f){fragRemoveFromSource(f);renderHighlightsLibrary();}
     }));
@@ -1432,21 +1429,11 @@ $('#noteDetailOverlay')&&$('#noteDetailOverlay').addEventListener('click',e=>{if
 $('#openNotes')&&$('#openNotes').addEventListener('click',()=>{renderNotes();show($('#view-notes'));});
 $('#notesBack')&&$('#notesBack').addEventListener('click',()=>show($('#view-input')));
 $('#noteSearch')&&$('#noteSearch').addEventListener('input',e=>{noteSearch=e.target.value.toLowerCase();renderNotes();});
-async function llmComplete(prompt,audioBlob){
+async function llmComplete(prompt){
   const p=settings.provider||'gemini';
-  if(audioBlob&&p!=='gemini'){
-    // OpenRouter/Ollama в этой простой text-completion обвязке не поддерживают инлайн-аудио —
-    // транскрипция аудио доступна только с провайдером Gemini (inline_data).
-    throw new Error('Транскрипция аудио пока работает только с провайдером Gemini');
-  }
   if(p==='openrouter'){const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.orKey,'HTTP-Referer':location.origin,'X-Title':'NeuroCatch'},body:JSON.stringify({model:settings.orModel||'meta-llama/llama-3.3-70b-instruct:free',messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';}
   if(p==='ollama'){const base=(settings.ollamaUrl||'http://localhost:11434').replace(/\/$/,'');const res=await fetch(base+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:settings.ollamaModel||'llama3.1',stream:false,messages:[{role:'user',content:prompt}]})});const j=await res.json();return (j.message&&j.message.content)||'';}
-  const parts=[{text:prompt}];
-  if(audioBlob){
-    const b64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(audioBlob);});
-    parts.push({inlineData:{mimeType:audioBlob.type||'audio/webm',data:b64}});
-  }
-  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+(settings.model||'gemini-2.5-flash')+':generateContent?key='+encodeURIComponent(settings.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{temperature:0.2,maxOutputTokens:2048}})});
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+(settings.model||'gemini-2.5-flash')+':generateContent?key='+encodeURIComponent(settings.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:2048}})});
   const j=await res.json();try{return j.candidates[0].content.parts.map(x=>x.text||'').join('');}catch(e){return '';}
 }
 async function semanticSearch(){
@@ -1491,27 +1478,10 @@ function globalSearch(q){
   push('Отчёты',realHistory().filter(h=>((h.markdown||'')+' '+(h.tags||[]).join(' ')).toLowerCase().includes(q)).slice(0,15).map(h=>({t:fmtDate(h.ts)+' · '+((h.tags||[]).slice(0,3).join(', ')||'разбор')+(h.archived?' 📦':''),act:()=>openReport(h.id)})));
   push('Привычки',habits.filter(hb=>hb.name.toLowerCase().includes(q)).slice(0,10).map(hb=>({t:hb.name,act:()=>{show($('#view-tasks'));setSubTab('habits');}})));
   const total=groups.reduce((n,g)=>n+g[1].length,0);
-  if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';}
+  if(!total){box.innerHTML='<div class="empty">Ничего не найдено по «'+esc(q)+'».</div>';return;}
   box.innerHTML=groups.map(([name,items])=>`<div class="sr-group"><div class="sr-h">${esc(name)}<span>${items.length}</span></div>${items.map(it=>`<button class="sr-item" data-fi="${it.fi}"><span class="sr-t">${esc(it.t)}</span>${it.sub?`<span class="sr-sub">${esc(it.sub)}</span>`:''}</button>`).join('')}</div>`).join('');
   box.querySelectorAll('.sr-item').forEach(b=>b.addEventListener('click',()=>{const f=flat[+b.dataset.fi];if(f)f();}));
-  // Anki-карточки — асинхронно поверх клиентских результатов (запрос к Supabase Postgres)
-  if(window.AnkiData){
-    const as=document.createElement('div');as.id='sr-anki-section';as.className='sr-group';
-    as.innerHTML='<div class="sr-h">Карточки Anki<span>\u2026</span></div>';
-    if(!total)box.innerHTML='';
-    box.appendChild(as);
-    window.AnkiData.listCards(null,{search:q}).then(cards=>{
-      if(!cards||!cards.length){as.remove();if(!box.querySelector('.sr-group'))box.innerHTML='<div class="empty">\u041d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u043e \u00ab'+esc(q)+'\u00bb.</div>';return;}
-      as.innerHTML='<div class="sr-h">\u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0438 Anki<span>'+cards.length+'</span></div>'+
-        cards.slice(0,15).map((c,i)=>'<button class="sr-item" data-aci="'+i+'"><span class="sr-t">'+esc((c.front||'').slice(0,60))+'</span><span class="sr-sub">'+esc((c.back||'').slice(0,50))+'</span></button>').join('');
-      as.querySelectorAll('[data-aci]').forEach(b=>b.addEventListener('click',()=>{
-        const c=cards[+b.dataset.aci];if(!c)return;
-        openAnkiCardEditor({id:c.id,deckId:c.deck_id,front:c.front,back:c.back,card_type:c.card_type,media_refs:c.media_refs});
-      }));
-    }).catch(()=>as.remove());
-  }
 }
-$('#goHome')&&$('#goHome').addEventListener('click',()=>show($('#view-input')));
 $('#openSearch')&&$('#openSearch').addEventListener('click',()=>{show($('#view-search'));setTimeout(()=>{const gi=$('#globalSearch');if(gi)gi.focus();},60);});
 $('#searchBack')&&$('#searchBack').addEventListener('click',()=>show($('#view-input')));
 $('#globalSearch')&&$('#globalSearch').addEventListener('input',e=>globalSearch(e.target.value));
@@ -1554,115 +1524,86 @@ async function generatePeriodReport(kind){
 $('#periodWeekBtn')&&$('#periodWeekBtn').addEventListener('click',()=>generatePeriodReport('week'));
 $('#periodMonthBtn')&&$('#periodMonthBtn').addEventListener('click',()=>generatePeriodReport('month'));
 /* ---------- Anki (spaced repetition) ---------- */
-/* Anki-данные теперь живут в Supabase — см. anki-data.js (window.AnkiData).
-   loadAnkiDecks/saveAnkiDecks/loadAnkiCards/saveAnkiCards/ankiRate удалены,
-   их заменяют async-вызовы window.AnkiData.* по всему разделу ниже. */
-async function ankiDueCount(deckId){
-  const c = await window.AnkiData.deckCounts(deckId);
-  return c.review; // "на повтор" — только просроченные review, как и было по смыслу due<=now
+function loadAnkiDecks(){try{const d=JSON.parse(localStorage.getItem('neurocatch_anki_decks')||'[]');if(!d.length){const def={id:uid('dk'),name:'Общая',ts:Date.now()};localStorage.setItem('neurocatch_anki_decks',JSON.stringify([def]));return [def];}return d;}catch(e){return [];}}
+function saveAnkiDecks(a){localStorage.setItem('neurocatch_anki_decks',JSON.stringify(a));touchLocal();}
+function loadAnkiCards(){try{return JSON.parse(localStorage.getItem('neurocatch_anki_cards')||'[]');}catch(e){return [];}}
+function saveAnkiCards(a){localStorage.setItem('neurocatch_anki_cards',JSON.stringify(a));touchLocal();}
+function ankiDueCount(deckId){const now=Date.now();return loadAnkiCards().filter(c=>c.deckId===deckId&&c.due<=now).length;}
+function ankiRate(card,rating){
+  card.reps=(card.reps||0)+1;card.ease=card.ease||2.5;
+  if(rating==='again'){card.interval=1;card.ease=Math.max(1.3,card.ease-0.2);card.reps=0;}
+  else if(rating==='hard'){card.interval=Math.max(1,Math.round((card.interval||1)*1.2));card.ease=Math.max(1.3,card.ease-0.15);}
+  else if(rating==='good'){card.interval=card.interval?Math.round(card.interval*card.ease):1;if(card.interval===0)card.interval=1;if(card.reps===1&&!card.interval)card.interval=1;}
+  else if(rating==='easy'){card.interval=card.interval?Math.round(card.interval*card.ease*1.3):4;card.ease=card.ease+0.15;}
+  if(!card.interval||card.interval<1)card.interval=1;
+  card.due=Date.now()+card.interval*86400000;
+  card.lastReview=Date.now();
 }
-let ankiStudyQueue=[],ankiStudyDeck=null,ankiCurCard=null,ankiEditingId=null,ankiCardShownAt=0;
-async function renderAnkiDeckList(){
+let ankiStudyQueue=[],ankiStudyDeck=null,ankiCurCard=null,ankiEditingId=null;
+function renderAnkiDeckList(){
   const box=$('#ankiDeckList');if(!box)return;
-  box.innerHTML='<div class="empty">Загрузка…</div>';
-  let decks;
-  try{ decks = await window.AnkiData.listDecks(); }
-  catch(e){ box.innerHTML='<div class="empty">Ошибка загрузки колод: '+esc(e.message||e)+'</div>'; return; }
-  if(!decks.length){
-    box.innerHTML='<div class="empty">Колод нет. Нажми «Новая колода» ниже.</div><button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
-    lucide.createIcons();
-    $('#ankiNewDeck')&&$('#ankiNewDeck').addEventListener('click',async()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim());renderAnkiDeckList();}catch(e){toast('Ошибка: '+(e.message||e),true);}}});
-    return;
-  }
-  const counts = await Promise.all(decks.map(d=>window.AnkiData.deckCounts(d.id).catch(()=>({new:0,learning:0,review:0}))));
-  const countMap=Object.fromEntries(decks.map((d,i)=>[d.id,counts[i]]));
-  // Строим дерево — рендерим рекурсивно начиная с корневых (parent_deck_id=null)
-  function renderDeckNode(d, depth){
-    const c=countMap[d.id]||{new:0,learning:0,review:0};
-    const children=decks.filter(x=>x.parent_deck_id===d.id);
-    const indent=depth?`style="margin-left:${depth*18}px;border-left:2px solid rgba(0,0,0,0.08);padding-left:8px"`:'';
-    return `<div class="anki-deck-card" data-id="${d.id}" ${indent}>
-      <div class="anki-deck-main"><div class="anki-deck-name">${depth?'└ ':''} ${esc(d.name)}</div>
-        <div class="anki-deck-meta"><span class="cnt-new anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.new} new</span> · <span class="cnt-learn anki-cnt" data-deck="${d.id}" data-m="learning" style="cursor:pointer" title="Открыть в Browser">${c.learning} learning</span> · <span class="cnt-rev anki-cnt" data-deck="${d.id}" data-m="mature" style="cursor:pointer" title="Открыть в Browser">${c.review} review</span></div></div>
-      <div class="anki-deck-acts">
-        <button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button>
-        <button class="mini anki-deck-addsub" data-id="${d.id}" title="Добавить вложенную колоду"><i data-lucide="plus"></i></button>
-        <button class="mini anki-deck-move" data-id="${d.id}" title="Переместить в другую колоду"><i data-lucide="folder"></i></button>
-        <button class="mini anki-deck-settings" data-id="${d.id}" title="Настройки колоды"><i data-lucide="settings"></i></button>
-        <button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button>
-        <button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button>
-      </div>
-    </div>${children.map(ch=>renderDeckNode(ch,depth+1)).join('')}`;
-  }
-  const roots=decks.filter(d=>!d.parent_deck_id);
-  box.innerHTML=roots.map(d=>renderDeckNode(d,0)).join('')+'<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
+  const decks=loadAnkiDecks();const cards=loadAnkiCards();
+  box.innerHTML=decks.map(d=>{
+    const total=cards.filter(c=>c.deckId===d.id).length;
+    const due=ankiDueCount(d.id);
+    return `<div class="anki-deck-card" data-id="${d.id}">
+      <div class="anki-deck-main"><div class="anki-deck-name">${esc(d.name)}</div><div class="anki-deck-meta">${total} карточ${total===1?'ка':(total>=2&&total<=4?'ки':'ек')}${due?(' · <b class="anki-due-n">'+due+' на повтор</b>'):''}</div></div>
+      <div class="anki-deck-acts"><button class="mini anki-deck-browse" data-id="${d.id}" title="Просмотреть карточки"><i data-lucide="list"></i></button><button class="mini anki-deck-rename" data-id="${d.id}" title="Переименовать"><i data-lucide="pencil"></i></button><button class="mini anki-deck-del" data-id="${d.id}" title="Удалить колоду"><i data-lucide="trash-2"></i></button></div>
+    </div>`;
+  }).join('')||'<div class="empty">Колод нет. Нажми «Новая колода» ниже — или создай карточку прямо из инсайта/выделения кнопкой-слоями, колода появится сама.</div>';
+  box.innerHTML+='<button class="btn" id="ankiNewDeck" style="width:100%;margin-top:10px"><i data-lucide="plus"></i>Новая колода</button>';
   lucide.createIcons();
   box.querySelectorAll('.anki-deck-card').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('.anki-deck-acts'))return;openAnkiStudy(el.dataset.id);}));
-  box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){try{await window.AnkiData.updateDeck(d.id,{name:nm.trim()});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
-  box.querySelectorAll('.anki-deck-addsub').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();const nm=prompt('Название вложенной колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim(),{parentDeckId:b.dataset.id});renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}}));
-  box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openCardBrowser(b.dataset.id);}));
-  box.querySelectorAll('.anki-deck-settings').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();window.AnkiUI.openDeckSettings(b.dataset.id);}));
-  box.querySelectorAll('.anki-deck-move').forEach(b=>b.addEventListener('click',async e=>{
-    e.stopPropagation();
-    const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;
-    // Строим список возможных родителей (все колоды кроме самой себя и её потомков)
-    function descendants(id){const ch=decks.filter(x=>x.parent_deck_id===id);return [id,...ch.flatMap(c=>descendants(c.id))];}
-    const excluded=new Set(descendants(d.id));
-    const candidates=decks.filter(x=>!excluded.has(x.id));
-    const options=['— корневая колода (без родителя)',...candidates.map(x=>x.name)];
-    const choice=prompt('Переместить «'+d.name+'» внутрь:\n'+options.map((o,i)=>`${i}. ${o}`).join('\n')+'\n\nВведи номер:');
-    if(choice===null)return;
-    const idx=+choice;
-    if(isNaN(idx)||idx<0||idx>candidates.length){toast('Неверный номер',true);return;}
-    const newParentId=idx===0?null:candidates[idx-1].id;
-    try{await window.AnkiData.updateDeck(d.id,{parent_deck_id:newParentId});renderAnkiDeckList();toast('Колода перемещена');}
-    catch(err){toast('Ошибка: '+(err.message||err),true);}
-  }));
-  box.querySelectorAll('.anki-cnt').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window._browserMaturity=el.dataset.m||null;window.AnkiUI.openCardBrowser(el.dataset.deck);}));
-  box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(!confirm('Удалить колоду и все её карточки (включая вложенные)?'))return;try{await window.AnkiData.deleteDeck(b.dataset.id);renderAnkiDeckList();}catch(err){toast('Ошибка: '+(err.message||err),true);}}));
-  const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',async()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){try{await window.AnkiData.createDeck(nm.trim());renderAnkiDeckList();}catch(e){toast('Ошибка: '+(e.message||e),true);}}});
+  box.querySelectorAll('.anki-deck-rename').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const d=decks.find(x=>x.id===b.dataset.id);if(!d)return;const nm=prompt('Название колоды:',d.name);if(nm&&nm.trim()){d.name=nm.trim();saveAnkiDecks(decks);renderAnkiDeckList();}}));
+  box.querySelectorAll('.anki-deck-browse').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openAnkiBrowse(b.dataset.id);}));
+  box.querySelectorAll('.anki-deck-del').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();if(decks.length<=1){toast('Нужна хотя бы одна колода',true);return;}if(!confirm('Удалить колоду и все её карточки?'))return;const id=b.dataset.id;saveAnkiDecks(decks.filter(x=>x.id!==id));saveAnkiCards(cards.filter(c=>c.deckId!==id));renderAnkiDeckList();}));
+  const nd=$('#ankiNewDeck');if(nd)nd.addEventListener('click',()=>{const nm=prompt('Название новой колоды:');if(nm&&nm.trim()){const arr=loadAnkiDecks();arr.push({id:uid('dk'),name:nm.trim(),ts:Date.now()});saveAnkiDecks(arr);renderAnkiDeckList();}});
 }
-/* openAnkiBrowse (простой просмотр без фильтров) заменён на window.AnkiUI.openCardBrowser —
-   полноценный Card Browser с фильтрами и bulk-операциями. Старые #ankiBrowseOverlay
-   обработчики оставлены неактивными (кнопка теперь не вызывает openAnkiBrowse). */
-async function openAnkiStudy(deckId){
-  let result;
-  try{ result = await window.AnkiData.buildStudyQueue(deckId); }
-  catch(e){ toast('Ошибка загрузки очереди: '+(e.message||e),true); return; }
-  ankiStudyDeck=result.deck;
-  ankiStudyQueue=result.queue;
-  $('#ankiStudyDeckName').textContent=ankiStudyDeck.name;
+function openAnkiBrowse(deckId){
+  const decks=loadAnkiDecks();const deck=decks.find(d=>d.id===deckId);if(!deck)return;
+  $('#ankiBrowseTitle').textContent=deck.name+' — карточки';
+  const box=$('#ankiBrowseList');
+  const cards=loadAnkiCards().filter(c=>c.deckId===deckId);
+  box.innerHTML=cards.length?cards.map(c=>`<div class="anki-browse-card" data-id="${c.id}">
+      <div class="anki-browse-front">${esc(c.front||'(без вопроса)')}</div>
+      <div class="anki-browse-back">${esc(c.back)}</div>
+      <div class="anki-browse-meta">Повтор: ${c.interval?c.interval+' дн.':'сегодня'} · Ответов: ${c.reps||0}</div>
+    </div>`).join(''):'<div class="empty">В этой колоде пока нет карточек.</div>';
+  lucide.createIcons();
+  box.querySelectorAll('.anki-browse-card').forEach(el=>el.addEventListener('click',()=>{
+    const c=cards.find(x=>x.id===el.dataset.id);if(!c)return;
+    $('#ankiBrowseOverlay').classList.remove('open');
+    openAnkiCardEditor({id:c.id,deckId:c.deckId,front:c.front,back:c.back});
+  }));
+  $('#ankiBrowseOverlay').classList.add('open');
+}
+$('#ankiBrowseClose')&&$('#ankiBrowseClose').addEventListener('click',()=>$('#ankiBrowseOverlay').classList.remove('open'));
+$('#ankiBrowseOverlay')&&$('#ankiBrowseOverlay').addEventListener('click',e=>{if(e.target===$('#ankiBrowseOverlay'))$('#ankiBrowseOverlay').classList.remove('open');});
+function openAnkiStudy(deckId){
+  const decks=loadAnkiDecks();const deck=decks.find(d=>d.id===deckId);if(!deck)return;
+  ankiStudyDeck=deck;
+  const now=Date.now();
+  ankiStudyQueue=loadAnkiCards().filter(c=>c.deckId===deckId&&c.due<=now).sort((a,b)=>a.due-b.due);
+  $('#ankiStudyDeckName').textContent=deck.name;
   $('#ankiStudyOverlay').classList.add('open');
   ankiNextCard();
 }
-async function ankiNextCard(){
+function ankiNextCard(){
   const body=$('#ankiStudyBody');if(!body)return;
   if(!ankiStudyQueue.length){
     body.innerHTML='<div class="empty" style="padding:40px 20px"><i data-lucide="check-circle"></i>Все карточки этой колоды повторены 👍</div>';
     lucide.createIcons();ankiCurCard=null;return;
   }
   ankiCurCard=ankiStudyQueue[0];
-  ankiCardShownAt=Date.now();
-  body.innerHTML='<div class="empty">Загрузка…</div>';
-  let faceHtml;
-  try{ faceHtml = await window.AnkiUI.renderCardFaceHTML(ankiCurCard,false); }
-  catch(e){ faceHtml = `<div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div>`; }
-  if(ankiCurCard!==ankiStudyQueue[0])return; // карточку успели пролистать/сменить, пока грузились медиа
-  body.innerHTML=`<div class="anki-card-face">${faceHtml}</div>
+  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div></div>
     <button class="btn btn-primary" id="ankiReveal" style="width:100%;margin-top:16px">Показать ответ</button>
     <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
   lucide.createIcons();
   $('#ankiReveal')&&$('#ankiReveal').addEventListener('click',ankiRevealAnswer);
 }
-async function ankiRevealAnswer(){
+function ankiRevealAnswer(){
   const body=$('#ankiStudyBody');if(!body||!ankiCurCard)return;
-  const cardAtReveal=ankiCurCard;
-  body.innerHTML='<div class="empty">Загрузка…</div>';
-  let faceHtml;
-  try{ faceHtml = await window.AnkiUI.renderCardFaceHTML(cardAtReveal,true); }
-  catch(e){ faceHtml = `<div class="anki-card-text">${esc(cardAtReveal.front||'')}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(cardAtReveal.back||'')}</div>`; }
-  if(ankiCurCard!==cardAtReveal)return;
-  body.innerHTML=`<div class="anki-card-face">${faceHtml}</div>
+  body.innerHTML=`<div class="anki-card-face"><div class="anki-card-text">${esc(ankiCurCard.front||'(без вопроса)')}</div><div class="anki-card-divider"></div><div class="anki-card-text anki-card-back">${esc(ankiCurCard.back)}</div></div>
     <div class="anki-rate-row">
       <button class="anki-rate again" data-r="again">Забыл</button>
       <button class="anki-rate hard" data-r="hard">Трудно</button>
@@ -1670,51 +1611,17 @@ async function ankiRevealAnswer(){
       <button class="anki-rate easy" data-r="easy">Легко</button>
     </div>
     <div class="anki-progress">Осталось: ${ankiStudyQueue.length}</div>`;
-  lucide.createIcons();
-  const RATING_ORDER={again:0,hard:1,good:2,easy:3};
-  body.querySelectorAll('.anki-rate').forEach(b=>b.addEventListener('click',async()=>{
-    const rating=b.dataset.r;
-    const cardBeingRated=ankiCurCard;
-    body.querySelectorAll('.anki-rate').forEach(x=>x.disabled=true);
-    const isSubCard = cardBeingRated._clozeIndex!==undefined || cardBeingRated._occlusionIndex!==undefined;
-    if(isSubCard && !cardBeingRated._isLastSub){
-      // Не последняя суб-карточка — накапливаем худший рейтинг на следующей и продвигаемся
-      if(ankiStudyQueue.length>1){
-        const next=ankiStudyQueue[1];
-        const prevWorst=next._worstRating;
-        if(!prevWorst||RATING_ORDER[rating]<RATING_ORDER[prevWorst]) next._worstRating=rating;
-      }
-      ankiStudyQueue.shift();
-      ankiNextCard();
-      renderAnkiDeckList();
-      return;
-    }
-    // Последняя суб-карточка или обычная — применяем финальный рейтинг
-    let finalRating=rating;
-    if(isSubCard&&cardBeingRated._worstRating){
-      finalRating=RATING_ORDER[cardBeingRated._worstRating]<RATING_ORDER[rating]?cardBeingRated._worstRating:rating;
-    }
-    try{
-      await window.AnkiData.rateCard(cardBeingRated, ankiStudyDeck, finalRating, Date.now()-ankiCardShownAt);
-    }catch(e){ toast('Ошибка сохранения оценки: '+(e.message||e),true); }
+  body.querySelectorAll('.anki-rate').forEach(b=>b.addEventListener('click',()=>{
+    const cards=loadAnkiCards();const c=cards.find(x=>x.id===ankiCurCard.id);
+    if(c){ankiRate(c,b.dataset.r);saveAnkiCards(cards);}
     ankiStudyQueue.shift();
     ankiNextCard();
     renderAnkiDeckList();
   }));
 }
-async function openAnkiCardEditor(opts){
+function openAnkiCardEditor(opts){
   opts=opts||{};ankiEditingId=opts.id||null;
-  window._ankiReturnView=document.querySelector('.view:not([hidden])');
-  // Закрываем все открытые оверлеи чтобы #ankiCardOverlay не оказался под ними.
-  // Запоминаем их для восстановления после закрытия редактора карточки.
-  window._ankiPausedOverlays=[];
-  document.querySelectorAll('.overlay.open').forEach(ov=>{
-    if(ov.id==='ankiCardOverlay')return; // себя не трогаем
-    window._ankiPausedOverlays.push(ov.id);
-    ov.classList.remove('open');
-  });
-  let decks=[];
-  try{ decks = await window.AnkiData.listDecks(); }catch(e){ toast('Ошибка загрузки колод',true); }
+  const decks=loadAnkiDecks();
   const sel=$('#ankiDeckSelect');if(sel)sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join('');
   if(sel&&opts.deckId)sel.value=opts.deckId;
   $('#ankiCardTitle').textContent=ankiEditingId?'Изменить карточку':'Новая карточка';
@@ -1722,68 +1629,28 @@ async function openAnkiCardEditor(opts){
   const bi=$('#ankiBackInput');if(bi)bi.value=opts.back||'';
   const del=$('#ankiCardDelete');if(del)del.hidden=!ankiEditingId;
   $('#ankiCardOverlay').classList.add('open');
-  try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, opts.media_refs||[], opts.card_type||'basic'); }catch(e){}
   setTimeout(()=>{if(bi)bi.focus();},50);
 }
-function closeAnkiCardEditor(){
-  const ov=$('#ankiCardOverlay');if(ov)ov.classList.remove('open');
-  // Восстанавливаем оверлеи, которые были временно скрыты при открытии редактора
-  (window._ankiPausedOverlays||[]).forEach(id=>{
-    const ov=document.getElementById(id);if(ov)ov.classList.add('open');
-  });
-  window._ankiPausedOverlays=[];
-}
-$('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',closeAnkiCardEditor);
-$('#ankiCardOverlay')&&$('#ankiCardOverlay').addEventListener('click',e=>{if(e.target===$('#ankiCardOverlay'))closeAnkiCardEditor();});
-$('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',async()=>{
+$('#ankiCardClose')&&$('#ankiCardClose').addEventListener('click',()=>$('#ankiCardOverlay').classList.remove('open'));
+$('#ankiCardOverlay')&&$('#ankiCardOverlay').addEventListener('click',e=>{if(e.target===$('#ankiCardOverlay'))$('#ankiCardOverlay').classList.remove('open');});
+$('#ankiCardSave')&&$('#ankiCardSave').addEventListener('click',()=>{
   const back=$('#ankiBackInput').value.trim();
   if(!back){toast('Заполни ответ/оборот карточки',true);return;}
   const front=$('#ankiFrontInput').value.trim();
   const deckId=$('#ankiDeckSelect').value;
-  const cardType=(window.AnkiUI&&window.AnkiUI.getSelectedType&&window.AnkiUI.getSelectedType())||'basic';
-  try{
-    if(ankiEditingId){
-      await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType});
-      closeAnkiCardEditor();
-      toast('Карточка обновлена');
-    }else{
-      const created = await window.AnkiData.createCard(deckId,{front,back,card_type:cardType});
-      // остаёмся в модалке в режиме редактирования — теперь есть id, можно прикреплять медиа
-      ankiEditingId=created.id;
-      $('#ankiCardTitle').textContent='Изменить карточку';
-      const del=$('#ankiCardDelete');if(del)del.hidden=false;
-      try{ window.AnkiUI.onCardEditorOpen(ankiEditingId, [], cardType); }catch(e){}
-      toast('Карточка создана — теперь можно прикрепить фото/аудио или закрыть');
-    }
-    renderAnkiDeckList();
-  }catch(e){ toast('Ошибка сохранения: '+(e.message||e),true); }
+  const cards=loadAnkiCards();
+  if(ankiEditingId){const c=cards.find(x=>x.id===ankiEditingId);if(c){c.front=front;c.back=back;c.deckId=deckId;}}
+  else{cards.push({id:uid('ac'),deckId,front,back,ease:2.5,interval:0,due:Date.now(),reps:0,ts:Date.now()});}
+  saveAnkiCards(cards);
+  $('#ankiCardOverlay').classList.remove('open');
+  toast(ankiEditingId?'Карточка обновлена':'Карточка создана');
+  renderAnkiDeckList();
 });
-$('#ankiCardDelete')&&$('#ankiCardDelete').addEventListener('click',async()=>{
+$('#ankiCardDelete')&&$('#ankiCardDelete').addEventListener('click',()=>{
   if(!ankiEditingId)return;if(!confirm('Удалить карточку?'))return;
-  try{ await window.AnkiData.deleteCards([ankiEditingId]); }
-  catch(e){ toast('Ошибка удаления: '+(e.message||e),true); return; }
-  closeAnkiCardEditor();
+  saveAnkiCards(loadAnkiCards().filter(x=>x.id!==ankiEditingId));
+  $('#ankiCardOverlay').classList.remove('open');
   toast('Карточка удалена');renderAnkiDeckList();
-});
-$('#ankiCardSaveNext')&&$('#ankiCardSaveNext').addEventListener('click',async()=>{
-  const back=$('#ankiBackInput').value.trim();
-  if(!back){toast('Заполни ответ/оборот карточки',true);return;}
-  const front=$('#ankiFrontInput').value.trim();
-  const deckId=$('#ankiDeckSelect').value;
-  const cardType=(window.AnkiUI&&window.AnkiUI.getSelectedType&&window.AnkiUI.getSelectedType())||'basic';
-  try{
-    if(ankiEditingId){ await window.AnkiData.updateCard(ankiEditingId,{front,back,deck_id:deckId,card_type:cardType}); }
-    else{ await window.AnkiData.createCard(deckId,{front,back,card_type:cardType}); }
-    // Сброс полей для новой карточки, модалка остаётся открытой
-    ankiEditingId=null;
-    const fi=$('#ankiFrontInput');if(fi)fi.value='';
-    const bi=$('#ankiBackInput');if(bi){bi.value='';setTimeout(()=>bi.focus(),50);}
-    const del=$('#ankiCardDelete');if(del)del.hidden=true;
-    $('#ankiCardTitle').textContent='Новая карточка';
-    try{ window.AnkiUI.onCardEditorOpen(null, [], cardType); }catch(e){}
-    toast('Карточка сохранена — добавляй следующую');
-    renderAnkiDeckList();
-  }catch(e){ toast('Ошибка сохранения: '+(e.message||e),true); }
 });
 $('#ankiStudyClose')&&$('#ankiStudyClose').addEventListener('click',()=>{$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();});
 $('#ankiStudyOverlay')&&$('#ankiStudyOverlay').addEventListener('click',e=>{if(e.target===$('#ankiStudyOverlay')){$('#ankiStudyOverlay').classList.remove('open');renderAnkiDeckList();}});
@@ -1805,32 +1672,22 @@ function renderDashboard(){
   const maxN=Math.max(1,...days.map(x=>x.n));
   const tagFreq={};rh.forEach(h=>(h.tags||[]).forEach(t=>{tagFreq[t]=(tagFreq[t]||0)+1;}));
   const tags=Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,24);const maxT=Math.max(1,...tags.map(t=>t[1]));
-  const card=(n,l,extra,action)=>`<button class="stat${action?' stat-link':''}" ${action?`data-action="${action}"`:''}><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</button>`;
+  const card=(n,l,extra)=>`<div class="stat"><div class="stat-n">${n}</div><div class="stat-l">${l}</div>${extra||''}</div>`;
   box.innerHTML=`
     <div class="dash-grid">
-      ${card(reportsTotal,'разборов','','history')}
-      ${card('🔥 '+streak,'дней подряд','','history')}
-      ${card(tDone+'/'+tTotal,'задач закрыто','<div class="stat-bar"><span style="width:'+tPct+'%"></span></div>','tasks')}
-      ${card(habits.length,'привычек · 🔥'+habBest,'','habits')}
-      ${card(noteCount,'заметок','','notes')}
-      ${card(bookmarks.length,'закладок','','bookmarks')}
-      ${card(catches.length,'в улове','','queue')}
-      ${card((()=>{let o=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{if(!t.done&&t.due&&t.due<Date.now())o++;}));return o;})(),'просрочено','','overdue')}
-      ${card(habWeek,'отметок за неделю','','habits')}
+      ${card(reportsTotal,'разборов')}
+      ${card('🔥 '+streak,'дней подряд')}
+      ${card(tDone+'/'+tTotal,'задач закрыто','<div class="stat-bar"><span style="width:'+tPct+'%"></span></div>')}
+      ${card(habits.length,'привычек · 🔥'+habBest)}
+      ${card(noteCount,'заметок')}
+      ${card(bookmarks.length,'закладок')}
+      ${card(catches.length,'в улове')}
+      ${card((()=>{let o=0;history.forEach(h=>(h.tasks||[]).forEach(t=>{if(!t.done&&t.due&&t.due<Date.now())o++;}));return o;})(),'просрочено')}
+      ${card(habWeek,'отметок за неделю')}
     </div>
     <div class="dash-sec"><h3>Активность · 14 дней</h3><div class="act-chart">${days.map(x=>`<div class="act-col"><div class="act-bar${x.n?'':' zero'}" style="height:${x.n?Math.max(8,Math.round(x.n/maxN*100)):3}%" title="${x.n} разбор(ов)"></div><span class="act-d">${x.d.getDate()}</span></div>`).join('')}</div></div>
     <div class="dash-sec"><h3>Облако тегов</h3><div class="tag-cloud">${tags.length?tags.map(([t,n])=>`<button class="tag-cloud-item" data-t="${attr(t)}" style="font-size:${(0.85+n/maxT*0.85).toFixed(2)}rem;opacity:${(0.6+n/maxT*0.4).toFixed(2)}">${esc(t)}<span class="tcn">${n}</span></button>`).join(''):'<span class="empty">Тегов пока нет</span>'}</div></div>`;
   box.querySelectorAll('.tag-cloud-item').forEach(b=>b.addEventListener('click',()=>{noteTagFilter=b.dataset.t;renderNotes();show($('#view-notes'));}));
-  box.querySelectorAll('.stat-link').forEach(btn=>btn.addEventListener('click',()=>{
-    const a=btn.dataset.action;
-    if(a==='history'){filterDate=null;searchQuery='';tagFilter=null;showArchived=false;renderHistory();show($('#view-history'));}
-    else if(a==='tasks'){show($('#view-tasks'));setSubTab('tasks');}
-    else if(a==='habits'){show($('#view-tasks'));setSubTab('habits');}
-    else if(a==='notes'){try{renderNotes();}catch(e){}show($('#view-notes'));}
-    else if(a==='bookmarks'){renderBookmarks();show($('#view-bookmarks'));}
-    else if(a==='queue'){try{renderQueue();}catch(e){}show($('#view-queue'));}
-    else if(a==='overdue'){show($('#view-tasks'));setSubTab('tasks');}
-  }));
 }
 function renderActionBar(mode){
   const bar=$('#actionBar');
@@ -2501,64 +2358,16 @@ function openDateMenu(anchor){
 function renderTasks(){renderTaskCal();renderTaskList();try{refreshTodayBtn();}catch(e){}}
 
 /* ---------- export / import (merge) ---------- */
-$('#exportBtn')&&$('#exportBtn').addEventListener('click',()=>{const payload={app:'NeuroCatch',version:3,exportedAt:new Date().toISOString(),settings,catches,history};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);toast('Данные выгружены');});
-$('#fullBackupBtn')&&$('#fullBackupBtn').addEventListener('click',async()=>{
-  toast('Собираю полный бэкап…');
-  let anki=null;
-  try{ if(window.AnkiData) anki=await window.AnkiData.exportAllAnkiData(); }
-  catch(e){ toast('Anki-данные не удалось выгрузить (бэкап будет без них): '+(e.message||e),true); }
-  const payload={app:'NeuroCatch',version:4,exportedAt:new Date().toISOString(),
-    settings,catches,history,extraData:collectCloudExtraData(),anki};
-  const json=JSON.stringify(payload,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_full_backup_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);
-  const sizeKb=Math.round(json.length/1024);
-  localStorage.setItem('neurocatch_last_backup',String(Date.now()));
-  updateLastBackupHint();
-  // Сохраняем дату на сервере
-  try{ if(window.AnkiData&&window.AnkiData.saveBackupMeta) await window.AnkiData.saveBackupMeta(sizeKb); }catch(e){}
-  toast('Полный бэкап сохранён (включая Anki)');
-});
-/* ---------- Кастомизация порядка пунктов меню ---------- */
-function checkBackupReminder(){
-  const days=settings.backupReminderDays||0;
-  if(!days)return;
-  const last=+(localStorage.getItem('neurocatch_last_backup')||0);
-  if(Date.now()-last<days*86400000)return;
-  const todayK=dateKey(Date.now());
-  if(localStorage.getItem('neurocatch_backup_reminder_date')===todayK)return;
-  localStorage.setItem('neurocatch_backup_reminder_date',todayK);
-  toast('Пора сделать резервную копию — Настройки → Основное → Полный бэкап');
-}
-/* ---------- CSV-импорт карточек Anki ---------- */
-let csvParsedCards=null;
-async function fillCsvDeckSelect(){
-  const sel=$('#csvDeckSelect');if(!sel||!window.AnkiData)return;
-  try{ const decks=await window.AnkiData.listDecks(); sel.innerHTML=decks.map(d=>`<option value="${attr(d.id)}">${esc(d.name)}</option>`).join(''); }
-  catch(e){ sel.innerHTML='<option value="">Ошибка загрузки колод</option>'; }
-}
-$('#csvPickBtn')&&$('#csvPickBtn').addEventListener('click',()=>{fillCsvDeckSelect();$('#csvFileInput').click();});
-$('#csvFileInput')&&$('#csvFileInput').addEventListener('change',async e=>{
-  const file=e.target.files&&e.target.files[0];e.target.value='';if(!file)return;
-  try{
-    const text=await file.text();
-    csvParsedCards=window.AnkiData.parseCardsCSV(text);
-    $('#csvPreview').textContent=csvParsedCards.length?`Найдено карточек: ${csvParsedCards.length}. Пример: «${csvParsedCards[0].front.slice(0,40)}»`:'Не удалось найти ни одной карточки в файле';
-    $('#csvImportGo').hidden=!csvParsedCards.length;
-  }catch(err){ toast('Ошибка чтения файла: '+(err.message||err),true); }
-});
-$('#csvImportGo')&&$('#csvImportGo').addEventListener('click',async()=>{
-  const deckId=$('#csvDeckSelect').value;
-  if(!deckId){toast('Выбери колоду назначения',true);return;}
-  if(!csvParsedCards||!csvParsedCards.length){toast('Сначала выбери CSV-файл',true);return;}
-  toast('Импортирую…');
-  try{
-    const n=await window.AnkiData.bulkImportCards(deckId,csvParsedCards);
-    toast('Импортировано карточек: '+n);
-    csvParsedCards=null;$('#csvPreview').textContent='';$('#csvImportGo').hidden=true;
-    renderAnkiDeckList();
-  }catch(e){ toast('Ошибка импорта: '+(e.message||e),true); }
-});
+function blobToB64(bl){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(bl);});}
+function b64ToBlob(b64,type){const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:type||'application/octet-stream'});}
+async function idbAllKeys(){try{const db=await idbOpen();return await new Promise((res)=>{const rq=db.transaction('attachments','readonly').objectStore('attachments').getAllKeys();rq.onsuccess=()=>res(rq.result||[]);rq.onerror=()=>res([]);});}catch(e){return [];}}
+async function exportAttachments(){const out={};for(const k of await idbAllKeys()){try{const bl=await idbGet(k);if(bl)out[k]={type:bl.type,b64:await blobToB64(bl)};}catch(e){}}return out;}
+$('#exportBtn')&&$('#exportBtn').addEventListener('click',async()=>{
+  const data=collectCloudExtraData();let attachments={};
+  try{attachments=await exportAttachments();}catch(e){}
+  const payload={app:'NeuroCatch',version:4,exportedAt:new Date().toISOString(),settings,catches,history,data,attachments};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='neurocatch_'+dateKey(Date.now())+'.json';a.click();URL.revokeObjectURL(a.href);
+  toast('Выгружено: полный экспорт ('+Object.keys(attachments).length+' вложений)');});
 $('#importBtn')&&$('#importBtn').addEventListener('click',()=>$('#importFile').click());
 $('#importFile')&&$('#importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const o=JSON.parse(r.result);let addedH=0,addedC=0;
@@ -2569,22 +2378,33 @@ $('#importFile')&&$('#importFile').addEventListener('change',e=>{const f=e.targe
     (o.catches||[]).forEach(c=>{const key=c.id||(c.at+'|'+c.text);if(!cKeys.has(key)){if(!c.id)c.id=uid('c');catches.push(c);cKeys.add(key);addedC++;}});
     if(o.settings){settings.model=o.settings.model||settings.model;if(typeof o.settings.prompt==='string')settings.prompt=o.settings.prompt;if(o.settings.microlinkKey)settings.microlinkKey=o.settings.microlinkKey;if(typeof o.settings.microPerLink==='boolean')settings.microPerLink=o.settings.microPerLink;if(Array.isArray(o.settings.microExclude))settings.microExclude=o.settings.microExclude;if(o.settings.studyCustomUrl){settings.studyCustomName=o.settings.studyCustomName||'';settings.studyCustomUrl=o.settings.studyCustomUrl;}if(o.settings.provider)settings.provider=o.settings.provider;if(o.settings.orKey)settings.orKey=o.settings.orKey;if(o.settings.orModel)settings.orModel=o.settings.orModel;if(o.settings.ollamaUrl)settings.ollamaUrl=o.settings.ollamaUrl;if(o.settings.ollamaModel)settings.ollamaModel=o.settings.ollamaModel;if(typeof o.settings.clearAfter==='boolean')settings.clearAfter=o.settings.clearAfter;if(typeof o.settings.autoClip==='boolean')settings.autoClip=o.settings.autoClip;if(o.settings.seed)setAccent(o.settings.seed,false);if(o.settings.themeMode)applyThemeMode(o.settings.themeMode,false);if(o.settings.key&&!settings.key)settings.key=o.settings.key;const ak=$('#apikey');if(ak)ak.value=settings.key;const md=$('#model');if(md)md.value=settings.model;buildSwatches();}
     saveSettings();saveCatches();saveHistory();refreshCount();renderHistory();
-    toast(`Слито: +${addedH} отчётов, +${addedC} записей`);
+    let addedX=0;
+    if(o.data&&typeof o.data==='object'){Object.keys(o.data).forEach(k=>{if(!CLOUD_SYNC_KEYS.includes(k))return;try{
+      const rv=o.data[k];const raw=localStorage.getItem(k);
+      if(raw==null){localStorage.setItem(k,JSON.stringify(rv));addedX++;return;}
+      const lv=JSON.parse(raw);
+      if(Array.isArray(lv)&&Array.isArray(rv)){const ids=new Set(lv.map(x=>x&&x.id).filter(Boolean));rv.forEach(x=>{if(x&&x.id&&!ids.has(x.id)){lv.push(x);ids.add(x.id);addedX++;}});localStorage.setItem(k,JSON.stringify(lv));}
+      else if(lv&&rv&&typeof lv==='object'&&typeof rv==='object'&&!Array.isArray(lv)){Object.keys(rv).forEach(kk=>{if(!(kk in lv)){lv[kk]=rv[kk];addedX++;}});localStorage.setItem(k,JSON.stringify(lv));}
+    }catch(e){}});try{loadBookmarks();}catch(e){}try{loadHabits();}catch(e){}}
+    let addedA=0;
+    if(o.attachments&&typeof o.attachments==='object'){(async()=>{for(const k of Object.keys(o.attachments)){try{if(!(await idbGet(k))){await idbPut(k,b64ToBlob(o.attachments[k].b64,o.attachments[k].type));addedA++;}}catch(e){}}if(addedA)toast('Вложений восстановлено: '+addedA);})();}
+    touchLocal&&touchLocal();
+    toast(`Слито: +${addedH} отчётов, +${addedC} записей, +${addedX} прочих`);
   }catch(err){toast('Битый файл импорта',true);}e.target.value='';};
   r.readAsText(f);});
 
 /* ---------- settings ---------- */
 const ov=$('#overlay');
-$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');try{window.AnkiUI.renderThemeSettings();}catch(e){}try{window.AnkiUI.wireSecretKeyButtons();window.AnkiUI.renderSecretKeyStatus();}catch(e){}});
+$('#openSettings')&&$('#openSettings').addEventListener('click',()=>{fillSettings();setTab('api');ov&&ov.classList.add('open');});
 $('#closeSettings')&&$('#closeSettings').addEventListener('click',()=>ov&&ov.classList.remove('open'));
 $('#themeSel')&&$('#themeSel').addEventListener('change',e=>applyThemeMode(e.target.value));
-$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const snd=$('#staleNoteDays');if(snd)settings.staleNoteDays=+snd.value;const brd=$('#backupReminderSelect');if(brd)settings.backupReminderDays=+brd.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
+$('#saveSettings')&&$('#saveSettings').addEventListener('click',()=>{settings.key=$('#apikey').value.trim();settings.model=$('#model').value;const mk=$('#microKey');if(mk)settings.microlinkKey=mk.value.trim();const sn=$('#studyName');if(sn)settings.studyCustomName=sn.value.trim();const su=$('#studyUrl');if(su)settings.studyCustomUrl=su.value.trim();const pr=$('#provider');if(pr)settings.provider=pr.value;const ok=$('#orKey');if(ok)settings.orKey=ok.value.trim();const om=$('#orModel');if(om)settings.orModel=om.value.trim();const ou=$('#ollamaUrl');if(ou)settings.ollamaUrl=ou.value.trim();const omm=$('#ollamaModel');if(omm)settings.ollamaModel=omm.value.trim();const ca=$('#clearAfter');if(ca)settings.clearAfter=ca.checked;const acl=$('#autoClip');if(acl)settings.autoClip=acl.checked;const asy=$('#autoSync');if(asy)settings.autoSync=asy.checked;const sw=$('#swipesOn');if(sw)settings.swipesOn=sw.checked;const va=$('#voiceAutoAdd');if(va)settings.voiceAutoAdd=va.checked;const ad=$('#archiveDays');if(ad)settings.archiveDays=+ad.value;const snd=$('#staleNoteDays');if(snd)settings.staleNoteDays=+snd.value;const pvEl=$('#promptInput');const pv=pvEl?pvEl.value.trim():'';settings.prompt=(pv&&pv!==DEFAULT_PROMPT.trim())?pv:'';saveSettings();ov&&ov.classList.remove('open');toast('Настройки сохранены');});
 $('#resetPrompt')&&$('#resetPrompt').addEventListener('click',()=>{$('#promptInput').value=DEFAULT_PROMPT;settings.prompt='';toast('Промпт сброшен к дефолту');});
 ov&&ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov)ov.classList.remove('open');});
 
 /* ---------- cloud sync (Supabase, optional) ---------- */
-let sb=null, sbUser=null, cloudTimer=null, cloudBusy=false, initialSyncDone=false;
+let sb=null, sbUser=null, cloudTimer=null, cloudBusy=false;
 function setCloudStatus(t,on){const el=$('#cloudStatus');if(el){el.textContent=t;el.classList.toggle('on',!!on);}}
 function updateCloudButtons(){const io=!!sbUser;const out=$('#sbLogout');if(out)out.hidden=!io;const login=$('#sbLogin');if(!login)return;login.textContent='';const i=document.createElement('i');i.setAttribute('data-lucide','link');login.appendChild(i);login.appendChild(document.createTextNode(io?'Сменить аккаунт':'Войти по ссылке'));lucide.createIcons();}
 async function sbClient(){
@@ -2600,7 +2420,7 @@ async function cloudInit(){
   try{const {data}=await c.auth.getSession();
     if(data&&data.session){sbUser=data.session.user;setCloudStatus(sbUser.email,true);setSync('ok');await cloudPull(true);}
     else{setCloudStatus('не в сети');setSync();}
-    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){initialSyncDone=false;setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{initialSyncDone=false;setCloudStatus('не в сети');setSync();}updateCloudButtons();});
+    c.auth.onAuthStateChange((_e,session)=>{sbUser=session?session.user:null;if(sbUser){setCloudStatus(sbUser.email,true);setSync('ok');cloudPull(true);}else{setCloudStatus('не в сети');setSync();}updateCloudButtons();});
   }catch(e){setCloudStatus('ошибка',false);}
   updateCloudButtons();
 }
@@ -2608,7 +2428,7 @@ function cloudAppSettings(){return {
   model:settings.model,themeMode:settings.themeMode,seed:settings.seed,prompt:settings.prompt,
   provider:settings.provider,clearAfter:settings.clearAfter,autoClip:settings.autoClip,bg:settings.bg,
   preset:settings.preset,swipesOn:settings.swipesOn,voiceAutoAdd:settings.voiceAutoAdd,
-  archiveDays:settings.archiveDays,staleNoteDays:settings.staleNoteDays,backupReminderDays:settings.backupReminderDays,
+  archiveDays:settings.archiveDays,staleNoteDays:settings.staleNoteDays,
   microPerLink:settings.microPerLink,microExclude:settings.microExclude,
   studyCustomName:settings.studyCustomName,studyCustomUrl:settings.studyCustomUrl
 };}
@@ -2617,9 +2437,7 @@ const CLOUD_SYNC_KEYS=[
   'neurocatch_bookmarks','neurocatch_habits','neurocatch_extracted','neurocatch_highlights',
   'neurocatch_manual_notes','neurocatch_note_activity','neurocatch_note_cats','neurocatch_note_links',
   'neurocatch_projects','neurocatch_recur_rules','neurocatch_shopping_list',
-  'neurocatch_shares','neurocatch_task_group'
-  /* neurocatch_anki_cards / neurocatch_anki_decks убраны — Anki теперь
-     в отдельных Supabase-таблицах через anki-data.js, не в blob */
+  'neurocatch_anki_cards','neurocatch_anki_decks','neurocatch_shares','neurocatch_task_group'
 ];
 function replaceState(remote){ // last-writer-wins: полностью заменяем локальное состояние удалённым
   applyingRemote=true;
@@ -2640,7 +2458,6 @@ function replaceState(remote){ // last-writer-wins: полностью заме�
     if(typeof rs.voiceAutoAdd==='boolean')settings.voiceAutoAdd=rs.voiceAutoAdd;
     if(rs.archiveDays!=null)settings.archiveDays=+rs.archiveDays;
     if(rs.staleNoteDays!=null)settings.staleNoteDays=+rs.staleNoteDays;
-    if(rs.backupReminderDays!=null)settings.backupReminderDays=+rs.backupReminderDays;
     if(typeof rs.microPerLink==='boolean')settings.microPerLink=rs.microPerLink;
     if(Array.isArray(rs.microExclude))settings.microExclude=rs.microExclude;
     if(typeof rs.studyCustomName==='string')settings.studyCustomName=rs.studyCustomName;
@@ -2672,23 +2489,13 @@ async function cloudPull(silent){
   try{const {data,error}=await c.from('states').select('data,updated_at').eq('id',sbUser.id).maybeSingle();
     if(error)throw error;
     const remoteTs=data&&data.updated_at?new Date(data.updated_at).getTime():0;
-    // На ЭТОМ браузере/устройстве ещё ни разу не было успешной синхронизации —
-    // значит вообще любая локальная запись (даже случайная, от автовставки из буфера)
-    // могла получить более свежий Date.now(), чем последнее сохранение на другом
-    // устройстве, и по обычному сравнению timestamp "выиграть" сравнение и переписать
-    // облако пустой/неполной копией. Поэтому первый pull на новом устройстве
-    // БЕЗУСЛОВНО принимает облако, если там вообще есть данные — не сравнивая время.
-    const everSynced=localStorage.getItem('neurocatch_ever_synced_'+sbUser.id)==='1';
-    const shouldTakeRemote = data&&data.data && (!everSynced || remoteTs>localUpdatedAt);
-    if(shouldTakeRemote){ // облако свежее (или это первая синхронизация устройства) — принимаем его
+    if(data&&data.data&&remoteTs>localUpdatedAt){ // облако свежее — принимаем его
       replaceState(data.data);localUpdatedAt=remoteTs;localStorage.setItem('neurocatch_updated',String(remoteTs));
       cloudBusy=false;setSync('ok');if(!silent)toast('Загружено из облака (свежее)');
-    }else{ // локальное свежее/равно, и это не первая синхронизация — выгружаем
+    }else{ // локальное свежее или равно — выгружаем
       cloudBusy=false;await cloudPush(true);if(!silent)toast('Синхронизировано');
     }
-    localStorage.setItem('neurocatch_ever_synced_'+sbUser.id,'1');
-    initialSyncDone=true;
-  }catch(e){cloudBusy=false;initialSyncDone=true;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
+  }catch(e){cloudBusy=false;setSync('err');if(!silent)toast('Синхр: '+(e.message||e),true);}
 }
 function collectCloudExtraData(){
   const out={};
@@ -2705,12 +2512,7 @@ async function cloudPush(silent){
     if(error)throw error;setSync('ok');if(!silent)toast('Выгружено в облако');
   }catch(e){setSync('err');if(!silent)toast('Выгрузка: '+(e.message||e),true);}
 }
-function scheduleCloudPush(){
-  if(!sbUser)return;
-  if(!initialSyncDone)return; // не пушим локальные изменения, пока не завершился первый pull после входа —
-                               // иначе можно случайно переписать облако, не успев дождаться данных с другого устройства
-  setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);
-}
+function scheduleCloudPush(){if(!sbUser)return;setSync('sync');clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1500);}
 $('#sbLogin')&&$('#sbLogin').addEventListener('click',async()=>{
   settings.sbUrl=$('#sbUrl').value.trim().replace(/\/$/,'');settings.sbKey=$('#sbKey').value.trim();settings.sbEmail=$('#sbEmail').value.trim();saveSettings();sb=null;
   if(!settings.sbUrl||!settings.sbKey){toast('Укажи Supabase URL и anon key',true);return;}
@@ -2722,40 +2524,6 @@ $('#sbLogin')&&$('#sbLogin').addEventListener('click',async()=>{
 });
 $('#sbSync')&&$('#sbSync').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPull(false);});
 $('#sbLogout')&&$('#sbLogout').addEventListener('click',async()=>{const c=await sbClient();if(c){try{await c.auth.signOut();}catch(e){}}sbUser=null;updateCloudButtons();setCloudStatus('не в сети');toast('Вышел из облака');});
-
-/* ---------- Anki X: миграция, навигация новых экранов, Card Browser wiring ---------- */
-$('#ankiMigrateBtn')&&$('#ankiMigrateBtn').addEventListener('click',async()=>{
-  try{
-    const r=await window.AnkiData.migrateFromLocalStorage();
-    toast(r.migrated?`Перенесено: колод ${r.decks}, карточек ${r.cards}`:'Нечего переносить или уже перенесено');
-    renderAnkiDeckList();
-  }catch(e){ toast('Ошибка миграции: '+(e.message||e),true); }
-});
-$('#deckSettingsBack')&&$('#deckSettingsBack').addEventListener('click',()=>show($('#view-anki')));
-$('#browserBack')&&$('#browserBack').addEventListener('click',()=>{try{window.AnkiUI.clearBrowserSelection();}catch(e){}show($('#view-anki'));});
-$('#tagManagerBack')&&$('#tagManagerBack').addEventListener('click',()=>show($('#view-more')));
-$('#occlusionBack')&&$('#occlusionBack').addEventListener('click',()=>{try{window.AnkiUI.returnFromOcclusionEditor();}catch(e){$('#ankiCardOverlay')&&$('#ankiCardOverlay').classList.add('open');}});
-$('#ankiAnalyticsBack')&&$('#ankiAnalyticsBack').addEventListener('click',()=>show($('#view-more')));
-document.addEventListener('click',e=>{
-  const chip=e.target.closest('#browserMaturityRow .chip');
-  if(!chip)return;
-  document.querySelectorAll('#browserMaturityRow .chip').forEach(c=>c.classList.remove('on'));
-  chip.classList.add('on');
-  window._browserMaturity = chip.dataset.m || null;
-  window.AnkiUI.renderCardBrowser();
-});
-document.addEventListener('click',e=>{
-  const chip=e.target.closest('#browserDueRow .chip');
-  if(!chip)return;
-  document.querySelectorAll('#browserDueRow .chip').forEach(c=>c.classList.remove('on'));
-  chip.classList.add('on');
-  window._browserDueRange = chip.dataset.d || null;
-  window.AnkiUI.renderCardBrowser();
-});
-$('#browserSearch')&&$('#browserSearch').addEventListener('input',()=>{
-  clearTimeout(window._browserSearchTimer);
-  window._browserSearchTimer=setTimeout(()=>window.AnkiUI.renderCardBrowser(),400);
-});
 
 $('#cloudPushNow')&&$('#cloudPushNow').addEventListener('click',()=>{if(!sbUser){toast('Сначала войди по ссылке',true);return;}cloudPush(false);});
 
@@ -3146,28 +2914,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
 window.addEventListener('focus',()=>setTimeout(checkClipboard,300));
 window.addEventListener('pointerdown',()=>setTimeout(checkClipboard,120),{once:true});
 /* ---------- settings tabs ---------- */
-function setTab(t){
-  document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
-  document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});
-  // themeSettingsBox не sgroup, управляем отдельно
-  const tsb=$('#themeSettingsBox');if(tsb)tsb.style.display=(t==='iface'?'':'none');
-  const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;
-  // Supabase-блок: сворачиваем в <details>, если уже настроен (URL/email заполнены)
-  // Supabase-спойлер: обновляем summary-текст если уже настроено
-  if(t==='api'){
-    try{
-      const det=$('#sbDetails');const sum=$('#sbSummaryText');
-      if(det&&sum&&settings.sbUrl&&settings.sbEmail){
-        sum.textContent='Подключено: '+settings.sbEmail+' (нажми чтобы изменить)';
-      }else if(sum){
-        sum.textContent='Настройки подключения';
-      }
-    }catch(e){}
-    setTimeout(()=>{ try{ window.AnkiUI&&window.AnkiUI.renderSecretKeyStatus&&window.AnkiUI.renderSecretKeyStatus(); }catch(e){} },100);
-  }
-  if(t==='anki') { setTimeout(()=>{try{fillCsvDeckSelect();}catch(e){}},100); }
-  if(t==='iface') renderMenuOrderList();
-}
+function setTab(t){document.querySelectorAll('#overlay .tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));document.querySelectorAll('#overlay .sgroup').forEach(g=>{g.style.display=(g.dataset.grp===t?'':'none');});const bd=$('#overlay .modal');if(bd)bd.scrollTop=0;}
 $('#overlay')&&$('#overlay').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)setTab(b.dataset.tab);});
 
 /* ---------- ritual presets ---------- */
@@ -3182,9 +2929,7 @@ $('#bgPicker')&&$('#bgPicker').addEventListener('click',e=>{const b=e.target.clo
    плитки вызывают ту же навигационную логику НАПРЯМУЮ, а не через .click(). */
 const MORE_TILES=[
   ['История','calendar',()=>realHistory().length,()=>{filterDate=null;searchQuery='';tagFilter=null;showArchived=false;const si=$('#searchInput');if(si)si.value='';renderHistory();show($('#view-history'));}],
-  ['Anki','layers',()=>0,()=>{renderAnkiDeckList();show($('#view-anki'));}],
-  ['Теги','list',()=>0,()=>{window.AnkiUI.renderTagManager();show($('#view-tag-manager'));}],
-  ['Anki-аналитика','bar-chart-3',()=>0,()=>{window.AnkiUI.renderAnkiAnalytics();show($('#view-anki-analytics'));}],
+  ['Anki','layers',()=>{const decks=loadAnkiDecks();return decks.reduce((n,d)=>n+ankiDueCount(d.id),0);},()=>{renderAnkiDeckList();show($('#view-anki'));}],
   ['Выделения','highlighter',()=>getAllFragments().length,()=>{fragSelectMode=false;fragSelected.clear();renderHighlightsLibrary();show($('#view-highlights'));}],
   ['Проекты','layout-grid',()=>loadProjects().length,()=>{renderProjectsList();show($('#view-projects'));}],
   ['Закладки','bookmark',()=>bookmarks.length,()=>{renderBookmarks();show($('#view-bookmarks'));}],
@@ -3193,54 +2938,12 @@ const MORE_TILES=[
 ];
 function renderMoreTiles(){
   const box=$('#moreTiles');if(!box)return;
-  const {order}=loadMenuConfig();
-  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean); // все плитки, в заданном порядке
-  box.innerHTML=tiles.map((t,i)=>{
-    let n=0;try{n=t[2]?t[2]():0;}catch(e){n=0;}
-    return `<button class="more-tile" data-i="${i}"><i data-lucide="${t[1]}"></i><span class="more-tile-label">${esc(t[0])}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
+  box.innerHTML=MORE_TILES.map(([label,icon,countFn],i)=>{
+    let n=0;try{n=countFn?countFn():0;}catch(e){n=0;}
+    return `<button class="more-tile" data-i="${i}"><i data-lucide="${icon}"></i><span class="more-tile-label">${esc(label)}</span>${n?`<span class="more-tile-badge">${n}</span>`:''}</button>`;
   }).join('');
   lucide.createIcons();
-  box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=tiles[+b.dataset.i];if(t&&t[3])t[3]();}));
-}
-const DEFAULT_MENU_ORDER=MORE_TILES.map((_,i)=>i);
-const MAIN_MENU_CUTOFF_DEFAULT=0; // 0 = все пункты в «Ещё»; разделитель только расставляет приоритет внутри списка
-function loadMenuConfig(){
-  try{const s=JSON.parse(localStorage.getItem('neurocatch_menu_cfg')||'{}');return {order:s.order||[...DEFAULT_MENU_ORDER],cutoff:s.cutoff!=null?s.cutoff:MAIN_MENU_CUTOFF_DEFAULT};}catch(e){return {order:[...DEFAULT_MENU_ORDER],cutoff:MAIN_MENU_CUTOFF_DEFAULT};}
-}
-function saveMenuConfig(cfg){localStorage.setItem('neurocatch_menu_cfg',JSON.stringify(cfg));touchLocal();}
-function renderMenuOrderList(){
-  const box=$('#menuOrderList');if(!box)return;
-  const {order,cutoff}=loadMenuConfig();
-  const tiles=order.map(i=>MORE_TILES[i]).filter(Boolean);
-  const divLabel='<div class="menu-order-divider" id="moDiv">— всё выше в «Ещё» первыми —</div>';
-  box.innerHTML='<div class="menu-order-list" id="moList">'+
-    (cutoff===0?divLabel:'')+
-    tiles.map((t,i)=>`<div class="menu-order-item" draggable="true" data-idx="${i}" data-orig="${order[i]}">
-      <span class="menu-order-drag">⠿</span>
-      <i data-lucide="${t[1]}"></i>
-      <span>${esc(t[0])}</span>
-    </div>${i===cutoff-1&&cutoff>0?divLabel:''}`).join('')+
-    (cutoff>=tiles.length?divLabel:'')+'</div>';
-  lucide.createIcons();
-  // простой drag-and-drop: mousedown → mousemove → mouseup / touch
-  let dragSrc=null;
-  box.querySelectorAll('.menu-order-item').forEach(el=>{
-    el.addEventListener('dragstart',()=>{dragSrc=el;el.style.opacity='0.4';});
-    el.addEventListener('dragend',()=>{el.style.opacity='';dragSrc=null;});
-    el.addEventListener('dragover',e=>{e.preventDefault();});
-    el.addEventListener('drop',e=>{
-      e.preventDefault();if(!dragSrc||dragSrc===el)return;
-      const list=box.querySelector('#moList');const items=[...list.querySelectorAll('.menu-order-item')];
-      const from=items.indexOf(dragSrc),to=items.indexOf(el);if(from<0||to<0)return;
-      const newOrder=[...order];const[moved]=newOrder.splice(from,1);newOrder.splice(to,0,moved);
-      // cutoff корректируем по положению разделителя
-      const divEl=box.querySelector('#moDiv');
-      let newCutoff=cutoff;
-      if(divEl){const divIdx=[...list.children].indexOf(divEl);newCutoff=divIdx;}
-      saveMenuConfig({order:newOrder,cutoff:newCutoff});
-      renderMenuOrderList();renderMoreTiles();
-    });
-  });
+  box.querySelectorAll('.more-tile').forEach(b=>b.addEventListener('click',()=>{const t=MORE_TILES[+b.dataset.i];if(t&&t[3])t[3]();}));
 }
 $('#openMore')&&$('#openMore').addEventListener('click',()=>{renderMoreTiles();renderDashboard();show($('#view-more'));});
 /* ---------- вкладки внутри «Заметки»: Заметки / Выделения / Проекты ---------- */
@@ -3420,7 +3123,6 @@ try{processRecurringRules(false);}catch(e){}
 try{seedNeuroCatchProject();}catch(e){}
 setTimeout(()=>{try{checkStaleReminder();}catch(e){}},1500);
 setTimeout(()=>{try{if(!$('#staleReminderOverlay').classList.contains('open'))checkUnsortedReminder();}catch(e){}},3200);
-setTimeout(()=>{try{checkBackupReminder();}catch(e){}},4500);
 try{initNotify();}catch(e){console.error('initNotify failed:',e);}
 try{startAutoSync();}catch(e){}
 lucide.createIcons();
@@ -3428,7 +3130,7 @@ booting=false;
 try{refreshTodayBtn();}catch(e){}
 try{applyBg();applyMinimal();renderPresetRow();refreshQueueBadge();if(navigator.onLine)setTimeout(processRitualQueue,1200);}catch(e){}
 if(checkSharedHash()){/* read-only share view */}
-setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER+' · Anki '+ANKI_X_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;const hv=$('#homeVerLine');if(hv)hv.textContent='NeuroCatch '+SW_VER+' · Anki '+ANKI_X_VER;checkClipboard();},400);
+setTimeout(()=>{const vl=$('#verLine');if(vl)vl.textContent='NeuroCatch '+SW_VER;const vm=$('#verMini');if(vm)vm.textContent=SW_VER;checkClipboard();},400);
 
 /* ---------- E2E debug bridge ----------
    Переменные, объявленные через let на верхнем уровне классического скрипта,
